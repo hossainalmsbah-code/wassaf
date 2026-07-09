@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>وصّاف — أوصاف منتجات احترافية بالعربي</title>
+<meta name="description" content="أداة ذكاء اصطناعي تولّد أوصاف منتجات احترافية بالعربي لأي متجر إلكتروني، بالاعتماد على فريمووركات كتابة إقناعية مثبتة.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#F1EEF7;
+    --ink-dim:#8B87A8;
+    --bg:#12112A;
+    --bg-raised:#1B1A3B;
+    --line:#2E2C55;
+    --accent:#FF6B81;
+    --accent-dim:#6E2A38;
+    --accent2:#9C97D6;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans Arabic','Tajawal',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:32px 24px 80px;}
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    padding-bottom:20px;margin-bottom:32px;
+  }
+  .brand{font-family:'Tajawal',sans-serif;font-weight:900;font-size:26px;}
+  .brand span{color:var(--accent);}
+  nav a{color:var(--ink-dim);text-decoration:none;font-size:13px;margin-inline-start:18px;}
+  nav a:hover{color:var(--ink);}
+  .hero{text-align:center;padding:20px 0 40px;}
+  .hero h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:32px;margin:0 0 12px;line-height:1.4;}
+  .hero p{color:var(--ink-dim);font-size:16px;max-width:520px;margin:0 auto;line-height:1.8;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  @media (max-width:640px){ .grid{grid-template-columns:1fr;} .pricing{grid-template-columns:1fr 1fr !important;} }
+  label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
+  input[type=text], textarea{
+    width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical;
+  }
+  input[type=text]:focus, textarea:focus{outline:none;border-color:var(--accent);}
+  .field{margin-bottom:16px;}
+  .frameworks{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .fw-btn{
+    background:var(--bg-raised);border:1px solid var(--line);color:var(--ink-dim);
+    padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .fw-btn.active{background:var(--accent);border-color:var(--accent);color:#1a0e14;}
+  .fw-hint{font-size:12px;color:var(--ink-dim);margin-top:8px;line-height:1.6;}
+  .go{
+    width:100%;margin-top:8px;background:var(--accent);color:#1a0e14;border:none;
+    padding:16px;border-radius:8px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+  }
+  .go:hover{background:#ff8095;}
+  .go:disabled{background:var(--line);color:var(--ink-dim);cursor:not-allowed;}
+  .result{margin-top:28px;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:24px;display:none;}
+  .result.show{display:block;}
+  .result-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+  .result-head .label{font-size:12px;color:var(--accent2);font-weight:700;letter-spacing:.5px;}
+  .copy-btn{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;}
+  .output{font-size:16px;line-height:2;white-space:pre-wrap;}
+  .loading{display:flex;align-items:center;gap:10px;color:var(--ink-dim);font-size:14px;padding:20px 0;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite ease-in-out;}
+  .dot:nth-child(2){animation-delay:.2s;}
+  .dot:nth-child(3){animation-delay:.4s;}
+  @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8);}50%{opacity:1;transform:scale(1.1);}}
+  .err{color:#E8664A;font-size:13px;margin-top:10px;display:none;}
+  .section-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:20px;margin:56px 0 20px;text-align:center;}
+  .pricing{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .plan{position:relative;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:18px 16px;}
+  .plan.featured{border-color:var(--accent);}
+  .badge{position:absolute;top:-10px;right:14px;background:var(--accent);color:#1a0e14;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;}
+  .plan-name{font-size:13px;color:var(--ink-dim);font-weight:600;margin-bottom:10px;}
+  .plan-old{font-size:13px;color:var(--ink-dim);text-decoration:line-through;margin-bottom:2px;}
+  .plan-price{font-family:'Tajawal',sans-serif;font-weight:900;font-size:24px;color:var(--ink);margin-bottom:6px;}
+  .plan-price span{font-size:12px;font-weight:500;color:var(--ink-dim);}
+  .plan-note{font-size:12px;color:var(--ink-dim);line-height:1.6;}
+  footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;text-align:center;}
+  footer a{color:var(--ink-dim);text-decoration:none;font-size:12px;margin:0 10px;}
+  footer a:hover{color:var(--ink);}
+  footer .copy{color:var(--ink-dim);font-size:12px;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">وصّاف<span>.</span></div>
+    <nav>
+      <a href="#tool">جرّب الأداة</a>
+      <a href="#pricing">الأسعار</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>أوصاف منتجات احترافية بالعربي، خلال ثواني</h1>
+    <p>أداة ذكاء اصطناعي تكتب وصف منتجك بفريمووركات تسويقية مثبتة (AIDA، PAS، BAB) — جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
+  </section>
+
+  <section id="pricing">
+    <div class="pricing">
+      <div class="plan">
+        <div class="plan-name">تجربة مجانية</div>
+        <div class="plan-price">0<span> ريال</span></div>
+        <div class="plan-note">جرّبه مجاناً — بدون بطاقة، لفترة محدودة</div>
+      </div>
+      <div class="plan">
+        <div class="badge">خصم 30%</div>
+        <div class="plan-name">شهري</div>
+        <div class="plan-old">85 ريال/شهر</div>
+        <div class="plan-price">59<span> ريال/شهر</span></div>
+        <div class="plan-note">حتى 120 وصف/شهر</div>
+      </div>
+      <div class="plan">
+        <div class="badge">خصم 40%</div>
+        <div class="plan-name">نصف سنوي</div>
+        <div class="plan-old">82 ريال/شهر</div>
+        <div class="plan-price">49<span> ريال/شهر</span></div>
+        <div class="plan-note">294 ريال كل 6 أشهر — حتى 180 وصف/شهر</div>
+      </div>
+      <div class="plan featured">
+        <div class="badge">خصم 65%</div>
+        <div class="plan-name">سنوي</div>
+        <div class="plan-old">83 ريال/شهر</div>
+        <div class="plan-price">29<span> ريال/شهر</span></div>
+        <div class="plan-note">348 ريال بالسنة — حتى 300 وصف/شهر</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-title" id="tool">جرّب الأداة الآن</div>
+
+  <div class="grid">
+    <div class="field">
+      <label>اسم المنتج</label>
+      <input type="text" id="productName" placeholder="مثال: سماعة أذن لاسلكية بلوتوث">
+    </div>
+    <div class="field">
+      <label>الجمهور المستهدف</label>
+      <input type="text" id="audience" placeholder="مثال: مستخدمين يبحثون عن جودة صوت بسعر مناسب">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>المميزات الأساسية (اذكرها مفصولة بفواصل)</label>
+    <textarea id="features" rows="3" placeholder="مثال: بطارية تدوم 30 ساعة، مقاومة للماء IPX5، اتصال بلوتوث 5.3، صوت نقي بخاصية إلغاء الضوضاء"></textarea>
+  </div>
+
+  <div class="field">
+    <label>سعر المنتج</label>
+    <input type="text" id="price" placeholder="مثال: 129 ريال">
+  </div>
+
+  <div class="field">
+    <label>الإطار الإقناعي</label>
+    <div class="frameworks" id="frameworks">
+      <button class="fw-btn active" data-fw="AIDA">AIDA</button>
+      <button class="fw-btn" data-fw="PAS">PAS</button>
+      <button class="fw-btn" data-fw="BAB">BAB</button>
+    </div>
+    <div class="fw-hint" id="fwHint">الانتباه ← الاهتمام ← الرغبة ← الفعل. الأنسب للمنتجات اللي تحتاج تلفت النظر أول.</div>
+  </div>
+
+  <button class="go" id="goBtn">ولّد الوصف</button>
+  <div class="err" id="errBox"></div>
+
+  <div class="result" id="resultBox">
+    <div class="result-head">
+      <div class="label" id="resultLabel">الوصف الناتج</div>
+      <button class="copy-btn" id="copyBtn">نسخ النص</button>
+    </div>
+    <div class="output" id="outputText"></div>
+  </div>
+
+  <footer>
+    <a href="/privacy.html">سياسة الخصوصية</a>
+    <a href="/terms.html">الشروط والأحكام</a>
+    <a href="/refund.html">سياسة الاسترجاع</a>
+    <div class="copy">© 2026 وصّاف. جميع الحقوق محفوظة.</div>
+  </footer>
+
+</div>
+
+<script>
+const hints = {
+  AIDA: "الانتباه ← الاهتمام ← الرغبة ← الفعل. الأنسب للمنتجات اللي تحتاج تلفت النظر أول.",
+  PAS: "المشكلة ← تضخيمها ← الحل. مثالي للمنتجات اللي تحل ألم واضح عند العميل.",
+  BAB: "قبل ← بعد ← الجسر. يبني تصوّر لحياة العميل بعد استخدام المنتج."
+};
+
+document.querySelectorAll('.fw-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.fw-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('fwHint').textContent = hints[btn.dataset.fw];
+  });
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const text = document.getElementById('outputText').textContent;
+  navigator.clipboard.writeText(text);
+  const btn = document.getElementById('copyBtn');
+  const old = btn.textContent;
+  btn.textContent = 'تم النسخ ✓';
+  setTimeout(() => btn.textContent = old, 1500);
+});
+
+document.getElementById('goBtn').addEventListener('click', async () => {
+  const productName = document.getElementById('productName').value.trim();
+  const audience = document.getElementById('audience').value.trim();
+  const features = document.getElementById('features').value.trim();
+  const price = document.getElementById('price').value.trim();
+  const fw = document.querySelector('.fw-btn.active').dataset.fw;
+
+  const errBox = document.getElementById('errBox');
+  const resultBox = document.getElementById('resultBox');
+  const outputText = document.getElementById('outputText');
+  const goBtn = document.getElementById('goBtn');
+
+  errBox.style.display = 'none';
+
+  if(!productName || !features || !price){
+    errBox.textContent = 'عبّي اسم المنتج والمميزات والسعر على الأقل';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  goBtn.disabled = true;
+  goBtn.textContent = 'جاري التوليد...';
+  resultBox.classList.add('show');
+  outputText.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> يكتب الوصف الآن</div>';
+
+  const prompt = `اكتب وصف منتج تسويقي احترافي باللهجة السعودية/الخليجية البيضاء المناسبة للتجارة الإلكترونية، باستخدام إطار ${fw} بالضبط.
+
+اسم المنتج: ${productName}
+الجمهور المستهدف: ${audience || "عام"}
+المميزات: ${features}
+${price ? "السعر: " + price : ""}
+
+اكتب الوصف جاهز للنشر مباشرة في صفحة منتج بمتجر إلكتروني، بدون أي شرح أو مقدمة، فقط الوصف النهائي. استخدم فقرات قصيرة وسطور نقطية إن لزم. لا تستخدم أي كلمات إنجليزية إلا لو ضرورية لاسم تقني.`;
+
+  try{
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await response.json();
+    outputText.textContent = data.text || "ما رجع نص، جرب مرة ثانية.";
+  }catch(e){
+    errBox.textContent = 'صار خطأ أثناء التوليد، جرب مرة ثانية';
+    errBox.style.display = 'block';
+    outputText.textContent = '';
+  }finally{
+    goBtn.disabled = false;
+    goBtn.textContent = 'ولّد الوصف';
+  }
+});
+</script>
+</body>
+</html>
