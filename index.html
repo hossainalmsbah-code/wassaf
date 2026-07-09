@@ -84,6 +84,15 @@
   .plan-price{font-family:'Tajawal',sans-serif;font-weight:900;font-size:24px;color:var(--ink);margin-bottom:6px;}
   .plan-price span{font-size:12px;font-weight:500;color:var(--ink-dim);}
   .plan-note{font-size:12px;color:var(--ink-dim);line-height:1.6;}
+  .plan-btn{
+    display:block;text-align:center;margin-top:14px;
+    background:var(--accent);color:#1a0e14;text-decoration:none;
+    font-size:13px;font-weight:700;padding:9px 0;border-radius:7px;
+    transition:background .15s;
+  }
+  .plan-btn:hover{background:#ff8095;}
+  .plan:not(.featured) .plan-btn{background:var(--bg);border:1px solid var(--accent);color:var(--accent);}
+  .plan:not(.featured) .plan-btn:hover{background:var(--accent-dim);}
   footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;text-align:center;}
   footer a{color:var(--ink-dim);text-decoration:none;font-size:12px;margin:0 10px;}
   footer a:hover{color:var(--ink);}
@@ -112,6 +121,7 @@
         <div class="plan-name">تجربة مجانية</div>
         <div class="plan-price">0<span> ريال</span></div>
         <div class="plan-note">جرّبه مجاناً — بدون بطاقة، لفترة محدودة</div>
+        <a class="plan-btn" href="#tool">جرّب الآن</a>
       </div>
       <div class="plan">
         <div class="badge">خصم 30%</div>
@@ -119,6 +129,7 @@
         <div class="plan-old">85 ريال/شهر</div>
         <div class="plan-price">59<span> ريال/شهر</span></div>
         <div class="plan-note">حتى 120 وصف/شهر</div>
+        <a class="plan-btn" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/ebaa39a1-80d4-4afc-920d-eb138f01c022" target="_blank" rel="noopener">اشترك الآن</a>
       </div>
       <div class="plan">
         <div class="badge">خصم 40%</div>
@@ -126,6 +137,7 @@
         <div class="plan-old">82 ريال/شهر</div>
         <div class="plan-price">49<span> ريال/شهر</span></div>
         <div class="plan-note">294 ريال كل 6 أشهر — حتى 180 وصف/شهر</div>
+        <a class="plan-btn" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/e19e7e5f-b92a-4503-bb31-1408a240dc96" target="_blank" rel="noopener">اشترك الآن</a>
       </div>
       <div class="plan featured">
         <div class="badge">خصم 65%</div>
@@ -133,6 +145,7 @@
         <div class="plan-old">83 ريال/شهر</div>
         <div class="plan-price">29<span> ريال/شهر</span></div>
         <div class="plan-note">348 ريال بالسنة — حتى 300 وصف/شهر</div>
+        <a class="plan-btn" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/c60071ae-3a32-422f-8971-0ecfd6e708ea" target="_blank" rel="noopener">اشترك الآن</a>
       </div>
     </div>
   </section>
