@@ -17,6 +17,7 @@
     --accent:#FF6B81;
     --accent-dim:#6E2A38;
     --accent2:#9C97D6;
+    --good:#4ADE80;
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -43,12 +44,14 @@
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
   @media (max-width:640px){ .grid{grid-template-columns:1fr;} .pricing{grid-template-columns:1fr 1fr !important;} }
   label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
-  input[type=text], textarea{
+  input[type=text], input[type=file], textarea, select{
     width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
     border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical;
   }
-  input[type=text]:focus, textarea:focus{outline:none;border-color:var(--accent);}
+  select{cursor:pointer;}
+  input[type=text]:focus, textarea:focus, select:focus{outline:none;border-color:var(--accent);}
   .field{margin-bottom:16px;}
+  .field-hint{font-size:12px;color:var(--ink-dim);margin-top:6px;line-height:1.6;}
   .frameworks{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
   .fw-btn{
     background:var(--bg-raised);border:1px solid var(--line);color:var(--ink-dim);
@@ -62,19 +65,26 @@
   }
   .go:hover{background:#ff8095;}
   .go:disabled{background:var(--line);color:var(--ink-dim);cursor:not-allowed;}
-  .result{margin-top:28px;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:24px;display:none;}
+  .go.secondary{background:var(--bg-raised);border:1px solid var(--accent);color:var(--accent);}
+  .go.secondary:hover{background:var(--accent-dim);}
+  .result{margin-top:28px;display:none;}
   .result.show{display:block;}
+  .result-block{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:14px;}
   .result-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);}
   .result-head .label{font-size:12px;color:var(--accent2);font-weight:700;letter-spacing:.5px;}
   .copy-btn{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;}
+  .copy-btn:hover{border-color:var(--accent);color:var(--ink);}
   .output{font-size:16px;line-height:2;white-space:pre-wrap;}
+  .output.small{font-size:14px;color:var(--ink-dim);}
   .loading{display:flex;align-items:center;gap:10px;color:var(--ink-dim);font-size:14px;padding:20px 0;}
   .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite ease-in-out;}
   .dot:nth-child(2){animation-delay:.2s;}
   .dot:nth-child(3){animation-delay:.4s;}
   @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8);}50%{opacity:1;transform:scale(1.1);}}
   .err{color:#E8664A;font-size:13px;margin-top:10px;display:none;}
-  .section-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:20px;margin:56px 0 20px;text-align:center;}
+  .ok-msg{color:var(--good);font-size:13px;margin-top:10px;display:none;}
+  .section-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:20px;margin:56px 0 8px;text-align:center;}
+  .section-sub{color:var(--ink-dim);font-size:13px;text-align:center;margin-bottom:28px;line-height:1.8;}
   .pricing{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
   .plan{position:relative;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:18px 16px;}
   .plan.featured{border-color:var(--accent);}
@@ -93,6 +103,44 @@
   .plan-btn:hover{background:#ff8095;}
   .plan:not(.featured) .plan-btn{background:var(--bg);border:1px solid var(--accent);color:var(--accent);}
   .plan:not(.featured) .plan-btn:hover{background:var(--accent-dim);}
+
+  /* إعدادات عامة (نبرة العلامة + الباقة) */
+  .settings-box{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:24px;}
+  .settings-title{font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .saved-tag{font-size:11px;color:var(--good);font-weight:600;opacity:0;transition:opacity .3s;}
+  .saved-tag.show{opacity:1;}
+
+  /* رفع جماعي */
+  .bulk-box{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:24px;}
+  .drop-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  .file-label{
+    flex:1;min-width:220px;background:var(--bg);border:1px dashed var(--line);border-radius:8px;
+    padding:16px;text-align:center;cursor:pointer;font-size:13px;color:var(--ink-dim);
+  }
+  .file-label:hover{border-color:var(--accent);color:var(--ink);}
+  .file-label input{display:none;}
+  .file-info{font-size:12px;color:var(--ink-dim);margin-top:10px;line-height:1.8;}
+  .file-info strong{color:var(--ink);}
+  .tmpl-link{font-size:12px;color:var(--accent2);text-decoration:none;cursor:pointer;background:none;border:none;font-family:inherit;padding:0;}
+  .tmpl-link:hover{text-decoration:underline;}
+  .progress-wrap{margin-top:18px;display:none;}
+  .progress-wrap.show{display:block;}
+  .progress-bar-bg{background:var(--bg);border:1px solid var(--line);border-radius:8px;height:10px;overflow:hidden;}
+  .progress-bar-fill{background:var(--accent);height:100%;width:0%;transition:width .25s;}
+  .progress-text{font-size:12px;color:var(--ink-dim);margin-top:8px;text-align:center;}
+  .bulk-table-wrap{margin-top:20px;max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px;display:none;}
+  .bulk-table-wrap.show{display:block;}
+  table.bulk-table{width:100%;border-collapse:collapse;font-size:13px;}
+  table.bulk-table th{position:sticky;top:0;background:var(--bg-raised);text-align:right;padding:10px 12px;color:var(--accent2);font-size:12px;border-bottom:1px solid var(--line);}
+  table.bulk-table td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink-dim);vertical-align:top;max-width:220px;}
+  table.bulk-table td.cell-text{white-space:pre-wrap;line-height:1.7;}
+  table.bulk-table tr:last-child td{border-bottom:none;}
+  .row-status{font-size:11px;font-weight:700;}
+  .row-status.ok{color:var(--good);}
+  .row-status.fail{color:#E8664A;}
+  .bulk-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .bulk-actions .go{width:auto;flex:1;min-width:180px;}
+
   footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;text-align:center;}
   footer a{color:var(--ink-dim);text-decoration:none;font-size:12px;margin:0 10px;}
   footer a:hover{color:var(--ink);}
@@ -106,6 +154,7 @@
     <div class="brand">وصّاف<span>.</span></div>
     <nav>
       <a href="#tool">جرّب الأداة</a>
+      <a href="#bulk">رفع جماعي</a>
       <a href="#pricing">الأسعار</a>
     </nav>
   </header>
@@ -151,6 +200,29 @@
   </section>
 
   <div class="section-title" id="tool">جرّب الأداة الآن</div>
+  <div class="section-sub">أدخل بيانات منتجك واحصل على وصف طويل، ونسخة قصيرة للسوشال ميديا، ووصف SEO — بضغطة وحدة.</div>
+
+  <div class="settings-box">
+    <div class="settings-title">
+      إعدادات عامة (تُحفظ في متصفحك تلقائياً) <span class="saved-tag" id="savedTag">تم الحفظ ✓</span>
+    </div>
+    <div class="grid">
+      <div class="field" style="margin-bottom:0;">
+        <label>نبرة العلامة التجارية (اختياري)</label>
+        <input type="text" id="brandTone" placeholder="مثال: فاخرة وراقية / شبابية وحماسية / عملية ومباشرة">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>باقتك الحالية</label>
+        <select id="planSelect">
+          <option value="free">تجربة مجانية</option>
+          <option value="monthly">شهري — حتى 120 وصف/شهر</option>
+          <option value="semiannual">نصف سنوي — حتى 180 وصف/شهر</option>
+          <option value="annual">سنوي — حتى 300 وصف/شهر</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-hint">نستخدم هذي البيانات تلقائياً في كل توليد (فردي أو جماعي) بدون ما تعيد كتابتها كل مرة. النبرة محفوظة في هذا المتصفح فقط، فإذا استخدمت جهاز آخر بتحتاج تكتبها من جديد.</div>
+  </div>
 
   <div class="grid">
     <div class="field">
@@ -183,16 +255,77 @@
     <div class="fw-hint" id="fwHint">الانتباه ← الاهتمام ← الرغبة ← الفعل. الأنسب للمنتجات اللي تحتاج تلفت النظر أول.</div>
   </div>
 
-  <button class="go" id="goBtn">ولّد الوصف</button>
+  <button class="go" id="goBtn">ولّد الأوصاف</button>
   <div class="err" id="errBox"></div>
 
   <div class="result" id="resultBox">
-    <div class="result-head">
-      <div class="label" id="resultLabel">الوصف الناتج</div>
-      <button class="copy-btn" id="copyBtn">نسخ النص</button>
+    <div class="result-block">
+      <div class="result-head">
+        <div class="label">الوصف الطويل — لصفحة المنتج</div>
+        <button class="copy-btn" data-target="outputLong">نسخ النص</button>
+      </div>
+      <div class="output" id="outputLong"></div>
     </div>
-    <div class="output" id="outputText"></div>
+    <div class="result-block">
+      <div class="result-head">
+        <div class="label">الوصف القصير — كابشن / إعلان</div>
+        <button class="copy-btn" data-target="outputShort">نسخ النص</button>
+      </div>
+      <div class="output" id="outputShort"></div>
+    </div>
+    <div class="result-block">
+      <div class="result-head">
+        <div class="label">وصف SEO — لمحركات البحث</div>
+        <button class="copy-btn" data-target="outputSeo">نسخ النص</button>
+      </div>
+      <div class="output small" id="outputSeo"></div>
+    </div>
   </div>
+
+  <!-- ===================== رفع جماعي ===================== -->
+  <div class="section-title" id="bulk">رفع دفعة منتجات (Bulk)</div>
+  <div class="section-sub">ارفع ملف CSV فيه منتجاتك، وخلّي وصّاف يولّد الأوصاف الثلاثة لكل منتج تلقائياً، ثم صدّرها كملف واحد جاهز.</div>
+
+  <div class="bulk-box">
+    <div class="drop-row">
+      <label class="file-label" id="fileLabel">
+        <input type="file" id="csvInput" accept=".csv,text/csv">
+        📄 اضغط لاختيار ملف CSV، أو اسحبه هنا
+      </label>
+      <button class="tmpl-link" id="tmplBtn" type="button">تحميل نموذج CSV فارغ</button>
+    </div>
+    <div class="field-hint">
+      الأعمدة المطلوبة: <strong>اسم_المنتج</strong> (إلزامي)، <strong>المميزات</strong> (إلزامي)، وتقدر تضيف اختيارياً: الجمهور، السعر، الإطار (AIDA أو PAS أو BAB). لو ما حددت الإطار أو النبرة لصف معين، بيستخدم الإعدادات العامة أعلاه.
+    </div>
+    <div class="file-info" id="fileInfo"></div>
+    <div class="err" id="bulkErr"></div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">جاري التوليد...</div>
+    </div>
+
+    <div class="bulk-actions">
+      <button class="go" id="bulkGoBtn" disabled>ابدأ التوليد الجماعي</button>
+      <button class="go secondary" id="exportBtn" style="display:none;">تحميل النتائج CSV</button>
+    </div>
+
+    <div class="bulk-table-wrap" id="bulkTableWrap">
+      <table class="bulk-table" id="bulkTable">
+        <thead>
+          <tr>
+            <th>الحالة</th>
+            <th>اسم المنتج</th>
+            <th>الوصف الطويل</th>
+            <th>الوصف القصير</th>
+            <th>SEO</th>
+          </tr>
+        </thead>
+        <tbody id="bulkTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <!-- ===================== نهاية رفع جماعي ===================== -->
 
   <footer>
     <a href="/privacy.html">سياسة الخصوصية</a>
@@ -204,12 +337,34 @@
 </div>
 
 <script>
+/* ==================== إعدادات عامة محفوظة محلياً ==================== */
+const PLAN_CAPS = { free: 10, monthly: 120, semiannual: 180, annual: 300 };
+const PLAN_LABELS = { free: 'تجربة مجانية', monthly: 'الشهري', semiannual: 'نصف السنوي', annual: 'السنوي' };
+
+const brandToneInput = document.getElementById('brandTone');
+const planSelect = document.getElementById('planSelect');
+const savedTag = document.getElementById('savedTag');
+
+function loadSettings(){
+  brandToneInput.value = localStorage.getItem('wassaf_brandTone') || '';
+  planSelect.value = localStorage.getItem('wassaf_plan') || 'monthly';
+}
+function saveSettings(){
+  localStorage.setItem('wassaf_brandTone', brandToneInput.value.trim());
+  localStorage.setItem('wassaf_plan', planSelect.value);
+  savedTag.classList.add('show');
+  setTimeout(() => savedTag.classList.remove('show'), 1400);
+}
+loadSettings();
+brandToneInput.addEventListener('change', saveSettings);
+planSelect.addEventListener('change', saveSettings);
+
+/* ==================== الإطار الإقناعي (توليد فردي) ==================== */
 const hints = {
   AIDA: "الانتباه ← الاهتمام ← الرغبة ← الفعل. الأنسب للمنتجات اللي تحتاج تلفت النظر أول.",
   PAS: "المشكلة ← تضخيمها ← الحل. مثالي للمنتجات اللي تحل ألم واضح عند العميل.",
   BAB: "قبل ← بعد ← الجسر. يبني تصوّر لحياة العميل بعد استخدام المنتج."
 };
-
 document.querySelectorAll('.fw-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.fw-btn').forEach(b => b.classList.remove('active'));
@@ -218,31 +373,52 @@ document.querySelectorAll('.fw-btn').forEach(btn => {
   });
 });
 
-document.getElementById('copyBtn').addEventListener('click', () => {
-  const text = document.getElementById('outputText').textContent;
-  navigator.clipboard.writeText(text);
-  const btn = document.getElementById('copyBtn');
-  const old = btn.textContent;
-  btn.textContent = 'تم النسخ ✓';
-  setTimeout(() => btn.textContent = old, 1500);
+/* ==================== نسخ النص ==================== */
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.target;
+    const text = document.getElementById(targetId).textContent;
+    if(!text) return;
+    navigator.clipboard.writeText(text);
+    const old = btn.textContent;
+    btn.textContent = 'تم النسخ ✓';
+    setTimeout(() => btn.textContent = old, 1500);
+  });
 });
 
+/* ==================== استدعاء واجهة التوليد ==================== */
+async function callGenerate({ productName, audience, features, price, framework, brandTone }){
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productName, audience, features, price, framework, brandTone })
+  });
+  if(!response.ok){
+    throw new Error('upstream_error');
+  }
+  return response.json();
+}
+
+/* ==================== توليد فردي ==================== */
 document.getElementById('goBtn').addEventListener('click', async () => {
   const productName = document.getElementById('productName').value.trim();
   const audience = document.getElementById('audience').value.trim();
   const features = document.getElementById('features').value.trim();
   const price = document.getElementById('price').value.trim();
-  const fw = document.querySelector('.fw-btn.active').dataset.fw;
+  const framework = document.querySelector('.fw-btn.active').dataset.fw;
+  const brandTone = brandToneInput.value.trim();
 
   const errBox = document.getElementById('errBox');
   const resultBox = document.getElementById('resultBox');
-  const outputText = document.getElementById('outputText');
+  const outputLong = document.getElementById('outputLong');
+  const outputShort = document.getElementById('outputShort');
+  const outputSeo = document.getElementById('outputSeo');
   const goBtn = document.getElementById('goBtn');
 
   errBox.style.display = 'none';
 
-  if(!productName || !features || !price){
-    errBox.textContent = 'عبّي اسم المنتج والمميزات والسعر على الأقل';
+  if(!productName || !features){
+    errBox.textContent = 'عبّي اسم المنتج والمميزات على الأقل';
     errBox.style.display = 'block';
     return;
   }
@@ -250,33 +426,264 @@ document.getElementById('goBtn').addEventListener('click', async () => {
   goBtn.disabled = true;
   goBtn.textContent = 'جاري التوليد...';
   resultBox.classList.add('show');
-  outputText.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> يكتب الوصف الآن</div>';
-
-  const prompt = `اكتب وصف منتج تسويقي احترافي باللهجة السعودية/الخليجية البيضاء المناسبة للتجارة الإلكترونية، باستخدام إطار ${fw} بالضبط.
-
-اسم المنتج: ${productName}
-الجمهور المستهدف: ${audience || "عام"}
-المميزات: ${features}
-${price ? "السعر: " + price : ""}
-
-اكتب الوصف جاهز للنشر مباشرة في صفحة منتج بمتجر إلكتروني، بدون أي شرح أو مقدمة، فقط الوصف النهائي. استخدم فقرات قصيرة وسطور نقطية إن لزم. لا تستخدم أي كلمات إنجليزية إلا لو ضرورية لاسم تقني.`;
+  outputLong.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> يكتب الأوصاف الآن</div>';
+  outputShort.textContent = '';
+  outputSeo.textContent = '';
 
   try{
-    const response = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt })
-    });
-    const data = await response.json();
-    outputText.textContent = data.text || "ما رجع نص، جرب مرة ثانية.";
+    const data = await callGenerate({ productName, audience, features, price, framework, brandTone });
+    outputLong.textContent = data.long || 'ما رجع نص، جرب مرة ثانية.';
+    outputShort.textContent = data.short || '—';
+    outputSeo.textContent = data.seo || '—';
   }catch(e){
     errBox.textContent = 'صار خطأ أثناء التوليد، جرب مرة ثانية';
     errBox.style.display = 'block';
-    outputText.textContent = '';
+    outputLong.textContent = '';
   }finally{
     goBtn.disabled = false;
-    goBtn.textContent = 'ولّد الوصف';
+    goBtn.textContent = 'ولّد الأوصاف';
   }
+});
+
+/* ==================== رفع جماعي: تحليل CSV ==================== */
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/, '');
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else { inQuotes = false; }
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field=''; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if(c === '\r'){ /* skip */ }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.length && r.some(c => c.trim() !== ''));
+}
+
+function normalizeHeader(h){
+  return h.trim().replace(/[إأآ]/g,'ا').replace(/[\s_]+/g,'');
+}
+
+const HEADER_MAP = {
+  name: ['اسمالمنتج','اسم','المنتج','productname','name'],
+  audience: ['الجمهور','الجمهورالمستهدف','audience'],
+  features: ['المميزات','الخصائص','features'],
+  price: ['السعر','price'],
+  framework: ['الاطار','الاطارالاقناعي','framework']
+};
+
+function mapHeaders(headerRow){
+  const map = {};
+  headerRow.forEach((raw, idx) => {
+    const norm = normalizeHeader(raw);
+    for(const key in HEADER_MAP){
+      if(HEADER_MAP[key].includes(norm)){ map[key] = idx; }
+    }
+  });
+  return map;
+}
+
+let parsedRows = []; // { name, audience, features, price, framework }
+
+const csvInput = document.getElementById('csvInput');
+const fileInfo = document.getElementById('fileInfo');
+const bulkErr = document.getElementById('bulkErr');
+const bulkGoBtn = document.getElementById('bulkGoBtn');
+
+csvInput.addEventListener('change', () => {
+  bulkErr.style.display = 'none';
+  bulkGoBtn.disabled = true;
+  parsedRows = [];
+  fileInfo.innerHTML = '';
+
+  const file = csvInput.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const rows = parseCSV(e.target.result);
+    if(rows.length < 2){
+      bulkErr.textContent = 'الملف فاضي أو ما فيه صفوف بيانات تحت رأس الأعمدة';
+      bulkErr.style.display = 'block';
+      return;
+    }
+    const headerMap = mapHeaders(rows[0]);
+    if(headerMap.name === undefined || headerMap.features === undefined){
+      bulkErr.textContent = 'لازم يكون بالملف عمود "اسم_المنتج" وعمود "المميزات" على الأقل';
+      bulkErr.style.display = 'block';
+      return;
+    }
+
+    const dataRows = rows.slice(1);
+    parsedRows = dataRows.map(r => ({
+      name: (r[headerMap.name] || '').trim(),
+      audience: headerMap.audience !== undefined ? (r[headerMap.audience] || '').trim() : '',
+      features: headerMap.features !== undefined ? (r[headerMap.features] || '').trim() : '',
+      price: headerMap.price !== undefined ? (r[headerMap.price] || '').trim() : '',
+      framework: headerMap.framework !== undefined ? (r[headerMap.framework] || '').trim().toUpperCase() : ''
+    })).filter(r => r.name && r.features);
+
+    const plan = planSelect.value;
+    const cap = PLAN_CAPS[plan];
+
+    fileInfo.innerHTML = `<strong>${file.name}</strong> — تم العثور على ${parsedRows.length} منتج صالح.`;
+
+    if(parsedRows.length === 0){
+      bulkErr.textContent = 'ما لقينا أي صف فيه اسم منتج ومميزات معبّاة';
+      bulkErr.style.display = 'block';
+      return;
+    }
+
+    if(parsedRows.length > cap){
+      bulkErr.textContent = `ملفك فيه ${parsedRows.length} منتج، وباقتك (${PLAN_LABELS[plan]}) حدها الشهري ${cap} وصف. قسّم ملفك لدفعات أصغر أو اختر باقة أعلى من القائمة أعلاه.`;
+      bulkErr.style.display = 'block';
+      return;
+    }
+
+    bulkGoBtn.disabled = false;
+  };
+  reader.readAsText(file, 'UTF-8');
+});
+
+document.getElementById('tmplBtn').addEventListener('click', () => {
+  const sample = '\uFEFF' + [
+    'اسم_المنتج,الجمهور,المميزات,السعر,الإطار',
+    '"سماعة بلوتوث لاسلكية","محبي الرياضة","بطارية 30 ساعة, مقاومة للماء, صوت نقي","129 ريال",AIDA',
+    '"حقيبة ظهر لابتوب","طلاب وموظفين","مقاس 15.6 بوصة, جيوب متعددة, قماش مقاوم للماء","95 ريال",PAS'
+  ].join('\r\n');
+  const blob = new Blob([sample], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'نموذج-وصاف.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ==================== رفع جماعي: التنفيذ بالتوازي المحدود ==================== */
+async function runWithConcurrency(items, limit, worker, onEach){
+  const results = new Array(items.length);
+  let idx = 0;
+  async function next(){
+    while(idx < items.length){
+      const current = idx++;
+      try{
+        results[current] = await worker(items[current], current);
+      }catch(e){
+        results[current] = { error: true };
+      }
+      onEach(current, results[current]);
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, next);
+  await Promise.all(workers);
+  return results;
+}
+
+const bulkTableWrap = document.getElementById('bulkTableWrap');
+const bulkTableBody = document.getElementById('bulkTableBody');
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const exportBtn = document.getElementById('exportBtn');
+
+let bulkResults = [];
+
+bulkGoBtn.addEventListener('click', async () => {
+  if(parsedRows.length === 0) return;
+
+  bulkGoBtn.disabled = true;
+  csvInput.disabled = true;
+  exportBtn.style.display = 'none';
+  bulkTableBody.innerHTML = '';
+  bulkTableWrap.classList.add('show');
+  progressWrap.classList.add('show');
+  progressFill.style.width = '0%';
+  progressText.textContent = `تم توليد 0 من ${parsedRows.length}`;
+
+  // إنشاء صفوف الجدول مسبقاً بحالة "بالانتظار"
+  parsedRows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.id = 'bulk-row-' + i;
+    tr.innerHTML = `
+      <td><span class="row-status" id="status-${i}">⏳</span></td>
+      <td>${escapeHTML(row.name)}</td>
+      <td class="cell-text" id="long-${i}">—</td>
+      <td class="cell-text" id="short-${i}">—</td>
+      <td class="cell-text" id="seo-${i}">—</td>
+    `;
+    bulkTableBody.appendChild(tr);
+  });
+
+  const globalBrandTone = brandToneInput.value.trim();
+  let done = 0;
+
+  bulkResults = await runWithConcurrency(parsedRows, 3, async (row) => {
+    const framework = ['AIDA','PAS','BAB'].includes(row.framework) ? row.framework : (document.querySelector('.fw-btn.active').dataset.fw);
+    const data = await callGenerate({
+      productName: row.name,
+      audience: row.audience,
+      features: row.features,
+      price: row.price,
+      framework,
+      brandTone: globalBrandTone
+    });
+    return { name: row.name, long: data.long || '', short: data.short || '', seo: data.seo || '' };
+  }, (i, result) => {
+    done++;
+    progressFill.style.width = Math.round((done / parsedRows.length) * 100) + '%';
+    progressText.textContent = `تم توليد ${done} من ${parsedRows.length}`;
+
+    const statusEl = document.getElementById('status-' + i);
+    if(result && !result.error){
+      statusEl.textContent = '✓';
+      statusEl.className = 'row-status ok';
+      document.getElementById('long-' + i).textContent = result.long || '—';
+      document.getElementById('short-' + i).textContent = result.short || '—';
+      document.getElementById('seo-' + i).textContent = result.seo || '—';
+    } else {
+      statusEl.textContent = 'فشل';
+      statusEl.className = 'row-status fail';
+    }
+  });
+
+  bulkGoBtn.disabled = false;
+  csvInput.disabled = false;
+  exportBtn.style.display = 'block';
+});
+
+function escapeHTML(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ==================== تصدير النتائج CSV ==================== */
+exportBtn.addEventListener('click', () => {
+  const header = ['اسم المنتج', 'الوصف الطويل', 'الوصف القصير', 'SEO'];
+  const escape = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
+  const lines = [header.map(escape).join(',')];
+  bulkResults.forEach(r => {
+    if(!r || r.error) return;
+    lines.push([r.name, r.long, r.short, r.seo].map(escape).join(','));
+  });
+  const csvContent = '\uFEFF' + lines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'اوصاف-وصاف.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 });
 </script>
 </body>
