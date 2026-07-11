@@ -49,6 +49,46 @@ function safeParseModelJSON(text) {
   return null;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// يحاول استدعاء Anthropic API، ولو رجع 429 (تجاوز حد الطلبات) أو 529 (تحميل زائد مؤقت)
+// يعيد المحاولة تلقائياً مع فترة انتظار متزايدة (Exponential Backoff) بدل ما يفشل فوراً.
+// يحترم رأس Retry-After لو Anthropic أرسلته، وإلا يستخدم فترات: 1 ثانية، 2 ثانية، 4 ثواني.
+async function callAnthropicWithRetry(payload, apiKey, maxRetries = 3) {
+  const baseDelayMs = 1000;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const isRetryable = response.status === 429 || response.status === 529;
+
+    if (!isRetryable || attempt === maxRetries) {
+      return response;
+    }
+
+    // نحدد وقت الانتظار: نحترم Retry-After لو موجود، وإلا نضاعف الوقت كل محاولة
+    const retryAfterHeader = response.headers.get('retry-after');
+    let delayMs = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : baseDelayMs * Math.pow(2, attempt);
+    if (Number.isNaN(delayMs) || delayMs <= 0) {
+      delayMs = baseDelayMs * Math.pow(2, attempt);
+    }
+    // نضيف Jitter بسيط عشان لو فيه عدة طلبات متزامنة ما تعيد المحاولة كلها بنفس اللحظة بالضبط
+    delayMs += Math.floor(Math.random() * 300);
+
+    await sleep(delayMs);
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -77,21 +117,23 @@ module.exports = async (req, res) => {
 
     const prompt = buildPrompt({ productName, audience, features, price, framework, brandTone });
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
+    const anthropicResponse = await callAnthropicWithRetry(
+      {
         model: 'claude-sonnet-4-6',
         max_tokens: 1200,
         messages: [{ role: 'user', content: prompt }]
-      })
-    });
+      },
+      apiKey
+    );
 
     if (!anthropicResponse.ok) {
+      if (anthropicResponse.status === 429 || anthropicResponse.status === 529) {
+        // حتى بعد كل محاولات الـ retry، الضغط لسا مستمر — نطلب من التاجر يعيد المحاولة بنفسه بعد شوي
+        res.status(503).json({
+          error: 'الخدمة مزدحمة حالياً، جرب تولّد مرة ثانية بعد شوي.'
+        });
+        return;
+      }
       const errText = await anthropicResponse.text();
       res.status(502).json({ error: 'Upstream error', detail: errText });
       return;
