@@ -397,7 +397,14 @@ async function callGenerate({ productName, audience, features, price, framework,
     body: JSON.stringify({ productName, audience, features, price, framework, brandTone })
   });
   if(!response.ok){
-    throw new Error('upstream_error');
+    let message = 'صار خطأ أثناء التوليد، جرب مرة ثانية';
+    try{
+      const errData = await response.json();
+      if(errData && errData.error) message = errData.error;
+    }catch(e){ /* تجاهل لو الرد مو JSON */ }
+    const err = new Error(message);
+    err.userMessage = message;
+    throw err;
   }
   return response.json();
 }
@@ -439,7 +446,7 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     outputShort.textContent = data.short || '—';
     outputSeo.textContent = data.seo || '—';
   }catch(e){
-    errBox.textContent = 'صار خطأ أثناء التوليد، جرب مرة ثانية';
+    errBox.textContent = e.userMessage || 'صار خطأ أثناء التوليد، جرب مرة ثانية';
     errBox.style.display = 'block';
     outputLong.textContent = '';
   }finally{
