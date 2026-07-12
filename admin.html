@@ -37,6 +37,15 @@
   .err{color:#E8664A;font-size:13px;margin-top:10px;display:none;}
   .lock-screen{max-width:340px;margin:80px auto;text-align:center;}
   .lock-screen input{margin-bottom:12px;}
+  .pending-item{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px;}
+  .pending-item.review{border-color:#E8664A;}
+  .pending-item .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .pending-item .code-big{font-family:monospace;font-weight:900;font-size:20px;color:var(--accent);letter-spacing:2px;}
+  .pending-item .meta{font-size:12px;color:var(--ink-dim);}
+  .pending-item .actions{display:flex;gap:8px;margin-top:10px;}
+  .pending-item .actions button{width:auto;flex:1;padding:8px;font-size:12px;}
+  .sent-btn{background:var(--good) !important;}
+  .empty-note{color:var(--ink-dim);font-size:13px;text-align:center;padding:20px 0;}
   .quick-caps{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
   .quick-cap-btn{flex:1;min-width:70px;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink-dim);padding:8px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;}
   .quick-cap-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
@@ -85,6 +94,12 @@
   </div>
 
   <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--line);">
+    <h1 style="font-size:18px;">أكواد جديدة من الاشتراكات (بانتظار الإرسال) <span id="pendingCount" style="color:var(--accent);"></span></h1>
+    <div class="sub">أي اشتراك جديد يوصل تلقائياً عبر Lemon Squeezy يطلع هنا — انسخ الكود وأرسله للتاجر، وبعدها اضغط "تم الإرسال".</div>
+    <div id="pendingList"></div>
+  </div>
+
+  <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--line);">
     <h1 style="font-size:18px;">فك ربط كود من جهازه</h1>
     <div class="sub">لو تاجر غيّر جهازه أو جواله، اكتب كوده هنا عشان يقدر يستخدمه من جهاز جديد.</div>
     <input type="text" id="unbindCodeInput" placeholder="مثال: GPQJSH" style="text-transform:uppercase;">
@@ -124,6 +139,7 @@ document.getElementById('unlockBtn').addEventListener('click', async () => {
     adminSecret = pass;
     document.getElementById('lockWrap').style.display = 'none';
     document.getElementById('mainWrap').style.display = 'block';
+    loadPendingCodes();
   }catch(e){
     lockErr.textContent = 'صار خطأ، جرب مرة ثانية';
     lockErr.style.display = 'block';
@@ -228,6 +244,89 @@ document.getElementById('unbindBtn').addEventListener('click', async () => {
     unbindErr.style.display = 'block';
   }
 });
+
+/* ==================== الأكواد الجديدة من الاشتراكات التلقائية ==================== */
+function escapeHTML(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+async function loadPendingCodes(){
+  const listEl = document.getElementById('pendingList');
+  const countEl = document.getElementById('pendingCount');
+  try{
+    const res = await fetch('/api/pending-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminSecret })
+    });
+    const data = await res.json();
+    const items = data.items || [];
+
+    countEl.textContent = items.length ? `(${items.length})` : '';
+
+    if(items.length === 0){
+      listEl.innerHTML = '<div class="empty-note">ما فيه أكواد جديدة حالياً — أي اشتراك جديد بيبين هنا تلقائياً.</div>';
+      return;
+    }
+
+    listEl.innerHTML = items.map(item => {
+      if(item.needsReview){
+        return `
+          <div class="pending-item review">
+            <div class="top-row">
+              <span class="code-big" style="color:#E8664A;font-size:14px;">تحتاج مراجعة يدوية</span>
+            </div>
+            <div class="meta">الإيميل: ${escapeHTML(item.email) || 'غير متوفر'} — الباقة: ${escapeHTML(item.plan)}</div>
+            <div class="meta">ما قدرنا نحدد حد الأوصاف تلقائياً من اسم الباقة، سوّي الكود يدوياً فوق وأرسله.</div>
+            <div class="actions">
+              <button class="sent-btn" onclick="markSent('${item.id}')">حذف من القائمة</button>
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="pending-item">
+          <div class="top-row">
+            <span class="code-big">${escapeHTML(item.code)}</span>
+            <span class="meta">${escapeHTML(item.plan)} — حد ${item.cap} وصف/شهر</span>
+          </div>
+          <div class="meta">الإيميل: ${escapeHTML(item.email) || 'غير متوفر'}</div>
+          <div class="actions">
+            <button onclick="copyPendingCode('${item.code}', this)">نسخ الكود</button>
+            <button class="sent-btn" onclick="markSent('${item.id}')">تم الإرسال</button>
+          </div>
+        </div>`;
+    }).join('');
+  }catch(e){
+    listEl.innerHTML = '<div class="empty-note">تعذر تحميل القائمة، حدّث الصفحة وجرب مرة ثانية.</div>';
+  }
+}
+
+function copyPendingCode(code, btn){
+  navigator.clipboard.writeText(code);
+  const old = btn.textContent;
+  btn.textContent = 'تم النسخ ✓';
+  setTimeout(() => btn.textContent = old, 1500);
+}
+
+async function markSent(id){
+  try{
+    await fetch('/api/mark-sent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminSecret, id })
+    });
+    loadPendingCodes();
+  }catch(e){
+    alert('صار خطأ، جرب مرة ثانية');
+  }
+}
+
+// نحدّث القائمة تلقائياً كل 30 ثانية عشان تشوف الاشتراكات الجديدة بدون ما تحدّث الصفحة يدوياً
+setInterval(() => {
+  if(adminSecret) loadPendingCodes();
+}, 30000);
 </script>
 </body>
 </html>
