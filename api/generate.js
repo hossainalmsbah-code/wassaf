@@ -107,6 +107,7 @@ module.exports = async (req, res) => {
     const framework = (body.framework || 'AIDA').toString().trim();
     const brandTone = (body.brandTone || '').toString().trim();
     const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
+    const deviceId = (body.deviceId || '').toString().trim();
 
     if (!productName || !features) {
       res.status(400).json({ error: 'اسم المنتج والمميزات مطلوبة' });
@@ -120,7 +121,7 @@ module.exports = async (req, res) => {
 
     let accessCheck;
     try {
-      accessCheck = await checkAccessCode(accessCode);
+      accessCheck = await checkAccessCode(accessCode, deviceId);
     } catch (redisErr) {
       res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
       return;
@@ -131,6 +132,11 @@ module.exports = async (req, res) => {
         res.status(403).json({
           error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك أو تواصل معنا لترقية باقتك.`,
           code: 'QUOTA_EXHAUSTED'
+        });
+      } else if (accessCheck.reason === 'device_mismatch') {
+        res.status(403).json({
+          error: 'هذا الكود مستخدم فعلاً بجهاز ثاني. لو غيّرت جهازك، تواصل معنا نفعّله لك بالجهاز الجديد.',
+          code: 'DEVICE_MISMATCH'
         });
       } else {
         res.status(403).json({ error: 'كود الوصول غير صحيح، تأكد منه أو تواصل معنا', code: 'INVALID_CODE' });

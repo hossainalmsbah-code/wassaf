@@ -9,13 +9,14 @@ module.exports = async (req, res) => {
   try {
     const body = req.body || {};
     const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
+    const deviceId = (body.deviceId || '').toString().trim();
 
     if (!accessCode) {
       res.status(400).json({ error: 'أدخل كود الوصول' });
       return;
     }
 
-    const result = await checkAccessCode(accessCode);
+    const result = await checkAccessCode(accessCode, deviceId);
 
     if (!result.ok) {
       if (result.reason === 'exhausted') {
@@ -23,6 +24,12 @@ module.exports = async (req, res) => {
           valid: false,
           reason: 'exhausted',
           message: `هذا الكود خلص حده الشهري (${result.cap} وصف). جدد اشتراكك أو تواصل معنا.`
+        });
+      } else if (result.reason === 'device_mismatch') {
+        res.status(200).json({
+          valid: false,
+          reason: 'device_mismatch',
+          message: 'هذا الكود مستخدم فعلاً بجهاز ثاني. لو غيّرت جهازك، تواصل معنا نفعّله لك.'
         });
       } else {
         res.status(200).json({
