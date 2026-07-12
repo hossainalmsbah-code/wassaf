@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>وصّاف — أوصاف منتجات احترافية بالعربي</title>
-<meta name="description" content="أداة ذكاء اصطناعي تولّد أوصاف منتجات احترافية بالعربي لأي متجر إلكتروني، بالاعتماد على فريمووركات كتابة إقناعية مثبتة.">
+<meta name="description" content="أداة تولّد أوصاف منتجات احترافية بالعربي لأي متجر إلكتروني، بالاعتماد على فريمووركات كتابة إقناعية مثبتة.">
 <link rel="icon" href="/assets/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
@@ -98,7 +98,7 @@
   .section-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:20px;margin:56px 0 8px;text-align:center;}
   .section-sub{color:var(--ink-dim);font-size:13px;text-align:center;margin-bottom:28px;line-height:1.8;}
   .pricing{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
-  .plan{position:relative;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:18px 16px;box-shadow:0 1px 4px rgba(30,27,46,0.05);}
+  .plan{position:relative;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:18px 16px;box-shadow:0 1px 4px rgba(30,27,46,0.05);display:flex;flex-direction:column;height:100%;gap:4px;}
   .plan.featured{border-color:var(--accent);}
   .badge{position:absolute;top:-10px;right:14px;background:var(--accent);color:#1a0e14;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;}
   .plan-name{font-size:13px;color:var(--ink-dim);font-weight:600;margin-bottom:10px;}
@@ -107,7 +107,7 @@
   .plan-price span{font-size:12px;font-weight:500;color:var(--ink-dim);}
   .plan-note{font-size:12px;color:var(--ink-dim);line-height:1.6;}
   .plan-btn{
-    display:block;text-align:center;margin-top:14px;
+    display:block;text-align:center;margin-top:auto;
     background:var(--accent);color:#1a0e14;text-decoration:none;
     font-size:13px;font-weight:700;padding:9px 0;border-radius:7px;
     transition:background .15s;
@@ -165,7 +165,6 @@
   <header class="top">
     <img class="brand-logo" src="/assets/logo-horizontal.svg" alt="وصّاف">
     <nav>
-      <a href="#tool">جرّب الأداة</a>
       <a href="#bulk">رفع جماعي</a>
       <a href="#pricing">الأسعار</a>
     </nav>
@@ -173,7 +172,7 @@
 
   <section class="hero">
     <h1>أوصاف منتجات احترافية بالعربي، خلال ثواني</h1>
-    <p>أداة ذكاء اصطناعي تكتب وصف منتجك بفريمووركات تسويقية مثبتة (AIDA، PAS، BAB) — جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
+    <p>أداة تكتب وصف منتجك بفريمووركات تسويقية مثبتة (AIDA، PAS، BAB) — جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
   </section>
 
   <section id="pricing">
@@ -218,27 +217,15 @@
     </div>
   </section>
 
-  <div class="section-title" id="tool">جرّب الأداة الآن</div>
-  <div class="section-sub">أدخل بيانات منتجك واحصل على وصف طويل، ونسخة قصيرة للسوشال ميديا، ووصف SEO — بضغطة وحدة.</div>
+  <div class="section-sub" id="tool" style="margin-top:56px;">أدخل بيانات منتجك واحصل على وصف طويل، ونسخة قصيرة للسوشال ميديا، ووصف SEO — بضغطة وحدة.</div>
 
   <div class="settings-box">
     <div class="settings-title">
       إعدادات عامة (تُحفظ في متصفحك تلقائياً) <span class="saved-tag" id="savedTag">تم الحفظ ✓</span>
     </div>
-    <div class="grid">
-      <div class="field" style="margin-bottom:0;">
-        <label>نبرة العلامة التجارية (اختياري)</label>
-        <input type="text" id="brandTone" placeholder="مثال: فاخرة وراقية / شبابية وحماسية / عملية ومباشرة">
-      </div>
-      <div class="field" style="margin-bottom:0;">
-        <label>باقتك الحالية</label>
-        <select id="planSelect">
-          <option value="free">تجربة مجانية</option>
-          <option value="monthly">شهري — حتى 120 وصف/شهر</option>
-          <option value="semiannual">نصف سنوي — حتى 180 وصف/شهر</option>
-          <option value="annual">سنوي — حتى 300 وصف/شهر</option>
-        </select>
-      </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>نبرة العلامة التجارية (اختياري)</label>
+      <input type="text" id="brandTone" placeholder="مثال: فاخرة وراقية / شبابية وحماسية / عملية ومباشرة">
     </div>
     <div class="field-hint">نستخدم هذي البيانات تلقائياً في كل توليد (فردي أو جماعي) بدون ما تعيد كتابتها كل مرة. النبرة محفوظة في هذا المتصفح فقط، فإذا استخدمت جهاز آخر بتحتاج تكتبها من جديد.</div>
   </div>
@@ -357,26 +344,21 @@
 
 <script>
 /* ==================== إعدادات عامة محفوظة محلياً ==================== */
-const PLAN_CAPS = { free: 10, monthly: 120, semiannual: 180, annual: 300 };
-const PLAN_LABELS = { free: 'تجربة مجانية', monthly: 'الشهري', semiannual: 'نصف السنوي', annual: 'السنوي' };
+const MAX_BULK_ROWS = 300; // حد أقصى ثابت للرفع الجماعي بغض النظر عن الباقة، لتجنب تحميل زائد
 
 const brandToneInput = document.getElementById('brandTone');
-const planSelect = document.getElementById('planSelect');
 const savedTag = document.getElementById('savedTag');
 
 function loadSettings(){
   brandToneInput.value = localStorage.getItem('wassaf_brandTone') || '';
-  planSelect.value = localStorage.getItem('wassaf_plan') || 'monthly';
 }
 function saveSettings(){
   localStorage.setItem('wassaf_brandTone', brandToneInput.value.trim());
-  localStorage.setItem('wassaf_plan', planSelect.value);
   savedTag.classList.add('show');
   setTimeout(() => savedTag.classList.remove('show'), 1400);
 }
 loadSettings();
 brandToneInput.addEventListener('change', saveSettings);
-planSelect.addEventListener('change', saveSettings);
 
 /* ==================== الإطار الإقناعي (توليد فردي) ==================== */
 const hints = {
@@ -558,9 +540,6 @@ csvInput.addEventListener('change', () => {
       framework: headerMap.framework !== undefined ? (r[headerMap.framework] || '').trim().toUpperCase() : ''
     })).filter(r => r.name && r.features);
 
-    const plan = planSelect.value;
-    const cap = PLAN_CAPS[plan];
-
     fileInfo.innerHTML = `<strong>${file.name}</strong> — تم العثور على ${parsedRows.length} منتج صالح.`;
 
     if(parsedRows.length === 0){
@@ -569,8 +548,8 @@ csvInput.addEventListener('change', () => {
       return;
     }
 
-    if(parsedRows.length > cap){
-      bulkErr.textContent = `ملفك فيه ${parsedRows.length} منتج، وباقتك (${PLAN_LABELS[plan]}) حدها الشهري ${cap} وصف. قسّم ملفك لدفعات أصغر أو اختر باقة أعلى من القائمة أعلاه.`;
+    if(parsedRows.length > MAX_BULK_ROWS){
+      bulkErr.textContent = `ملفك فيه ${parsedRows.length} منتج، والحد الأقصى للرفع الجماعي دفعة وحدة هو ${MAX_BULK_ROWS} منتج. قسّم ملفك لدفعات أصغر وأعد المحاولة.`;
       bulkErr.style.display = 'block';
       return;
     }
