@@ -1,3 +1,6 @@
+const { redisCommand } = require('./_redis');
+const { checkAccessCode, incrementUsage } = require('./_access');
+
 const FRAMEWORK_LABELS = {
   AIDA: 'AIDA (الانتباه ← الاهتمام ← الرغبة ← الفعل)',
   PAS: 'PAS (المشكلة ← تضخيمها ← الحل)',
@@ -103,9 +106,35 @@ module.exports = async (req, res) => {
     const price = (body.price || '').toString().trim();
     const framework = (body.framework || 'AIDA').toString().trim();
     const brandTone = (body.brandTone || '').toString().trim();
+    const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
 
     if (!productName || !features) {
       res.status(400).json({ error: 'اسم المنتج والمميزات مطلوبة' });
+      return;
+    }
+
+    if (!accessCode) {
+      res.status(401).json({ error: 'أدخل كود الوصول أول عشان تقدر تولّد', code: 'NO_ACCESS_CODE' });
+      return;
+    }
+
+    let accessCheck;
+    try {
+      accessCheck = await checkAccessCode(accessCode);
+    } catch (redisErr) {
+      res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
+      return;
+    }
+
+    if (!accessCheck.ok) {
+      if (accessCheck.reason === 'exhausted') {
+        res.status(403).json({
+          error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك أو تواصل معنا لترقية باقتك.`,
+          code: 'QUOTA_EXHAUSTED'
+        });
+      } else {
+        res.status(403).json({ error: 'كود الوصول غير صحيح، تأكد منه أو تواصل معنا', code: 'INVALID_CODE' });
+      }
       return;
     }
 
@@ -147,18 +176,31 @@ module.exports = async (req, res) => {
 
     const parsed = safeParseModelJSON(rawText);
 
+    // التوليد نجح فعلياً هنا، فالحين بس نحسبه على رصيد الكود
+    let remainingAfter = accessCheck.remaining - 1;
+    try {
+      await incrementUsage(accessCheck.usageKey);
+    } catch (incrErr) {
+      // حتى لو فشل تسجيل الاستخدام لأي سبب، ما نمنع التاجر من نتيجته اللي دفع/يستحقها
+      remainingAfter = accessCheck.remaining - 1;
+    }
+
     if (parsed && (parsed.long || parsed.short || parsed.seo)) {
       res.status(200).json({
         long: parsed.long || '',
         short: parsed.short || '',
-        seo: parsed.seo || ''
+        seo: parsed.seo || '',
+        remaining: remainingAfter,
+        cap: accessCheck.cap
       });
     } else {
       // fallback: لو المودل ما رجع JSON صحيح لأي سبب، نرجع النص كامل كوصف طويل بدل ما نفشل بالكامل
       res.status(200).json({
         long: rawText || 'ما رجع نص، جرب مرة ثانية.',
         short: '',
-        seo: ''
+        seo: '',
+        remaining: remainingAfter,
+        cap: accessCheck.cap
       });
     }
   } catch (err) {
