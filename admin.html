@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>لوحة إدارة أكواد وصّاف</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E1B2E; --ink-dim:#6B6785; --bg:#FFFFFF; --bg-raised:#F7F6FB;
+    --line:#E7E4F0; --accent:#E94548; --accent-dim:#FDEBEB; --good:#16A34A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',sans-serif;min-height:100vh;}
+  .wrap{max-width:520px;margin:0 auto;padding:40px 24px 80px;}
+  h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:22px;margin:0 0 8px;}
+  .sub{color:var(--ink-dim);font-size:13px;margin-bottom:28px;}
+  label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
+  input, select{
+    width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;margin-bottom:16px;
+  }
+  input:focus, select:focus{outline:none;border-color:var(--accent);}
+  button{
+    width:100%;background:var(--accent);color:#fff;border:none;padding:14px;
+    border-radius:8px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;
+  }
+  button:hover{background:#d63a3d;}
+  button:disabled{background:var(--line);color:var(--ink-dim);cursor:not-allowed;}
+  .result{margin-top:24px;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:20px;display:none;}
+  .result.show{display:block;}
+  .result-code{font-family:monospace;font-size:28px;font-weight:900;color:var(--accent);text-align:center;letter-spacing:4px;padding:16px 0;}
+  .result-note{font-size:13px;color:var(--ink-dim);text-align:center;}
+  .copy-btn{width:100%;margin-top:12px;background:var(--bg);border:1px solid var(--accent);color:var(--accent);padding:10px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .err{color:#E8664A;font-size:13px;margin-top:10px;display:none;}
+  .lock-screen{max-width:340px;margin:80px auto;text-align:center;}
+  .lock-screen input{margin-bottom:12px;}
+  .quick-caps{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .quick-cap-btn{flex:1;min-width:70px;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink-dim);padding:8px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;}
+  .quick-cap-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="lockWrap">
+  <div class="lock-screen">
+    <h1>لوحة إدارة وصّاف</h1>
+    <div class="sub">أدخل كلمة السر الإدارية للمتابعة</div>
+    <input type="password" id="adminPass" placeholder="كلمة السر الإدارية">
+    <button id="unlockBtn">دخول</button>
+    <div class="err" id="lockErr"></div>
+  </div>
+</div>
+
+<div class="wrap" id="mainWrap" style="display:none;">
+  <h1>إنشاء كود وصول جديد</h1>
+  <div class="sub">كل كود مرتبط بحد أقصى شهري لعدد الأوصاف اللي يقدر التاجر يولّدها.</div>
+
+  <label>الحد الأقصى الشهري</label>
+  <div class="quick-caps">
+    <button type="button" class="quick-cap-btn" data-cap="10">10 (تجربة)</button>
+    <button type="button" class="quick-cap-btn" data-cap="39">39 (أسبوعي)</button>
+    <button type="button" class="quick-cap-btn" data-cap="120">120 (شهري)</button>
+    <button type="button" class="quick-cap-btn" data-cap="180">180 (نصف سنوي)</button>
+    <button type="button" class="quick-cap-btn active" data-cap="300">300 (سنوي)</button>
+  </div>
+  <input type="number" id="capInput" placeholder="أو اكتب رقم مخصص" value="300">
+
+  <label>وصف الباقة (للتوثيق الداخلي فقط، اختياري)</label>
+  <input type="text" id="planInput" placeholder="مثال: عميل حملة يوليو - إنستقرام">
+
+  <label>كود مخصص (اختياري — اتركه فاضي ليتولد تلقائياً)</label>
+  <input type="text" id="customCodeInput" placeholder="مثال: AHMED10">
+
+  <button id="createBtn">أنشئ الكود</button>
+  <div class="err" id="createErr"></div>
+
+  <div class="result" id="resultBox">
+    <div class="result-note">الكود جاهز — أرسله للتاجر:</div>
+    <div class="result-code" id="resultCode"></div>
+    <div class="result-note" id="resultDetail"></div>
+    <button class="copy-btn" id="copyBtn">نسخ الكود</button>
+  </div>
+</div>
+
+<script>
+let adminSecret = '';
+
+document.getElementById('unlockBtn').addEventListener('click', async () => {
+  const pass = document.getElementById('adminPass').value.trim();
+  const lockErr = document.getElementById('lockErr');
+  lockErr.style.display = 'none';
+
+  if(!pass){
+    lockErr.textContent = 'أدخل كلمة السر';
+    lockErr.style.display = 'block';
+    return;
+  }
+
+  // نتحقق من كلمة السر عبر نقطة تحقق مخصصة، بدون أي كتابة لقاعدة البيانات
+  try{
+    const res = await fetch('/api/verify-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminSecret: pass })
+    });
+    const data = await res.json();
+    if(!data.ok){
+      lockErr.textContent = 'كلمة السر غير صحيحة';
+      lockErr.style.display = 'block';
+      return;
+    }
+    adminSecret = pass;
+    document.getElementById('lockWrap').style.display = 'none';
+    document.getElementById('mainWrap').style.display = 'block';
+  }catch(e){
+    lockErr.textContent = 'صار خطأ، جرب مرة ثانية';
+    lockErr.style.display = 'block';
+  }
+});
+
+document.getElementById('adminPass').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') document.getElementById('unlockBtn').click();
+});
+
+document.querySelectorAll('.quick-cap-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.quick-cap-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('capInput').value = btn.dataset.cap;
+  });
+});
+
+document.getElementById('createBtn').addEventListener('click', async () => {
+  const cap = document.getElementById('capInput').value;
+  const plan = document.getElementById('planInput').value.trim();
+  const customCode = document.getElementById('customCodeInput').value.trim();
+  const createErr = document.getElementById('createErr');
+  const resultBox = document.getElementById('resultBox');
+  const createBtn = document.getElementById('createBtn');
+
+  createErr.style.display = 'none';
+
+  if(!cap || parseInt(cap) <= 0){
+    createErr.textContent = 'حدد حد أقصى صحيح';
+    createErr.style.display = 'block';
+    return;
+  }
+
+  createBtn.disabled = true;
+  createBtn.textContent = 'جاري الإنشاء...';
+
+  try{
+    const res = await fetch('/api/create-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminSecret, cap: parseInt(cap), plan, code: customCode })
+    });
+    const data = await res.json();
+
+    if(!res.ok){
+      createErr.textContent = data.error || 'صار خطأ أثناء الإنشاء';
+      createErr.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('resultCode').textContent = data.code;
+    document.getElementById('resultDetail').textContent = `الحد الأقصى: ${data.cap} وصف/شهر${plan ? ' — ' + plan : ''}`;
+    resultBox.classList.add('show');
+  }catch(e){
+    createErr.textContent = 'صار خطأ أثناء الإنشاء، جرب مرة ثانية';
+    createErr.style.display = 'block';
+  }finally{
+    createBtn.disabled = false;
+    createBtn.textContent = 'أنشئ الكود';
+  }
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const code = document.getElementById('resultCode').textContent;
+  navigator.clipboard.writeText(code);
+  const btn = document.getElementById('copyBtn');
+  const old = btn.textContent;
+  btn.textContent = 'تم النسخ ✓';
+  setTimeout(() => btn.textContent = old, 1500);
+});
+</script>
+</body>
+</html>

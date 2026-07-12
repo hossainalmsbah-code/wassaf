@@ -219,6 +219,17 @@
 
   <div class="section-sub" id="tool" style="margin-top:56px;">أدخل بيانات منتجك واحصل على وصف طويل، ونسخة قصيرة للسوشال ميديا، ووصف SEO — بضغطة وحدة.</div>
 
+  <div class="settings-box" id="accessBox">
+    <div class="settings-title">
+      كود الوصول <span class="saved-tag" id="accessSavedTag">تم الحفظ ✓</span>
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>أدخل كود الوصول اللي أرسلناه لك</label>
+      <input type="text" id="accessCodeInput" placeholder="مثال: AB12CD" style="text-transform:uppercase;">
+    </div>
+    <div class="field-hint" id="accessStatus">ما عندك كود؟ راسلنا على واتساب وخلّك أول من يجرب وصّاف.</div>
+  </div>
+
   <div class="settings-box">
     <div class="settings-title">
       إعدادات عامة (تُحفظ في متصفحك تلقائياً) <span class="saved-tag" id="savedTag">تم الحفظ ✓</span>
@@ -360,6 +371,72 @@ function saveSettings(){
 loadSettings();
 brandToneInput.addEventListener('change', saveSettings);
 
+/* ==================== كود الوصول ==================== */
+const accessCodeInput = document.getElementById('accessCodeInput');
+const accessStatus = document.getElementById('accessStatus');
+const accessSavedTag = document.getElementById('accessSavedTag');
+
+let accessCodeValid = false; // هل آخر تحقق كان ناجح؟ (نستخدمه قبل أي توليد)
+
+function setAccessStatus(message, kind){
+  accessStatus.textContent = message;
+  accessStatus.style.color = kind === 'ok' ? 'var(--good)' : (kind === 'error' ? '#E8664A' : 'var(--ink-dim)');
+}
+
+async function validateAccessCode(code, { silent } = {}){
+  if(!code){
+    accessCodeValid = false;
+    setAccessStatus('ما عندك كود؟ راسلنا وخلّك أول من يجرب وصّاف.', 'muted');
+    return;
+  }
+  if(!silent) setAccessStatus('جاري التحقق من الكود...', 'muted');
+  try{
+    const res = await fetch('/api/check-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode: code })
+    });
+    const data = await res.json();
+    if(data.valid){
+      accessCodeValid = true;
+      setAccessStatus(`✓ كود صحيح — تبقى لك ${data.remaining} من ${data.cap} وصف هذا الشهر`, 'ok');
+    }else{
+      accessCodeValid = false;
+      setAccessStatus(data.message || 'كود غير صحيح', 'error');
+    }
+  }catch(e){
+    accessCodeValid = false;
+    setAccessStatus('تعذر التحقق من الكود الآن، جرب مرة ثانية', 'error');
+  }
+}
+
+function loadAccessCode(){
+  const saved = localStorage.getItem('wassaf_accessCode') || '';
+  accessCodeInput.value = saved;
+  if(saved) validateAccessCode(saved, { silent: true });
+  else setAccessStatus('ما عندك كود؟ راسلنا وخلّك أول من يجرب وصّاف.', 'muted');
+}
+loadAccessCode();
+
+accessCodeInput.addEventListener('change', () => {
+  const code = accessCodeInput.value.trim().toUpperCase();
+  accessCodeInput.value = code;
+  localStorage.setItem('wassaf_accessCode', code);
+  accessSavedTag.classList.add('show');
+  setTimeout(() => accessSavedTag.classList.remove('show'), 1400);
+  validateAccessCode(code);
+});
+
+function getStoredAccessCode(){
+  return (localStorage.getItem('wassaf_accessCode') || '').trim().toUpperCase();
+}
+
+function updateAccessStatusAfterGenerate(remaining, cap){
+  if(typeof remaining === 'number' && typeof cap === 'number'){
+    setAccessStatus(`✓ كود صحيح — تبقى لك ${remaining} من ${cap} وصف هذا الشهر`, 'ok');
+  }
+}
+
 /* ==================== الإطار الإقناعي (توليد فردي) ==================== */
 const hints = {
   AIDA: "الانتباه ← الاهتمام ← الرغبة ← الفعل. الأنسب للمنتجات اللي تحتاج تلفت النظر أول.",
@@ -389,22 +466,24 @@ document.querySelectorAll('.copy-btn').forEach(btn => {
 
 /* ==================== استدعاء واجهة التوليد ==================== */
 async function callGenerate({ productName, audience, features, price, framework, brandTone }){
+  const accessCode = getStoredAccessCode();
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productName, audience, features, price, framework, brandTone })
+    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode })
   });
+  const data = await response.json();
   if(!response.ok){
-    let message = 'صار خطأ أثناء التوليد، جرب مرة ثانية';
-    try{
-      const errData = await response.json();
-      if(errData && errData.error) message = errData.error;
-    }catch(e){ /* تجاهل لو الرد مو JSON */ }
+    const message = (data && data.error) || 'صار خطأ أثناء التوليد، جرب مرة ثانية';
     const err = new Error(message);
     err.userMessage = message;
+    err.code = data && data.code;
     throw err;
   }
-  return response.json();
+  if(typeof data.remaining === 'number'){
+    updateAccessStatusAfterGenerate(data.remaining, data.cap);
+  }
+  return data;
 }
 
 /* ==================== توليد فردي ==================== */
@@ -428,6 +507,13 @@ document.getElementById('goBtn').addEventListener('click', async () => {
   if(!productName || !features){
     errBox.textContent = 'عبّي اسم المنتج والمميزات على الأقل';
     errBox.style.display = 'block';
+    return;
+  }
+
+  if(!getStoredAccessCode()){
+    errBox.textContent = 'أدخل كود الوصول بالصندوق فوق قبل ما تقدر تولّد';
+    errBox.style.display = 'block';
+    accessCodeInput.focus();
     return;
   }
 
@@ -575,16 +661,25 @@ document.getElementById('tmplBtn').addEventListener('click', () => {
 });
 
 /* ==================== رفع جماعي: التنفيذ بالتوازي المحدود ==================== */
+let bulkAborted = false;
+let bulkAbortReason = '';
+
 async function runWithConcurrency(items, limit, worker, onEach){
   const results = new Array(items.length);
   let idx = 0;
   async function next(){
     while(idx < items.length){
+      if(bulkAborted) return;
       const current = idx++;
       try{
         results[current] = await worker(items[current], current);
       }catch(e){
-        results[current] = { error: true };
+        results[current] = { error: true, message: e.userMessage };
+        // لو خلص رصيد الكود، نوقف كل الطلبات الجاية فوراً بدل ما نكمل نحاول ونفشل صف صف
+        if(e.code === 'QUOTA_EXHAUSTED' || e.code === 'INVALID_CODE' || e.code === 'NO_ACCESS_CODE'){
+          bulkAborted = true;
+          bulkAbortReason = e.userMessage || 'توقف الرفع الجماعي بسبب مشكلة بكود الوصول';
+        }
       }
       onEach(current, results[current]);
     }
@@ -606,6 +701,13 @@ let bulkResults = [];
 bulkGoBtn.addEventListener('click', async () => {
   if(parsedRows.length === 0) return;
 
+  if(!getStoredAccessCode()){
+    bulkErr.textContent = 'أدخل كود الوصول بالصندوق فوق قبل ما تقدر تسوي رفع جماعي';
+    bulkErr.style.display = 'block';
+    accessCodeInput.focus();
+    return;
+  }
+
   bulkGoBtn.disabled = true;
   csvInput.disabled = true;
   exportBtn.style.display = 'none';
@@ -614,6 +716,9 @@ bulkGoBtn.addEventListener('click', async () => {
   progressWrap.classList.add('show');
   progressFill.style.width = '0%';
   progressText.textContent = `تم توليد 0 من ${parsedRows.length}`;
+  bulkAborted = false;
+  bulkAbortReason = '';
+  bulkErr.style.display = 'none';
 
   // إنشاء صفوف الجدول مسبقاً بحالة "بالانتظار"
   parsedRows.forEach((row, i) => {
@@ -660,6 +765,19 @@ bulkGoBtn.addEventListener('click', async () => {
       statusEl.className = 'row-status fail';
     }
   });
+
+  // أي صف ما انعالج بسبب توقف مبكر (خلص الرصيد) نعلّمه بوضوح بدل ما يضل رمز الانتظار عالق
+  if(bulkAborted){
+    parsedRows.forEach((row, i) => {
+      const statusEl = document.getElementById('status-' + i);
+      if(statusEl && statusEl.textContent === '⏳'){
+        statusEl.textContent = 'ما انعالج';
+        statusEl.className = 'row-status fail';
+      }
+    });
+    bulkErr.textContent = bulkAbortReason;
+    bulkErr.style.display = 'block';
+  }
 
   bulkGoBtn.disabled = false;
   csvInput.disabled = false;
