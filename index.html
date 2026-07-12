@@ -54,7 +54,7 @@
   .hero h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:32px;margin:0 0 12px;line-height:1.4;}
   .hero p{color:var(--ink-dim);font-size:16px;max-width:520px;margin:0 auto;line-height:1.8;}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-  @media (max-width:640px){ .grid{grid-template-columns:1fr;} .pricing{grid-template-columns:1fr 1fr !important;} }
+  @media (max-width:640px){ .grid{grid-template-columns:1fr;} .pricing{grid-template-columns:1fr 1fr !important;} .plan:last-child{grid-column:1 / -1;} }
   label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
   input[type=text], input[type=file], textarea, select{
     width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
@@ -97,7 +97,7 @@
   .ok-msg{color:var(--good);font-size:13px;margin-top:10px;display:none;}
   .section-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:20px;margin:56px 0 8px;text-align:center;}
   .section-sub{color:var(--ink-dim);font-size:13px;text-align:center;margin-bottom:28px;line-height:1.8;}
-  .pricing{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .pricing{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
   .plan{position:relative;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:18px 16px;box-shadow:0 1px 4px rgba(30,27,46,0.05);}
   .plan.featured{border-color:var(--accent);}
   .badge{position:absolute;top:-10px;right:14px;background:var(--accent);color:#1a0e14;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;}
@@ -183,6 +183,13 @@
         <div class="plan-price">0<span> ريال</span></div>
         <div class="plan-note">جرّبه مجاناً — بدون بطاقة، لفترة محدودة</div>
         <a class="plan-btn" href="#tool">جرّب الآن</a>
+      </div>
+      <div class="plan">
+        <div class="badge">جديد</div>
+        <div class="plan-name">أسبوعي</div>
+        <div class="plan-price">39<span> ريال/أسبوع</span></div>
+        <div class="plan-note">جرّبها أسبوع كامل بدون أي التزام طويل</div>
+        <a class="plan-btn" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/70302a8c-ad03-466d-9dd9-2b3cc9f35d9c" target="_blank" rel="noopener">اشترك الآن</a>
       </div>
       <div class="plan">
         <div class="badge">خصم 30%</div>
