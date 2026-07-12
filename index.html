@@ -371,6 +371,17 @@ function saveSettings(){
 loadSettings();
 brandToneInput.addEventListener('change', saveSettings);
 
+/* ==================== بصمة الجهاز (لربط كود الوصول بجهاز واحد) ==================== */
+function getOrCreateDeviceId(){
+  let id = localStorage.getItem('wassaf_deviceId');
+  if(!id){
+    id = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+    localStorage.setItem('wassaf_deviceId', id);
+  }
+  return id;
+}
+const deviceId = getOrCreateDeviceId();
+
 /* ==================== كود الوصول ==================== */
 const accessCodeInput = document.getElementById('accessCodeInput');
 const accessStatus = document.getElementById('accessStatus');
@@ -394,7 +405,7 @@ async function validateAccessCode(code, { silent } = {}){
     const res = await fetch('/api/check-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode: code })
+      body: JSON.stringify({ accessCode: code, deviceId })
     });
     const data = await res.json();
     if(data.valid){
@@ -470,7 +481,7 @@ async function callGenerate({ productName, audience, features, price, framework,
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode })
+    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId })
   });
   const data = await response.json();
   if(!response.ok){

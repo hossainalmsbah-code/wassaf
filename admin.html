@@ -83,6 +83,15 @@
     <div class="result-note" id="resultDetail"></div>
     <button class="copy-btn" id="copyBtn">نسخ الكود</button>
   </div>
+
+  <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--line);">
+    <h1 style="font-size:18px;">فك ربط كود من جهازه</h1>
+    <div class="sub">لو تاجر غيّر جهازه أو جواله، اكتب كوده هنا عشان يقدر يستخدمه من جهاز جديد.</div>
+    <input type="text" id="unbindCodeInput" placeholder="مثال: GPQJSH" style="text-transform:uppercase;">
+    <button id="unbindBtn" style="background:var(--ink-dim);">فك الربط</button>
+    <div class="err" id="unbindErr"></div>
+    <div class="result-note" id="unbindSuccess" style="display:none;color:var(--good);margin-top:10px;">تم فك الربط ✓ — الكود جاهز يُستخدم من جهاز جديد</div>
+  </div>
 </div>
 
 <script>
@@ -185,6 +194,39 @@ document.getElementById('copyBtn').addEventListener('click', () => {
   const old = btn.textContent;
   btn.textContent = 'تم النسخ ✓';
   setTimeout(() => btn.textContent = old, 1500);
+});
+
+document.getElementById('unbindBtn').addEventListener('click', async () => {
+  const code = document.getElementById('unbindCodeInput').value.trim().toUpperCase();
+  const unbindErr = document.getElementById('unbindErr');
+  const unbindSuccess = document.getElementById('unbindSuccess');
+  unbindErr.style.display = 'none';
+  unbindSuccess.style.display = 'none';
+
+  if(!code){
+    unbindErr.textContent = 'اكتب الكود أول';
+    unbindErr.style.display = 'block';
+    return;
+  }
+
+  try{
+    const res = await fetch('/api/unbind-device', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminSecret, code })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      unbindErr.textContent = data.error || 'صار خطأ';
+      unbindErr.style.display = 'block';
+      return;
+    }
+    unbindSuccess.style.display = 'block';
+    document.getElementById('unbindCodeInput').value = '';
+  }catch(e){
+    unbindErr.textContent = 'صار خطأ أثناء فك الربط، جرب مرة ثانية';
+    unbindErr.style.display = 'block';
+  }
 });
 </script>
 </body>
