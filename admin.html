@@ -161,7 +161,7 @@ document.getElementById('createBtn').addEventListener('click', async () => {
     const data = await res.json();
 
     if(!res.ok){
-      createErr.textContent = data.error || 'صار خطأ أثناء الإنشاء';
+      createErr.textContent = (data.error || 'صار خطأ أثناء الإنشاء') + (data.detail ? (' — التفاصيل: ' + data.detail) : '');
       createErr.style.display = 'block';
       return;
     }
