@@ -181,7 +181,7 @@
         <div class="plan-name">تجربة مجانية</div>
         <div class="plan-price">0<span> ريال</span></div>
         <div class="plan-note">جرّبه مجاناً — بدون بطاقة، لفترة محدودة</div>
-        <a class="plan-btn" href="#tool">جرّب الآن</a>
+        <a class="plan-btn" href="#tool" id="trialBtn">جرّب الآن</a>
       </div>
       <div class="plan">
         <div class="badge">جديد</div>
@@ -388,6 +388,9 @@ const accessStatus = document.getElementById('accessStatus');
 const accessSavedTag = document.getElementById('accessSavedTag');
 
 let accessCodeValid = false; // هل آخر تحقق كان ناجح؟ (نستخدمه قبل أي توليد)
+let currentCodeCap = null; // الحد الأقصى الشهري للكود الحالي (نستخدمه بقيد الرفع الجماعي)
+
+const BULK_MIN_CAP = 120; // الرفع الجماعي متاح بس للأكواد بحد 120 وصف فأكثر (شهري/نصف سنوي/سنوي)
 
 function setAccessStatus(message, kind){
   accessStatus.textContent = message;
@@ -397,6 +400,7 @@ function setAccessStatus(message, kind){
 async function validateAccessCode(code, { silent } = {}){
   if(!code){
     accessCodeValid = false;
+    currentCodeCap = null;
     setAccessStatus('ما عندك كود؟ راسلنا وخلّك أول من يجرب وصّاف.', 'muted');
     return;
   }
@@ -410,13 +414,16 @@ async function validateAccessCode(code, { silent } = {}){
     const data = await res.json();
     if(data.valid){
       accessCodeValid = true;
+      currentCodeCap = data.cap;
       setAccessStatus(`✓ كود صحيح — تبقى لك ${data.remaining} من ${data.cap} وصف هذا الشهر`, 'ok');
     }else{
       accessCodeValid = false;
+      currentCodeCap = null;
       setAccessStatus(data.message || 'كود غير صحيح', 'error');
     }
   }catch(e){
     accessCodeValid = false;
+    currentCodeCap = null;
     setAccessStatus('تعذر التحقق من الكود الآن، جرب مرة ثانية', 'error');
   }
 }
@@ -444,9 +451,42 @@ function getStoredAccessCode(){
 
 function updateAccessStatusAfterGenerate(remaining, cap){
   if(typeof remaining === 'number' && typeof cap === 'number'){
+    currentCodeCap = cap;
     setAccessStatus(`✓ كود صحيح — تبقى لك ${remaining} من ${cap} وصف هذا الشهر`, 'ok');
   }
 }
+
+/* ==================== زر التجربة المجانية الذاتية ==================== */
+document.getElementById('trialBtn').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const btn = e.currentTarget;
+  const oldText = btn.textContent;
+  btn.textContent = 'جاري التجهيز...';
+
+  try{
+    const res = await fetch('/api/create-trial', { method: 'POST' });
+    const data = await res.json();
+
+    if(!res.ok){
+      // لو جرّب هالشهر من قبل، ننقله للأداة ونوريه رسالة واضحة بدل ما نفشل بصمت
+      document.getElementById('tool').scrollIntoView({ behavior: 'smooth' });
+      setAccessStatus(data.error || 'تعذر إنشاء تجربة جديدة', 'error');
+      return;
+    }
+
+    // نعبّي الكود تلقائياً ونحفظه، تماماً زي لو كتبه المستخدم بنفسه
+    accessCodeInput.value = data.code;
+    localStorage.setItem('wassaf_accessCode', data.code);
+    document.getElementById('tool').scrollIntoView({ behavior: 'smooth' });
+    setAccessStatus(`✓ جاهز! تبقى لك ${data.cap} من ${data.cap} وصف بالتجربة المجانية`, 'ok');
+    accessCodeValid = true;
+    currentCodeCap = data.cap;
+  }catch(e){
+    setAccessStatus('صار خطأ أثناء إنشاء التجربة، جرب مرة ثانية', 'error');
+  }finally{
+    btn.textContent = oldText;
+  }
+});
 
 /* ==================== الإطار الإقناعي (توليد فردي) ==================== */
 const hints = {
@@ -716,6 +756,19 @@ bulkGoBtn.addEventListener('click', async () => {
     bulkErr.textContent = 'أدخل كود الوصول بالصندوق فوق قبل ما تقدر تسوي رفع جماعي';
     bulkErr.style.display = 'block';
     accessCodeInput.focus();
+    return;
+  }
+
+  if(!accessCodeValid){
+    bulkErr.textContent = 'كودك غير صالح حالياً، تأكد منه أول';
+    bulkErr.style.display = 'block';
+    accessCodeInput.focus();
+    return;
+  }
+
+  if(currentCodeCap !== null && currentCodeCap < BULK_MIN_CAP){
+    bulkErr.textContent = `الرفع الجماعي متاح بس لباقات الشهري فأعلى (حد ${BULK_MIN_CAP} وصف فأكثر). باقتك الحالية حدها ${currentCodeCap} وصف — رقّي باقتك عشان تستخدم هالميزة.`;
+    bulkErr.style.display = 'block';
     return;
   }
 

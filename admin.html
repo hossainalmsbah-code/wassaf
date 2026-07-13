@@ -70,7 +70,7 @@
   <label>الحد الأقصى الشهري</label>
   <div class="quick-caps">
     <button type="button" class="quick-cap-btn" data-cap="10">10 (تجربة)</button>
-    <button type="button" class="quick-cap-btn" data-cap="39">39 (أسبوعي)</button>
+    <button type="button" class="quick-cap-btn" data-cap="30">30 (أسبوعي)</button>
     <button type="button" class="quick-cap-btn" data-cap="120">120 (شهري)</button>
     <button type="button" class="quick-cap-btn" data-cap="180">180 (نصف سنوي)</button>
     <button type="button" class="quick-cap-btn active" data-cap="300">300 (سنوي)</button>
@@ -97,6 +97,15 @@
     <h1 style="font-size:18px;">أكواد جديدة من الاشتراكات (بانتظار الإرسال) <span id="pendingCount" style="color:var(--accent);"></span></h1>
     <div class="sub">أي اشتراك جديد يوصل تلقائياً عبر Lemon Squeezy يطلع هنا — انسخ الكود وأرسله للتاجر، وبعدها اضغط "تم الإرسال".</div>
     <div id="pendingList"></div>
+  </div>
+
+  <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--line);">
+    <h1 style="font-size:18px;">فك حظر شبكة من التجربة المجانية</h1>
+    <div class="sub">لو تاجر تواصل معك ويقول "التجربة المجانية ما تشتغل" رغم إنه أول مرة يستخدمها فعلياً (زي شبكة مكتب فيها أكثر من تاجر)، اطلب منه عنوان IP الخاص فيه وحطه هنا.</div>
+    <input type="text" id="resetIpInput" placeholder="مثال: 85.1.2.3">
+    <button id="resetIpBtn" style="background:var(--ink-dim);">فك الحظر</button>
+    <div class="err" id="resetIpErr"></div>
+    <div class="result-note" id="resetIpSuccess" style="display:none;color:var(--good);margin-top:10px;">تم فك الحظر ✓ — تقدر الشبكة تاخذ تجربة مجانية جديدة</div>
   </div>
 
   <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--line);">
@@ -210,6 +219,39 @@ document.getElementById('copyBtn').addEventListener('click', () => {
   const old = btn.textContent;
   btn.textContent = 'تم النسخ ✓';
   setTimeout(() => btn.textContent = old, 1500);
+});
+
+document.getElementById('resetIpBtn').addEventListener('click', async () => {
+  const ip = document.getElementById('resetIpInput').value.trim();
+  const resetIpErr = document.getElementById('resetIpErr');
+  const resetIpSuccess = document.getElementById('resetIpSuccess');
+  resetIpErr.style.display = 'none';
+  resetIpSuccess.style.display = 'none';
+
+  if(!ip){
+    resetIpErr.textContent = 'اكتب عنوان الشبكة (IP) أول';
+    resetIpErr.style.display = 'block';
+    return;
+  }
+
+  try{
+    const res = await fetch('/api/reset-trial-ip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminSecret, ip })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      resetIpErr.textContent = data.error || 'صار خطأ';
+      resetIpErr.style.display = 'block';
+      return;
+    }
+    resetIpSuccess.style.display = 'block';
+    document.getElementById('resetIpInput').value = '';
+  }catch(e){
+    resetIpErr.textContent = 'صار خطأ أثناء فك الحظر، جرب مرة ثانية';
+    resetIpErr.style.display = 'block';
+  }
 });
 
 document.getElementById('unbindBtn').addEventListener('click', async () => {
