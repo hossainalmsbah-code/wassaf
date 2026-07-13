@@ -17,7 +17,7 @@ function capFromVariantName(name) {
   if (n.includes('نصف')) return { cap: 180, plan: 'نصف سنوي' };
   if (n.includes('سنوي')) return { cap: 300, plan: 'سنوي' };
   if (n.includes('شهري')) return { cap: 120, plan: 'شهري' };
-  if (n.includes('أسبوع') || n.includes('اسبوع')) return { cap: 39, plan: 'أسبوعي' };
+  if (n.includes('أسبوع') || n.includes('اسبوع')) return { cap: 30, plan: 'أسبوعي' };
   if (n.includes('تجرب')) return { cap: 10, plan: 'تجربة' };
   return null;
 }
