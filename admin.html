@@ -327,6 +327,12 @@ async function loadPendingCodes(){
             </div>
           </div>`;
       }
+      const emailStatusHtml = item.emailSent
+        ? '<div class="meta" style="color:var(--good);">✓ اتبعث تلقائياً بالإيميل</div>'
+        : item.email
+          ? '<div class="meta" style="color:#E8664A;">⚠ فشل الإرسال التلقائي — أرسله يدوياً</div>'
+          : '<div class="meta" style="color:#E8664A;">⚠ ما فيه إيميل، أرسله يدوياً</div>';
+
       return `
         <div class="pending-item">
           <div class="top-row">
@@ -334,6 +340,7 @@ async function loadPendingCodes(){
             <span class="meta">${escapeHTML(item.plan)} — حد ${item.cap} وصف/شهر</span>
           </div>
           <div class="meta">الإيميل: ${escapeHTML(item.email) || 'غير متوفر'}</div>
+          ${emailStatusHtml}
           <div class="actions">
             <button onclick="copyPendingCode('${item.code}', this)">نسخ الكود</button>
             <button class="sent-btn" onclick="markSent('${item.id}')">تم الإرسال</button>
