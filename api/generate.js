@@ -2,32 +2,63 @@ const { redisCommand } = require('./_redis');
 const { checkAccessCode, incrementUsage } = require('./_access');
 
 const FRAMEWORK_LABELS = {
-  AIDA: 'AIDA (الانتباه ← الاهتمام ← الرغبة ← الفعل)',
-  PAS: 'PAS (المشكلة ← تضخيمها ← الحل)',
-  BAB: 'BAB (قبل ← بعد ← الجسر)'
+  AIDA: 'AIDA (الانتباه ← الاهتمام ← الرغبة ← الفعل) — الأنسب للمنتجات العاطفية ولايف ستايل (عطور، إكسسوارات، هدايا)',
+  PAS: 'PAS (المشكلة ← تضخيمها ← الحل) — الأنسب للمنتجات اللي تحل مشكلة وظيفية (أدوات، حلول تقنية، منتجات صحية)',
+  BAB: 'BAB (قبل ← بعد ← الجسر) — الأنسب للمنتجات اللي تحسّن حالة حالية (تجميل، لياقة، تنظيم)'
 };
 
+const SYSTEM_PROMPT = `أنت كاتب محتوى تسويقي متخصص في التجارة الإلكترونية الخليجية، تكتب أوصاف منتجات تحوّل الزائر لمشتري.
+
+# قواعد اللهجة (إلزامية)
+اكتب بلهجة خليجية بيضاء: دافئة ومحلية لكن مفهومة لكل دول الخليج بنفس السهولة.
+- تجنب المصطلحات الإقليمية الضيقة (كلمات خاصة بلهجة سعودية أو إماراتية أو كويتية فقط)
+- تجنب الفصحى الجافة الرسمية
+- تجنب العامية الثقيلة أو السوقية
+- استخدم عبارات مثل: "يوفر لك"، "يخليك"، "تحس فيه"، "مصمم يناسب"، "يعطيك"
+- الجمل قصيرة ومباشرة، مو طويلة ومعقدة
+- لا تستخدم أي كلمات إنجليزية إلا لو ضرورية لاسم تقني
+
+# البنية الإلزامية لكل نسخة من الوصف الطويل (بغض النظر عن الإطار المستخدم)
+1. Hook (سطر واحد): جملة افتتاحية تلقط الانتباه أول 3 ثواني، لا تبدأ بـ"هذا المنتج" أو "يتميز بـ"
+2. المشكلة أو الرغبة (2-3 أسطر): تلمس ألم أو طموح حقيقي للعميل المستهدف
+3. الحل (3-5 نقاط أو أسطر): حوّل كل خاصية تقنية لفائدة ملموسة (مثال: بدل "قماش قطني 100%" اكتب "يعطيك راحة تدوم طول اليوم بفضل خامته الطبيعية")
+4. دليل/ثقة (سطر، اختياري حسب توفر البيانات): مواصفة دقيقة أو رقم يبني ثقة
+5. CTA (سطر واحد): دعوة فعل تناسب طبيعة المنتج، مو دايماً "اشتري الآن"، نوّع حسب السياق`;
+
+function buildFrameworkInstruction(framework) {
+  if (framework === 'AUTO' || !FRAMEWORK_LABELS[framework]) {
+    return `اختر أنت الإطار الأنسب لهذا المنتج تحديداً من بين الثلاثة التالية حسب طبيعته، وطبّقه على الزاويتين الاثنتين:
+- ${FRAMEWORK_LABELS.AIDA}
+- ${FRAMEWORK_LABELS.PAS}
+- ${FRAMEWORK_LABELS.BAB}`;
+  }
+  return `استخدم إطار ${FRAMEWORK_LABELS[framework]} بالضبط للزاويتين الاثنتين.`;
+}
+
 function buildPrompt({ productName, audience, features, price, framework, brandTone }) {
-  const fwKey = FRAMEWORK_LABELS[framework] ? framework : 'AIDA';
-  const fwLabel = FRAMEWORK_LABELS[fwKey];
+  const frameworkInstruction = buildFrameworkInstruction(framework);
 
-  return `اكتب أوصاف منتج تسويقية احترافية باللهجة السعودية/الخليجية البيضاء المناسبة للتجارة الإلكترونية، باستخدام إطار ${fwLabel} بالضبط.
+  const user = `# بروفايل صوت المتجر
+${brandTone ? brandTone : 'ما فيه تفضيل محدد — اختر نبرة مناسبة لطبيعة المنتج والجمهور.'}
 
+# اختيار الإطار
+${frameworkInstruction}
+
+# بيانات المنتج
 اسم المنتج: ${productName}
 الجمهور المستهدف: ${audience || 'عام'}
-المميزات: ${features}
+الخصائص المُدخلة: ${features}
 ${price ? 'السعر: ' + price : ''}
-${brandTone ? 'نبرة العلامة التجارية المطلوبة: ' + brandTone : ''}
 
-المطلوب منك ثلاث نسخ مختلفة من الوصف:
-1. "long": وصف كامل جاهز للنشر مباشرة في صفحة منتج بمتجر إلكتروني، بفقرات قصيرة وسطور نقطية إن لزم، يطبّق إطار ${fwKey} بوضوح.
-2. "short": نسخة مختصرة جداً (سطرين إلى ثلاثة كحد أقصى) تصلح كابشن إنستقرام أو نص إعلان قصير، بنفس نبرة المنتج.
-3. "seo": جملة واحدة قصيرة (لا تتجاوز 160 حرف) محسّنة لظهور المنتج في نتائج جوجل، تتضمن اسم المنتج وأهم ميزة فيه.
+# المطلوب منك بالضبط
+1. "long_variants": مصفوفة فيها نسختين مختلفتين فعلياً من الوصف الطويل (مو نفس الصياغة بكلمات مرادفة، بل زاويتين مختلفتين حقيقة — مثلاً وحدة تركز على المشكلة والحل، والثانية تركز على تحسين الحالة أو تجربة الاستخدام). كل نسخة تتبع البنية الإلزامية كاملة وجاهزة للنشر مباشرة بصفحة منتج.
+2. "short": نسخة مختصرة جداً (سطرين إلى ثلاثة كحد أقصى) تصلح كابشن إنستقرام أو نص إعلان قصير.
+3. "seo": جملة واحدة قصيرة (لا تتجاوز 160 حرف) محسّنة لظهور المنتج بجوجل، تتضمن اسم المنتج وأهم ميزة فيه.
 
 مهم جداً: أجب فقط بكائن JSON صحيح وخام بدون أي شيء آخر — بدون علامات كود، بدون شرح، بدون مقدمة. الصيغة يجب أن تكون بالضبط:
-{"long":"...","short":"...","seo":"..."}
+{"long_variants":["...","..."],"short":"...","seo":"..."}`;
 
-لا تستخدم أي كلمات إنجليزية داخل النصوص الثلاثة إلا لو ضرورية لاسم تقني.`;
+  return { system: SYSTEM_PROMPT, user };
 }
 
 function safeParseModelJSON(text) {
@@ -150,13 +181,14 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const prompt = buildPrompt({ productName, audience, features, price, framework, brandTone });
+    const { system, user } = buildPrompt({ productName, audience, features, price, framework, brandTone });
 
     const anthropicResponse = await callAnthropicWithRetry(
       {
         model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
-        messages: [{ role: 'user', content: prompt }]
+        max_tokens: 2000,
+        system,
+        messages: [{ role: 'user', content: user }]
       },
       apiKey
     );
@@ -191,18 +223,25 @@ module.exports = async (req, res) => {
       remainingAfter = accessCheck.remaining - 1;
     }
 
-    if (parsed && (parsed.long || parsed.short || parsed.seo)) {
+    const longVariants = Array.isArray(parsed && parsed.long_variants)
+      ? parsed.long_variants.filter((v) => typeof v === 'string' && v.trim())
+      : [];
+
+    if (longVariants.length > 0 || (parsed && (parsed.short || parsed.seo))) {
       res.status(200).json({
-        long: parsed.long || '',
-        short: parsed.short || '',
-        seo: parsed.seo || '',
+        long_variants: longVariants,
+        long: longVariants[0] || '', // للتوافق مع أي كود قديم لسا يتوقع حقل long وحيد
+        short: (parsed && parsed.short) || '',
+        seo: (parsed && parsed.seo) || '',
         remaining: remainingAfter,
         cap: accessCheck.cap
       });
     } else {
-      // fallback: لو المودل ما رجع JSON صحيح لأي سبب، نرجع النص كامل كوصف طويل بدل ما نفشل بالكامل
+      // fallback: لو المودل ما رجع JSON صحيح لأي سبب، نرجع النص كامل كزاوية وحيدة بدل ما نفشل بالكامل
+      const fallbackText = rawText || 'ما رجع نص، جرب مرة ثانية.';
       res.status(200).json({
-        long: rawText || 'ما رجع نص، جرب مرة ثانية.',
+        long_variants: [fallbackText],
+        long: fallbackText,
         short: '',
         seo: '',
         remaining: remainingAfter,
