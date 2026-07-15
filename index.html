@@ -273,6 +273,15 @@
     <div class="fw-hint" id="fwHint">الأداة تحلل نوع منتجك وتختار أنسب إطار إقناعي له تلقائياً.</div>
   </div>
 
+  <div class="field">
+    <label>أسلوب الكتابة</label>
+    <div class="frameworks" id="styleButtons">
+      <button class="fw-btn" data-style="COLLOQUIAL">عامي (لهجة خليجية)</button>
+      <button class="fw-btn active" data-style="FORMAL">فصحى (رسمية)</button>
+    </div>
+    <div class="fw-hint" id="styleHint">فصحى معاصرة سلسة واحترافية — مناسبة للمنتجات الفاخرة أو الجمهور الرسمي.</div>
+  </div>
+
   <button class="go" id="goBtn">ولّد الأوصاف</button>
   <div class="err" id="errBox"></div>
 
@@ -496,13 +505,31 @@ const hints = {
   PAS: "المشكلة ← تضخيمها ← الحل. مثالي للمنتجات اللي تحل ألم واضح عند العميل.",
   BAB: "قبل ← بعد ← الجسر. يبني تصوّر لحياة العميل بعد استخدام المنتج."
 };
-document.querySelectorAll('.fw-btn').forEach(btn => {
+document.querySelectorAll('#frameworks .fw-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.fw-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#frameworks .fw-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('fwHint').textContent = hints[btn.dataset.fw];
   });
 });
+
+/* ==================== أسلوب الكتابة (عامي / فصيح) ==================== */
+const styleHints = {
+  COLLOQUIAL: "لهجة خليجية بيضاء دافئة ومباشرة — مناسبة لأغلب المتاجر.",
+  FORMAL: "فصحى معاصرة سلسة واحترافية — مناسبة للمنتجات الفاخرة أو الجمهور الرسمي."
+};
+document.querySelectorAll('#styleButtons .fw-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#styleButtons .fw-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('styleHint').textContent = styleHints[btn.dataset.style];
+  });
+});
+
+function getSelectedStyle(){
+  const activeBtn = document.querySelector('#styleButtons .fw-btn.active');
+  return activeBtn ? activeBtn.dataset.style : 'FORMAL';
+}
 
 /* ==================== نسخ النص ==================== */
 document.querySelectorAll('.copy-btn').forEach(btn => {
@@ -518,12 +545,12 @@ document.querySelectorAll('.copy-btn').forEach(btn => {
 });
 
 /* ==================== استدعاء واجهة التوليد ==================== */
-async function callGenerate({ productName, audience, features, price, framework, brandTone }){
+async function callGenerate({ productName, audience, features, price, framework, brandTone, style }){
   const accessCode = getStoredAccessCode();
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId })
+    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId, style })
   });
   const data = await response.json();
   if(!response.ok){
@@ -545,7 +572,8 @@ document.getElementById('goBtn').addEventListener('click', async () => {
   const audience = document.getElementById('audience').value.trim();
   const features = document.getElementById('features').value.trim();
   const price = document.getElementById('price').value.trim();
-  const framework = document.querySelector('.fw-btn.active').dataset.fw;
+  const framework = document.querySelector('#frameworks .fw-btn.active').dataset.fw;
+  const style = getSelectedStyle();
   const brandTone = brandToneInput.value.trim();
 
   const errBox = document.getElementById('errBox');
@@ -578,7 +606,7 @@ document.getElementById('goBtn').addEventListener('click', async () => {
   outputSeo.textContent = '';
 
   try{
-    const data = await callGenerate({ productName, audience, features, price, framework, brandTone });
+    const data = await callGenerate({ productName, audience, features, price, framework, brandTone, style });
     outputLong.textContent = data.long || 'ما رجع نص، جرب مرة ثانية.';
     outputShort.textContent = data.short || '—';
     outputSeo.textContent = data.seo || '—';
@@ -801,17 +829,19 @@ bulkGoBtn.addEventListener('click', async () => {
   });
 
   const globalBrandTone = brandToneInput.value.trim();
+  const globalStyle = getSelectedStyle();
   let done = 0;
 
   bulkResults = await runWithConcurrency(parsedRows, 3, async (row) => {
-    const framework = ['AIDA','PAS','BAB'].includes(row.framework) ? row.framework : (document.querySelector('.fw-btn.active').dataset.fw);
+    const framework = ['AIDA','PAS','BAB'].includes(row.framework) ? row.framework : (document.querySelector('#frameworks .fw-btn.active').dataset.fw);
     const data = await callGenerate({
       productName: row.name,
       audience: row.audience,
       features: row.features,
       price: row.price,
       framework,
-      brandTone: globalBrandTone
+      brandTone: globalBrandTone,
+      style: globalStyle
     });
     return { name: row.name, long: data.long || '', short: data.short || '', seo: data.seo || '' };
   }, (i, result) => {
