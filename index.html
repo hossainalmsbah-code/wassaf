@@ -265,11 +265,12 @@
   <div class="field">
     <label>الإطار الإقناعي</label>
     <div class="frameworks" id="frameworks">
-      <button class="fw-btn active" data-fw="AIDA">AIDA</button>
+      <button class="fw-btn active" data-fw="AUTO">تلقائي (الأداة تختار)</button>
+      <button class="fw-btn" data-fw="AIDA">AIDA</button>
       <button class="fw-btn" data-fw="PAS">PAS</button>
       <button class="fw-btn" data-fw="BAB">BAB</button>
     </div>
-    <div class="fw-hint" id="fwHint">الانتباه ← الاهتمام ← الرغبة ← الفعل. الأنسب للمنتجات اللي تحتاج تلفت النظر أول.</div>
+    <div class="fw-hint" id="fwHint">الأداة تحلل نوع منتجك وتختار أنسب إطار إقناعي له تلقائياً.</div>
   </div>
 
   <button class="go" id="goBtn">ولّد الأوصاف</button>
@@ -278,10 +279,17 @@
   <div class="result" id="resultBox">
     <div class="result-block">
       <div class="result-head">
-        <div class="label">الوصف الطويل — لصفحة المنتج</div>
-        <button class="copy-btn" data-target="outputLong">نسخ النص</button>
+        <div class="label">الزاوية الأولى — لصفحة المنتج</div>
+        <button class="copy-btn" data-target="outputLong1">نسخ النص</button>
       </div>
-      <div class="output" id="outputLong"></div>
+      <div class="output" id="outputLong1"></div>
+    </div>
+    <div class="result-block">
+      <div class="result-head">
+        <div class="label">الزاوية الثانية — لصفحة المنتج</div>
+        <button class="copy-btn" data-target="outputLong2">نسخ النص</button>
+      </div>
+      <div class="output" id="outputLong2"></div>
     </div>
     <div class="result-block">
       <div class="result-head">
@@ -333,7 +341,8 @@
           <tr>
             <th>الحالة</th>
             <th>اسم المنتج</th>
-            <th>الوصف الطويل</th>
+            <th>الزاوية الأولى</th>
+            <th>الزاوية الثانية</th>
             <th>الوصف القصير</th>
             <th>SEO</th>
           </tr>
@@ -490,6 +499,7 @@ document.getElementById('trialBtn').addEventListener('click', async (e) => {
 
 /* ==================== الإطار الإقناعي (توليد فردي) ==================== */
 const hints = {
+  AUTO: "الأداة تحلل نوع منتجك وتختار أنسب إطار إقناعي له تلقائياً.",
   AIDA: "الانتباه ← الاهتمام ← الرغبة ← الفعل. الأنسب للمنتجات اللي تحتاج تلفت النظر أول.",
   PAS: "المشكلة ← تضخيمها ← الحل. مثالي للمنتجات اللي تحل ألم واضح عند العميل.",
   BAB: "قبل ← بعد ← الجسر. يبني تصوّر لحياة العميل بعد استخدام المنتج."
@@ -548,7 +558,8 @@ document.getElementById('goBtn').addEventListener('click', async () => {
 
   const errBox = document.getElementById('errBox');
   const resultBox = document.getElementById('resultBox');
-  const outputLong = document.getElementById('outputLong');
+  const outputLong1 = document.getElementById('outputLong1');
+  const outputLong2 = document.getElementById('outputLong2');
   const outputShort = document.getElementById('outputShort');
   const outputSeo = document.getElementById('outputSeo');
   const goBtn = document.getElementById('goBtn');
@@ -571,19 +582,22 @@ document.getElementById('goBtn').addEventListener('click', async () => {
   goBtn.disabled = true;
   goBtn.textContent = 'جاري التوليد...';
   resultBox.classList.add('show');
-  outputLong.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> يكتب الأوصاف الآن</div>';
+  outputLong1.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> يكتب الأوصاف الآن</div>';
+  outputLong2.textContent = '';
   outputShort.textContent = '';
   outputSeo.textContent = '';
 
   try{
     const data = await callGenerate({ productName, audience, features, price, framework, brandTone });
-    outputLong.textContent = data.long || 'ما رجع نص، جرب مرة ثانية.';
+    const variants = Array.isArray(data.long_variants) ? data.long_variants : [data.long].filter(Boolean);
+    outputLong1.textContent = variants[0] || 'ما رجع نص، جرب مرة ثانية.';
+    outputLong2.textContent = variants[1] || variants[0] || '—';
     outputShort.textContent = data.short || '—';
     outputSeo.textContent = data.seo || '—';
   }catch(e){
     errBox.textContent = e.userMessage || 'صار خطأ أثناء التوليد، جرب مرة ثانية';
     errBox.style.display = 'block';
-    outputLong.textContent = '';
+    outputLong1.textContent = '';
   }finally{
     goBtn.disabled = false;
     goBtn.textContent = 'ولّد الأوصاف';
@@ -791,7 +805,8 @@ bulkGoBtn.addEventListener('click', async () => {
     tr.innerHTML = `
       <td><span class="row-status" id="status-${i}">⏳</span></td>
       <td>${escapeHTML(row.name)}</td>
-      <td class="cell-text" id="long-${i}">—</td>
+      <td class="cell-text" id="long1-${i}">—</td>
+      <td class="cell-text" id="long2-${i}">—</td>
       <td class="cell-text" id="short-${i}">—</td>
       <td class="cell-text" id="seo-${i}">—</td>
     `;
@@ -811,7 +826,14 @@ bulkGoBtn.addEventListener('click', async () => {
       framework,
       brandTone: globalBrandTone
     });
-    return { name: row.name, long: data.long || '', short: data.short || '', seo: data.seo || '' };
+    const variants = Array.isArray(data.long_variants) ? data.long_variants : [data.long].filter(Boolean);
+    return {
+      name: row.name,
+      long1: variants[0] || '',
+      long2: variants[1] || variants[0] || '',
+      short: data.short || '',
+      seo: data.seo || ''
+    };
   }, (i, result) => {
     done++;
     progressFill.style.width = Math.round((done / parsedRows.length) * 100) + '%';
@@ -821,7 +843,8 @@ bulkGoBtn.addEventListener('click', async () => {
     if(result && !result.error){
       statusEl.textContent = '✓';
       statusEl.className = 'row-status ok';
-      document.getElementById('long-' + i).textContent = result.long || '—';
+      document.getElementById('long1-' + i).textContent = result.long1 || '—';
+      document.getElementById('long2-' + i).textContent = result.long2 || '—';
       document.getElementById('short-' + i).textContent = result.short || '—';
       document.getElementById('seo-' + i).textContent = result.seo || '—';
     } else {
@@ -856,12 +879,12 @@ function escapeHTML(str){
 
 /* ==================== تصدير النتائج CSV ==================== */
 exportBtn.addEventListener('click', () => {
-  const header = ['اسم المنتج', 'الوصف الطويل', 'الوصف القصير', 'SEO'];
+  const header = ['اسم المنتج', 'الزاوية الأولى', 'الزاوية الثانية', 'الوصف القصير', 'SEO'];
   const escape = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
   const lines = [header.map(escape).join(',')];
   bulkResults.forEach(r => {
     if(!r || r.error) return;
-    lines.push([r.name, r.long, r.short, r.seo].map(escape).join(','));
+    lines.push([r.name, r.long1, r.long2, r.short, r.seo].map(escape).join(','));
   });
   const csvContent = '\uFEFF' + lines.join('\r\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
