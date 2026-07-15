@@ -51,12 +51,14 @@ ${frameworkInstruction}
 ${price ? 'السعر: ' + price : ''}
 
 # المطلوب منك بالضبط
-1. "long_variants": مصفوفة فيها نسختين مختلفتين فعلياً من الوصف الطويل (مو نفس الصياغة بكلمات مرادفة، بل زاويتين مختلفتين حقيقة — مثلاً وحدة تركز على المشكلة والحل، والثانية تركز على تحسين الحالة أو تجربة الاستخدام). كل نسخة تتبع البنية الإلزامية كاملة وجاهزة للنشر مباشرة بصفحة منتج.
+1. "long": نسخة وحدة قوية ومركّزة من الوصف الطويل، جاهزة للنشر مباشرة بصفحة منتج، تتبع البنية الإلزامية كاملة.
 2. "short": نسخة مختصرة جداً (سطرين إلى ثلاثة كحد أقصى) تصلح كابشن إنستقرام أو نص إعلان قصير.
 3. "seo": جملة واحدة قصيرة (لا تتجاوز 160 حرف) محسّنة لظهور المنتج بجوجل، تتضمن اسم المنتج وأهم ميزة فيه.
 
 مهم جداً: أجب فقط بكائن JSON صحيح وخام بدون أي شيء آخر — بدون علامات كود، بدون شرح، بدون مقدمة. الصيغة يجب أن تكون بالضبط:
-{"long_variants":["...","..."],"short":"...","seo":"..."}`;
+{"long":"...","short":"...","seo":"..."}
+
+راجع نصك قبل ما ترسله: تأكد من صحة التصريف النحوي (خصوصاً المثنى والجمع)، وسلامة تركيب كل جملة، قبل الالتزام باللهجة.`;
 
   return { system: SYSTEM_PROMPT, user };
 }
@@ -186,7 +188,7 @@ module.exports = async (req, res) => {
     const anthropicResponse = await callAnthropicWithRetry(
       {
         model: 'claude-sonnet-4-6',
-        max_tokens: 2000,
+        max_tokens: 1200,
         system,
         messages: [{ role: 'user', content: user }]
       },
@@ -223,25 +225,18 @@ module.exports = async (req, res) => {
       remainingAfter = accessCheck.remaining - 1;
     }
 
-    const longVariants = Array.isArray(parsed && parsed.long_variants)
-      ? parsed.long_variants.filter((v) => typeof v === 'string' && v.trim())
-      : [];
-
-    if (longVariants.length > 0 || (parsed && (parsed.short || parsed.seo))) {
+    if (parsed && (parsed.long || parsed.short || parsed.seo)) {
       res.status(200).json({
-        long_variants: longVariants,
-        long: longVariants[0] || '', // للتوافق مع أي كود قديم لسا يتوقع حقل long وحيد
-        short: (parsed && parsed.short) || '',
-        seo: (parsed && parsed.seo) || '',
+        long: parsed.long || '',
+        short: parsed.short || '',
+        seo: parsed.seo || '',
         remaining: remainingAfter,
         cap: accessCheck.cap
       });
     } else {
-      // fallback: لو المودل ما رجع JSON صحيح لأي سبب، نرجع النص كامل كزاوية وحيدة بدل ما نفشل بالكامل
-      const fallbackText = rawText || 'ما رجع نص، جرب مرة ثانية.';
+      // fallback: لو المودل ما رجع JSON صحيح لأي سبب، نرجع النص كامل كوصف طويل بدل ما نفشل بالكامل
       res.status(200).json({
-        long_variants: [fallbackText],
-        long: fallbackText,
+        long: rawText || 'ما رجع نص، جرب مرة ثانية.',
         short: '',
         seo: '',
         remaining: remainingAfter,
