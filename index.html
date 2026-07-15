@@ -276,10 +276,10 @@
   <div class="field">
     <label>أسلوب الكتابة</label>
     <div class="frameworks" id="styleButtons">
-      <button class="fw-btn" data-style="COLLOQUIAL">عامي (لهجة خليجية)</button>
-      <button class="fw-btn active" data-style="FORMAL">فصحى (رسمية)</button>
+      <button class="fw-btn" data-style="COLLOQUIAL">عامي</button>
+      <button class="fw-btn active" data-style="FORMAL">فصحى</button>
     </div>
-    <div class="fw-hint" id="styleHint">فصحى معاصرة سلسة واحترافية — مناسبة للمنتجات الفاخرة أو الجمهور الرسمي.</div>
+    <div class="fw-hint" id="styleHint">فصحى سهلة وبسيطة، بدون مفردات ثقيلة.</div>
   </div>
 
   <button class="go" id="goBtn">ولّد الأوصاف</button>
@@ -516,7 +516,7 @@ document.querySelectorAll('#frameworks .fw-btn').forEach(btn => {
 /* ==================== أسلوب الكتابة (عامي / فصيح) ==================== */
 const styleHints = {
   COLLOQUIAL: "لهجة خليجية بيضاء دافئة ومباشرة — مناسبة لأغلب المتاجر.",
-  FORMAL: "فصحى معاصرة سلسة واحترافية — مناسبة للمنتجات الفاخرة أو الجمهور الرسمي."
+  FORMAL: "فصحى سهلة وبسيطة، بدون مفردات ثقيلة."
 };
 document.querySelectorAll('#styleButtons .fw-btn').forEach(btn => {
   btn.addEventListener('click', () => {
