@@ -128,6 +128,20 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // منع التكرار: Lemon Squeezy أحياناً يرسل نفس حدث الاشتراك أكثر من مرة (retry)
+    // نستخدم معرّف الاشتراك الفريد كقفل بـ Redis — أول وحدة توصل تاخذ القفل وتكمل، أي تكرار بعدها يتجاهل فوراً
+    const subscriptionId = event.data && event.data.id;
+    if (subscriptionId) {
+      const lockKey = `webhook:lock:${subscriptionId}`;
+      // NX: يحط القيمة بس لو المفتاح مو موجود أصلاً | EX 2592000: القفل ينتهي تلقائياً بعد 30 يوم
+      const lockResult = await redisCommand(['SET', lockKey, '1', 'NX', 'EX', '2592000']);
+      if (lockResult !== 'OK') {
+        // معناها فيه حدث سابق أخذ القفل قبلنا — هذا تكرار، نتجاهله
+        res.status(200).json({ received: true, duplicate: true, subscriptionId });
+        return;
+      }
+    }
+
     const attrs = (event.data && event.data.attributes) || {};
     const email = attrs.user_email || '';
     const variantId = attrs.variant_id;
