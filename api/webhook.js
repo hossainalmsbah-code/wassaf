@@ -17,9 +17,9 @@ function generateRandomCode(length = 6) {
 
 // عدّل الأرقام هذي بأرقام الـ variant IDs الحقيقية عندك (تحصلها من لوحة Lemon Squeezy أو API)
 const VARIANT_ID_MAP = {
+  '1913994': { cap: 180, plan: 'نصف سنوي' }, // تأكدنا منه باختبار حقيقي بتاريخ 16 يوليو 2026
   // 'رقم_الـ_variant': { cap: 30, plan: 'أسبوعي' },
   // 'رقم_الـ_variant': { cap: 120, plan: 'شهري' },
-  // 'رقم_الـ_variant': { cap: 180, plan: 'نصف سنوي' },
   // 'رقم_الـ_variant': { cap: 300, plan: 'سنوي' },
   // 'رقم_الـ_variant': { cap: 10, plan: 'تجربة' },
 };
@@ -131,7 +131,9 @@ module.exports = async (req, res) => {
     const attrs = (event.data && event.data.attributes) || {};
     const email = attrs.user_email || '';
     const variantId = attrs.variant_id;
-    const variantName = attrs.variant_name || attrs.product_name || '';
+    // product_name يحمل الاسم العربي الحقيقي للباقة (مثلاً "الباقة النصف السنوي")
+    // variant_name غالباً "Default" لما يكون فيه variant وحيد بالمنتج — لهذا نجربه بعد product_name فقط
+    const variantName = attrs.product_name || attrs.variant_name || '';
 
     const notifyId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const planInfo = resolvePlan(variantId, variantName);
