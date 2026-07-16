@@ -23,7 +23,15 @@ module.exports = async (req, res) => {
         const id = raw[i];
         try {
           const data = JSON.parse(raw[i + 1]);
-          items.push({ id, ...data });
+
+          // نعرض بس العناصر اللي فعلاً تحتاج تدخل يدوي:
+          // - يحتاج مراجعة (ما قدرنا نحدد الباقة تلقائياً)، أو
+          // - الإيميل التلقائي فشل إرساله
+          // أي كود انبعث تلقائياً بنجاح (emailSent: true) ما نعرضه — لأنه ما يحتاج أي تدخل منك
+          const needsAction = data.needsReview === true || data.emailSent === false;
+          if (needsAction) {
+            items.push({ id, ...data });
+          }
         } catch (e) {
           // نتجاهل أي سجل تالف بدل ما نكسر الصفحة كلها
         }
