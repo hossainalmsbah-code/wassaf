@@ -11,16 +11,48 @@ function generateRandomCode(length = 6) {
   return code;
 }
 
-// نحدد حد الأوصاف الشهري تلقائياً حسب اسم الباقة اللي جاية من Lemon Squeezy
+// نحدد حد الأوصاف الشهري تلقائياً حسب رقم الباقة (variant_id) أو اسمها اللي جاية من Lemon Squeezy
 // نفس الأرقام المستخدمة بلوحة الإدارة يدوياً، عشان التوليد الآلي يطابق اليدوي
+// الأولوية لـ variant_id لأنه رقم ثابت ما يتغير، وبعده نطابق الاسم (عربي/إنجليزي) كخطة احتياطية
+
+// عدّل الأرقام هذي بأرقام الـ variant IDs الحقيقية عندك (تحصلها من لوحة Lemon Squeezy أو API)
+const VARIANT_ID_MAP = {
+  // 'رقم_الـ_variant': { cap: 30, plan: 'أسبوعي' },
+  // 'رقم_الـ_variant': { cap: 120, plan: 'شهري' },
+  // 'رقم_الـ_variant': { cap: 180, plan: 'نصف سنوي' },
+  // 'رقم_الـ_variant': { cap: 300, plan: 'سنوي' },
+  // 'رقم_الـ_variant': { cap: 10, plan: 'تجربة' },
+};
+
+function capFromVariantId(variantId) {
+  if (!variantId) return null;
+  const key = variantId.toString();
+  return VARIANT_ID_MAP[key] || null;
+}
+
 function capFromVariantName(name) {
-  const n = (name || '').toString();
+  const n = (name || '').toString().toLowerCase();
+
+  // مطابقة عربية (الأصلية)
   if (n.includes('نصف')) return { cap: 180, plan: 'نصف سنوي' };
   if (n.includes('سنوي')) return { cap: 300, plan: 'سنوي' };
   if (n.includes('شهري')) return { cap: 120, plan: 'شهري' };
   if (n.includes('أسبوع') || n.includes('اسبوع')) return { cap: 30, plan: 'أسبوعي' };
   if (n.includes('تجرب')) return { cap: 10, plan: 'تجربة' };
+
+  // مطابقة إنجليزية (إضافة جديدة) — نتحقق من "نصف سنوي" قبل "سنوي" عشان ما يلخبط semi مع annual
+  if (n.includes('semi') || n.includes('half') || n.includes('bi-annual') || n.includes('biannual')) return { cap: 180, plan: 'نصف سنوي' };
+  if (n.includes('annual') || n.includes('year')) return { cap: 300, plan: 'سنوي' };
+  if (n.includes('month')) return { cap: 120, plan: 'شهري' };
+  if (n.includes('week')) return { cap: 30, plan: 'أسبوعي' };
+  if (n.includes('trial') || n.includes('free')) return { cap: 10, plan: 'تجربة' };
+
   return null;
+}
+
+// الدالة الرئيسية: نجرب الـ variant_id أول، ولو ما لقينا نرجع للاسم
+function resolvePlan(variantId, variantName) {
+  return capFromVariantId(variantId) || capFromVariantName(variantName);
 }
 
 // لازم نقرأ الـ body الخام (Raw Bytes) قبل أي تحويل، لأن التحقق من التوقيع يحتاج البيانات الأصلية بالضبط
@@ -98,17 +130,19 @@ module.exports = async (req, res) => {
 
     const attrs = (event.data && event.data.attributes) || {};
     const email = attrs.user_email || '';
+    const variantId = attrs.variant_id;
     const variantName = attrs.variant_name || attrs.product_name || '';
 
     const notifyId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const planInfo = capFromVariantName(variantName);
+    const planInfo = resolvePlan(variantId, variantName);
 
     if (!planInfo) {
-      // ما قدرنا نحدد الباقة تلقائياً من الاسم — نسجلها "تحتاج مراجعة يدوية" بدل ما نتجاهلها بصمت
+      // ما قدرنا نحدد الباقة تلقائياً لا من الـ variant_id ولا من الاسم — نسجلها "تحتاج مراجعة يدوية" بدل ما نتجاهلها بصمت
       await redisCommand(['HSET', 'pending:notify', notifyId, JSON.stringify({
         code: null,
         email,
         plan: variantName || 'غير معروف',
+        variantId: variantId || null,
         cap: null,
         needsReview: true,
         createdAt: new Date().toISOString()
