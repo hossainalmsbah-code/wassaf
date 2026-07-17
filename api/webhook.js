@@ -37,14 +37,14 @@ function capFromVariantName(name) {
   if (n.includes('نصف')) return { cap: 180, plan: 'نصف سنوي' };
   if (n.includes('سنوي')) return { cap: 300, plan: 'سنوي' };
   if (n.includes('شهري')) return { cap: 120, plan: 'شهري' };
-  if (n.includes('أسبوع') || n.includes('اسبوع')) return { cap: 30, plan: 'أسبوعي' };
+  if (n.includes('أسبوع') || n.includes('اسبوع')) return { cap: 20, plan: 'أسبوعي' };
   if (n.includes('تجرب')) return { cap: 10, plan: 'تجربة' };
 
   // مطابقة إنجليزية (إضافة جديدة) — نتحقق من "نصف سنوي" قبل "سنوي" عشان ما يلخبط semi مع annual
   if (n.includes('semi') || n.includes('half') || n.includes('bi-annual') || n.includes('biannual')) return { cap: 180, plan: 'نصف سنوي' };
   if (n.includes('annual') || n.includes('year')) return { cap: 300, plan: 'سنوي' };
   if (n.includes('month')) return { cap: 120, plan: 'شهري' };
-  if (n.includes('week')) return { cap: 30, plan: 'أسبوعي' };
+  if (n.includes('week')) return { cap: 20, plan: 'أسبوعي' };
   if (n.includes('trial') || n.includes('free')) return { cap: 10, plan: 'تجربة' };
 
   return null;
