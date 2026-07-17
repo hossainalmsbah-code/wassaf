@@ -148,6 +148,7 @@
   .pricing-hook span{display:block;font-size:13px;font-weight:700;color:var(--accent);margin-top:8px;}
   .feature-tag{background:var(--accent-dim);color:#6E5BC7;font-size:11.5px;font-weight:700;padding:6px 10px;border-radius:6px;margin-top:10px;line-height:1.6;text-align:center;}
   .plan-subnote{font-size:11.5px;color:var(--ink-dim);margin-top:10px;line-height:1.7;text-align:center;}
+  .icon-img{width:14px;height:14px;vertical-align:-2px;margin-left:4px;color:var(--accent);}
   .plan-name{font-size:13px;color:var(--ink-dim);font-weight:600;margin-bottom:10px;}
   .plan-old{font-size:13px;color:var(--ink-dim);text-decoration:line-through;margin-bottom:2px;}
   .plan-price{font-family:'Tajawal',sans-serif;font-weight:900;font-size:24px;color:var(--ink);margin-bottom:6px;}
@@ -173,11 +174,21 @@
   .bulk-box{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:24px;box-shadow:0 1px 4px rgba(30,27,46,0.05);}
   .drop-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
   .file-label{
-    flex:1;min-width:220px;background:var(--bg);border:1px dashed var(--line);border-radius:8px;
-    padding:16px;text-align:center;cursor:pointer;font-size:13px;color:var(--ink-dim);
+    flex:1;min-width:220px;background:var(--bg);border:2px dashed var(--line);border-radius:10px;
+    padding:24px 16px;text-align:center;cursor:pointer;font-size:13px;color:var(--ink-dim);transition:border-color .15s,background .15s;
   }
-  .file-label:hover{border-color:var(--accent);color:var(--ink);}
+  .file-label:hover{border-color:var(--accent);color:var(--ink);background:var(--accent-dim);}
+  .file-label.dragover{border-color:var(--accent);background:var(--accent-dim);color:var(--ink);}
   .file-label input{display:none;}
+  .csv-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+  .csv-step{display:flex;gap:10px;align-items:flex-start;text-align:right;}
+  .csv-step-num{
+    flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;
+    font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  }
+  .csv-step-title{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:3px;}
+  .csv-step-desc{font-size:11.5px;color:var(--ink-dim);line-height:1.6;}
+  @media (max-width:640px){ .csv-steps{grid-template-columns:1fr;} }
   .file-info{font-size:12px;color:var(--ink-dim);margin-top:10px;line-height:1.8;}
   .file-info strong{color:var(--ink);}
   .tmpl-link{font-size:12px;color:var(--accent2);text-decoration:none;cursor:pointer;background:none;border:none;font-family:inherit;padding:0;}
@@ -212,6 +223,7 @@
   <header class="top">
     <img class="brand-logo" src="/assets/logo-horizontal.svg" alt="وصّاف">
     <nav>
+      <a href="#imageGen">توليد من صورة</a>
       <a href="#bulk">رفع جماعي</a>
       <a href="#pricing">الأسعار</a>
     </nav>
@@ -223,7 +235,7 @@
   </section>
 
   <section id="pricing">
-    <p class="pricing-hook">من صورة وحدة، وصّاف يكتب لك وصف كامل بـ8 ثواني — بدون ما تكتب كلمة.<span>🖼️ حصرياً بباقتي النصف سنوي والسنوي</span></p>
+    <p class="pricing-hook">من صورة وحدة، وصّاف يكتب لك وصف كامل بـ8 ثواني — بدون ما تكتب كلمة.<span><svg class="icon-img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg> حصرياً بباقتي النصف سنوي والسنوي</span></p>
     <div class="pricing">
       <div class="plan">
         <div class="plan-name">تجربة مجانية</div>
@@ -253,7 +265,7 @@
         <div class="plan-old">82 ريال/شهر</div>
         <div class="plan-price">49<span> ريال/شهر</span></div>
         <div class="plan-note">294 ريال كل 6 أشهر — حتى 180 وصف/شهر</div>
-        <div class="feature-tag">🖼️ جديد: ولّد الوصف من صورة المنتج مباشرة</div>
+        <div class="feature-tag"><svg class="icon-img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg> جديد: ولّد الوصف من صورة المنتج مباشرة</div>
         <a class="plan-btn" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/92383064-5150-403f-bd87-57cce5ea8374" target="_blank" rel="noopener">اشترك الآن</a>
       </div>
       <div class="plan featured">
@@ -262,7 +274,7 @@
         <div class="plan-old">83 ريال/شهر</div>
         <div class="plan-price">29<span> ريال/شهر</span></div>
         <div class="plan-note">348 ريال بالسنة — حتى 300 وصف/شهر</div>
-        <div class="feature-tag">🖼️ جديد: ولّد الوصف من صورة المنتج مباشرة</div>
+        <div class="feature-tag"><svg class="icon-img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg> جديد: ولّد الوصف من صورة المنتج مباشرة</div>
         <a class="plan-btn" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/092dc02f-3393-4739-9519-1e8b3ad151e3" target="_blank" rel="noopener">اشترك الآن</a>
       </div>
     </div>
@@ -360,18 +372,96 @@
     </div>
   </div>
 
+  <!-- ===================== توليد من صورة (حصري نصف سنوي/سنوي) ===================== -->
+  <div class="section-title" id="imageGen">
+    <svg class="icon-img" style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+    ولّد الوصف من صورة المنتج
+  </div>
+  <div class="section-sub">ارفع صورة منتجك بس، ووصّاف يحلّلها ويكتب لك الوصف الطويل والقصير وSEO تلقائياً — بدون ما تكتب كلمة.</div>
+
+  <div class="bulk-box">
+    <div class="field-hint" id="imageLockedNote" style="display:block;">
+      🔒 هذي الميزة حصرية لمشتركي الباقة <strong>النصف سنوية</strong> أو <strong>السنوية</strong>. <a href="#pricing" style="color:var(--accent);font-weight:700;">شوف الباقات وترقّى من هنا</a>.
+    </div>
+
+    <div id="imageUploadArea" style="display:none;">
+      <div class="drop-row">
+        <label class="file-label" id="imageFileLabel">
+          <input type="file" id="imageInput" accept="image/*">
+          <svg class="icon-img" style="width:22px;height:22px;display:block;margin:0 auto 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          اضغط لاختيار صورة المنتج، أو اسحبها هنا
+        </label>
+        <div id="imagePreviewWrap" style="display:none;flex:1;min-width:220px;">
+          <img id="imagePreview" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid var(--line);display:block;margin:0 auto;">
+          <button type="button" id="imageRemoveBtn" class="tmpl-link" style="display:block;margin:8px auto 0;">إزالة الصورة</button>
+        </div>
+      </div>
+      <div class="field-hint">وضّح المنتج بالصورة بشكل واضح ومباشر — إضاءة كويسة وخلفية بسيطة تعطي نتيجة أدق.</div>
+    </div>
+
+    <button class="go" id="imageGoBtn" disabled style="display:none;margin-top:16px;">ولّد من الصورة</button>
+    <div class="err" id="imageErr"></div>
+
+    <div class="result" id="imageResultBox">
+      <div class="result-block">
+        <div class="result-head">
+          <div class="label">الوصف الطويل — لصفحة المنتج</div>
+          <button class="copy-btn" data-target="outputImgLong">نسخ النص</button>
+        </div>
+        <div class="output" id="outputImgLong"></div>
+      </div>
+      <div class="result-block">
+        <div class="result-head">
+          <div class="label">الوصف القصير — كابشن / إعلان</div>
+          <button class="copy-btn" data-target="outputImgShort">نسخ النص</button>
+        </div>
+        <div class="output" id="outputImgShort"></div>
+      </div>
+      <div class="result-block">
+        <div class="result-head">
+          <div class="label">وصف SEO — لمحركات البحث</div>
+          <button class="copy-btn" data-target="outputImgSeo">نسخ النص</button>
+        </div>
+        <div class="output small" id="outputImgSeo"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== رفع جماعي ===================== -->
   <div class="section-title" id="bulk">رفع دفعة منتجات (Bulk)</div>
   <div class="section-sub">ارفع ملف CSV فيه منتجاتك، وخلّي وصّاف يولّد الأوصاف الثلاثة لكل منتج تلقائياً، ثم صدّرها كملف واحد جاهز.</div>
 
   <div class="bulk-box">
-    <div class="drop-row">
-      <label class="file-label" id="fileLabel">
-        <input type="file" id="csvInput" accept=".csv,text/csv">
-        📄 اضغط لاختيار ملف CSV، أو اسحبه هنا
-      </label>
-      <button class="tmpl-link" id="tmplBtn" type="button">تحميل نموذج CSV فارغ</button>
+    <div class="csv-steps">
+      <div class="csv-step">
+        <span class="csv-step-num">1</span>
+        <div>
+          <div class="csv-step-title">حمّل نموذج الملف</div>
+          <div class="csv-step-desc">ملف فاضي بالأعمدة الصحيحة جاهز تعبّيه</div>
+          <button class="tmpl-link" id="tmplBtn" type="button">تحميل نموذج CSV فارغ ⬇</button>
+        </div>
+      </div>
+      <div class="csv-step">
+        <span class="csv-step-num">2</span>
+        <div>
+          <div class="csv-step-title">عبّي منتجاتك بالملف</div>
+          <div class="csv-step-desc">افتحه بإكسل أو Google Sheets وعبّي صف لكل منتج، وحفظه بصيغة CSV</div>
+        </div>
+      </div>
+      <div class="csv-step">
+        <span class="csv-step-num">3</span>
+        <div>
+          <div class="csv-step-title">ارفعه هنا</div>
+          <div class="csv-step-desc">وصّاف يولّد الأوصاف لكل المنتجات دفعة وحدة</div>
+        </div>
+      </div>
     </div>
+
+    <label class="file-label" id="fileLabel">
+      <input type="file" id="csvInput" accept=".csv,text/csv">
+      <svg class="icon-img" style="width:22px;height:22px;display:block;margin:0 auto 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+      اضغط لاختيار ملف CSV، أو اسحبه هنا
+    </label>
     <div class="field-hint">
       الأعمدة المطلوبة: <strong>اسم_المنتج</strong> (إلزامي)، <strong>المميزات</strong> (إلزامي)، وتقدر تضيف اختيارياً: الجمهور، السعر، الإطار (AIDA أو PAS أو BAB). لو ما حددت الإطار أو النبرة لصف معين، بيستخدم الإعدادات العامة أعلاه.
     </div>
@@ -450,8 +540,21 @@ const accessSavedTag = document.getElementById('accessSavedTag');
 
 let accessCodeValid = false; // هل آخر تحقق كان ناجح؟ (نستخدمه قبل أي توليد)
 let currentCodeCap = null; // الحد الأقصى الشهري للكود الحالي (نستخدمه بقيد الرفع الجماعي)
+let currentCodePlan = null; // اسم الباقة الحالية (نستخدمه بقيد ميزة التوليد من صورة)
 
 const BULK_MIN_CAP = 120; // الرفع الجماعي متاح بس للأكواد بحد 120 وصف فأكثر (شهري/نصف سنوي/سنوي)
+const IMAGE_ALLOWED_PLANS = ['نصف سنوي', 'سنوي']; // ميزة التوليد من صورة مقصورة على هذي الباقات بس
+
+function updateImageFeatureVisibility(){
+  const lockedNote = document.getElementById('imageLockedNote');
+  const uploadArea = document.getElementById('imageUploadArea');
+  const goBtn = document.getElementById('imageGoBtn');
+  if(!lockedNote || !uploadArea || !goBtn) return;
+  const allowed = IMAGE_ALLOWED_PLANS.includes(currentCodePlan);
+  lockedNote.style.display = allowed ? 'none' : 'block';
+  uploadArea.style.display = allowed ? 'block' : 'none';
+  goBtn.style.display = allowed ? 'block' : 'none';
+}
 
 function setAccessStatus(message, kind){
   accessStatus.textContent = message;
@@ -476,16 +579,22 @@ async function validateAccessCode(code, { silent } = {}){
     if(data.valid){
       accessCodeValid = true;
       currentCodeCap = data.cap;
+      currentCodePlan = data.plan || null;
       setAccessStatus(`✓ كود صحيح — تبقى لك ${data.remaining} من ${data.cap} وصف هذا الشهر`, 'ok');
+      updateImageFeatureVisibility();
     }else{
       accessCodeValid = false;
       currentCodeCap = null;
+      currentCodePlan = null;
       setAccessStatus(data.message || 'كود غير صحيح', 'error');
+      updateImageFeatureVisibility();
     }
   }catch(e){
     accessCodeValid = false;
     currentCodeCap = null;
+    currentCodePlan = null;
     setAccessStatus('تعذر التحقق من الكود الآن، جرب مرة ثانية', 'error');
+    updateImageFeatureVisibility();
   }
 }
 
@@ -670,6 +779,106 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     goBtn.textContent = 'ولّد الأوصاف';
   }
 });
+
+/* ==================== توليد من صورة ==================== */
+const imageInput = document.getElementById('imageInput');
+const imageFileLabel = document.getElementById('imageFileLabel');
+const imagePreviewWrap = document.getElementById('imagePreviewWrap');
+const imagePreview = document.getElementById('imagePreview');
+const imageGoBtn = document.getElementById('imageGoBtn');
+const imageErr = document.getElementById('imageErr');
+const imageResultBox = document.getElementById('imageResultBox');
+let selectedImageBase64 = null;
+let selectedImageMediaType = null;
+
+if(imageInput){
+  imageInput.addEventListener('change', () => {
+    const file = imageInput.files[0];
+    if(!file) return;
+    selectedImageMediaType = file.type || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target.result;
+      selectedImageBase64 = result.split(',')[1];
+      imagePreview.src = result;
+      imagePreviewWrap.style.display = 'block';
+      imageFileLabel.style.display = 'none';
+      imageGoBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  ['dragover','dragenter'].forEach(evt => {
+    imageFileLabel.addEventListener(evt, (e) => { e.preventDefault(); imageFileLabel.classList.add('dragover'); });
+  });
+  ['dragleave','drop'].forEach(evt => {
+    imageFileLabel.addEventListener(evt, (e) => { e.preventDefault(); imageFileLabel.classList.remove('dragover'); });
+  });
+  imageFileLabel.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    if(file){ imageInput.files = e.dataTransfer.files; imageInput.dispatchEvent(new Event('change')); }
+  });
+
+  document.getElementById('imageRemoveBtn').addEventListener('click', () => {
+    selectedImageBase64 = null;
+    imageInput.value = '';
+    imagePreviewWrap.style.display = 'none';
+    imageFileLabel.style.display = 'block';
+    imageGoBtn.disabled = true;
+  });
+
+  imageGoBtn.addEventListener('click', async () => {
+    imageErr.style.display = 'none';
+    if(!accessCodeValid){
+      imageErr.textContent = 'أدخل كود وصول صحيح أول';
+      imageErr.style.display = 'block';
+      return;
+    }
+    if(!selectedImageBase64){
+      imageErr.textContent = 'ارفع صورة المنتج أول';
+      imageErr.style.display = 'block';
+      return;
+    }
+    const oldText = imageGoBtn.textContent;
+    imageGoBtn.disabled = true;
+    imageGoBtn.textContent = 'جاري تحليل الصورة...';
+    try{
+      const activeStyleBtn = document.querySelector('#styleButtons .fw-btn.active');
+      const res = await fetch('/api/generate-from-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: selectedImageBase64,
+          imageMediaType: selectedImageMediaType,
+          audience: document.getElementById('audience').value.trim(),
+          price: document.getElementById('price').value.trim(),
+          brandTone: document.getElementById('brandTone').value.trim(),
+          style: activeStyleBtn ? activeStyleBtn.dataset.style : 'FORMAL',
+          accessCode: getStoredAccessCode(),
+          deviceId
+        })
+      });
+      const data = await res.json();
+      if(!res.ok){
+        imageErr.textContent = data.error || 'صار خطأ، جرب مرة ثانية';
+        imageErr.style.display = 'block';
+        return;
+      }
+      document.getElementById('outputImgLong').textContent = data.long || '';
+      document.getElementById('outputImgShort').textContent = data.short || '';
+      document.getElementById('outputImgSeo').textContent = data.seo || '';
+      imageResultBox.classList.add('show');
+      imageResultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      updateAccessStatusAfterGenerate(data.remaining, data.cap);
+    }catch(e){
+      imageErr.textContent = 'صار خطأ أثناء الاتصال، جرب مرة ثانية';
+      imageErr.style.display = 'block';
+    }finally{
+      imageGoBtn.disabled = false;
+      imageGoBtn.textContent = oldText;
+    }
+  });
+}
 
 /* ==================== رفع جماعي: تحليل CSV ==================== */
 function parseCSV(text){
