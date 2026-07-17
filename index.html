@@ -385,6 +385,11 @@
     </div>
 
     <div id="imageUploadArea" style="display:none;">
+      <div class="field">
+        <label>اسم المنتج (إلزامي)</label>
+        <input type="text" id="imageProductName" placeholder="مثال: مرّكن زرع خشبي">
+        <div class="field-hint">حدده بدقة — وصّاف يعتمد على هذا الاسم لتحديد نوع المنتج، والصورة تستخدمها بس لاستخراج التفاصيل (اللون، الخامة، الشكل).</div>
+      </div>
       <div class="drop-row">
         <label class="file-label" id="imageFileLabel">
           <input type="file" id="imageInput" accept="image/*">
@@ -834,6 +839,12 @@ if(imageInput){
       imageErr.style.display = 'block';
       return;
     }
+    const imageProductName = document.getElementById('imageProductName').value.trim();
+    if(!imageProductName){
+      imageErr.textContent = 'اكتب اسم المنتج أول — يساعد وصّاف يحدد نوعه بدقة بدل ما يخمّنه من الصورة بس';
+      imageErr.style.display = 'block';
+      return;
+    }
     if(!selectedImageBase64){
       imageErr.textContent = 'ارفع صورة المنتج أول';
       imageErr.style.display = 'block';
@@ -850,6 +861,7 @@ if(imageInput){
         body: JSON.stringify({
           imageBase64: selectedImageBase64,
           imageMediaType: selectedImageMediaType,
+          productName: imageProductName,
           audience: document.getElementById('audience').value.trim(),
           price: document.getElementById('price').value.trim(),
           brandTone: document.getElementById('brandTone').value.trim(),
