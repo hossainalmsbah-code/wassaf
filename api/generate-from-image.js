@@ -1,7 +1,7 @@
 const { checkAccessCode, incrementUsage } = require('./_access');
 
 // نفس السجلين اللغويين المستخدمين بالتوليد النصي العادي — نعيد استخدامهم بالضبط عشان يطلع نفس أسلوب الكتابة
-const SYSTEM_PROMPT_COLLOQUIAL = `أنت كاتب محتوى تسويقي متخصص في التجارة الإلكترونية الخليجية. بتوصف لك صورة منتج، ومهمتك تحلل الصورة بدقة (النوع، الشكل، المواد، الألوان، أي تفاصيل ظاهرة) وتكتب منها وصف تسويقي يحوّل الزائر لمشتري.
+const SYSTEM_PROMPT_COLLOQUIAL = `أنت كاتب محتوى تسويقي متخصص في التجارة الإلكترونية الخليجية. التاجر بيعطيك اسم المنتج بالضبط، وصورة له. اسم المنتج هو المرجع الأساسي لنوع المنتج — الصورة تستخدمها بس لاستخراج التفاصيل البصرية الملموسة (اللون، الشكل، الخامة، أي تفاصيل تصميم ظاهرة) ومنها تكتب وصف تسويقي يحوّل الزائر لمشتري.
 
 اكتب بلهجة خليجية بيضاء بسيطة ودافئة — جمل قصيرة، مباشرة، محكية.
 
@@ -17,10 +17,9 @@ const SYSTEM_PROMPT_COLLOQUIAL = `أنت كاتب محتوى تسويقي متخ
 3. 3-4 نقاط: كل نقطة فايدة ملموسة مبنية على اللي تشوفه فعلياً بالصورة (لون، خامة، شكل، تفاصيل)
 4. سطر ثقة لو مناسب
 5. جملة ختامية قصيرة تدعو للفعل
+`;
 
-مهم: لو الصورة ما فيها منتج واضح أو غير مفهومة، رجّع بحقل "long" بس رسالة توضح إنك ما قدرت تحدد المنتج بوضوح واطلب صورة أوضح.`;
-
-const SYSTEM_PROMPT_FORMAL = `أنت كاتب محتوى تسويقي محترف. بتوصف لك صورة منتج، ومهمتك تحلل الصورة بدقة (النوع، الشكل، المواد، الألوان، أي تفاصيل ظاهرة) وتكتب منها وصف تسويقي بلغة عربية مبسطة وسهلة — فصحى خفيفة قريبة من لغة الحديث اليومي، بدون لهجة عامية محكية وبدون مفردات رسمية ثقيلة.
+const SYSTEM_PROMPT_FORMAL = `أنت كاتب محتوى تسويقي محترف. التاجر بيعطيك اسم المنتج بالضبط، وصورة له. اسم المنتج هو المرجع الأساسي لنوع المنتج — الصورة تستخدمها بس لاستخراج التفاصيل البصرية الملموسة (اللون، الشكل، الخامة، أي تفاصيل تصميم ظاهرة) ومنها تكتب وصف تسويقي بلغة عربية مبسطة وسهلة — فصحى خفيفة قريبة من لغة الحديث اليومي، بدون لهجة عامية محكية وبدون مفردات رسمية ثقيلة.
 
 # البنية
 1. سؤال أو جملة افتتاحية بسيطة (سطر واحد)
@@ -28,15 +27,17 @@ const SYSTEM_PROMPT_FORMAL = `أنت كاتب محتوى تسويقي محترف
 3. 3-4 نقاط: كل نقطة فائدة ملموسة مبنية على اللي تشوفه فعلياً بالصورة (لون، خامة، شكل، تفاصيل)
 4. سطر ثقة إن وُجد
 5. جملة ختامية قصيرة تدعو للفعل
+`;
 
-مهم: لو الصورة ما فيها منتج واضح أو غير مفهومة، رجّع بحقل "long" بس رسالة توضح إنك ما قدرت تحدد المنتج بوضوح واطلب صورة أوضح.`;
-
-function buildUserText({ audience, price, brandTone, style }) {
+function buildUserText({ productName, audience, price, brandTone, style }) {
   const reviewLine = style === 'COLLOQUIAL'
     ? 'راجع نصك قبل ما ترسله: تأكد ما فيه أي كلمة من القائمة الممنوعة، وتأكد كل التفاصيل اللي ذكرتها موجودة فعلياً بالصورة مو مختلقة.'
     : 'راجع نصك قبل ما ترسله: تأكد ما فيه أي مفردة رسمية ثقيلة أو كلمة عامية متسربة، وتأكد كل التفاصيل اللي ذكرتها موجودة فعلياً بالصورة مو مختلقة.';
 
-  return `# بروفايل صوت المتجر
+  return `# اسم المنتج (حدده التاجر بنفسه — اعتمد عليه حرفياً، لا تخمّن نوع منتج مختلف من الصورة حتى لو الشكل يوحي بغير ذلك)
+${productName}
+
+# بروفايل صوت المتجر
 ${brandTone ? brandTone : 'ما فيه تفضيل محدد — اختر نبرة مناسبة لطبيعة المنتج والجمهور.'}
 
 # معلومات إضافية (اختيارية، استخدمها لو موجودة)
@@ -44,14 +45,13 @@ ${brandTone ? brandTone : 'ما فيه تفضيل محدد — اختر نبرة
 ${price ? 'السعر: ' + price : ''}
 
 # المطلوب منك بالضبط
-حلّل الصورة المرفقة وحدد نوع المنتج وخصائصه الظاهرة، ثم اكتب:
+استخدم الصورة المرفقة بس لاستخراج التفاصيل البصرية الملموسة (اللون، الخامة، الشكل، أي تفاصيل تصميم ظاهرة) — مو لتحديد نوع المنتج، لأن نوع المنتج محدد فوق بالضبط باسم "${productName}". اكتب:
 1. "long": نسخة وحدة قوية ومركّزة من الوصف الطويل، جاهزة للنشر مباشرة بصفحة منتج.
 2. "short": نسخة مختصرة جداً (سطرين إلى ثلاثة كحد أقصى) تصلح كابشن إنستقرام.
 3. "seo": جملة واحدة قصيرة (لا تتجاوز 160 حرف) محسّنة لظهور المنتج بجوجل.
-4. "detectedProduct": اسم المنتج اللي حددته من الصورة (كلمتين إلى أربع كلمات بس).
 
 مهم جداً: أجب فقط بكائن JSON صحيح وخام بدون أي شيء آخر — بدون علامات كود، بدون شرح. الصيغة بالضبط:
-{"long":"...","short":"...","seo":"...","detectedProduct":"..."}
+{"long":"...","short":"...","seo":"..."}
 
 ${reviewLine}`;
 }
@@ -110,12 +110,18 @@ module.exports = async (req, res) => {
     const body = req.body || {};
     const imageBase64 = (body.imageBase64 || '').toString();
     const imageMediaType = (body.imageMediaType || 'image/jpeg').toString();
+    const productName = (body.productName || '').toString().trim();
     const audience = (body.audience || '').toString().trim();
     const price = (body.price || '').toString().trim();
     const brandTone = (body.brandTone || '').toString().trim();
     const style = (body.style || 'FORMAL').toString().trim().toUpperCase();
     const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
     const deviceId = (body.deviceId || '').toString().trim();
+
+    if (!productName) {
+      res.status(400).json({ error: 'اكتب اسم المنتج أول — يساعد بتحديد نوعه بدقة بدل التخمين من الصورة بس' });
+      return;
+    }
 
     if (!imageBase64) {
       res.status(400).json({ error: 'ارفع صورة المنتج أول' });
@@ -162,7 +168,7 @@ module.exports = async (req, res) => {
     }
 
     const systemPrompt = style === 'COLLOQUIAL' ? SYSTEM_PROMPT_COLLOQUIAL : SYSTEM_PROMPT_FORMAL;
-    const userText = buildUserText({ audience, price, brandTone, style });
+    const userText = buildUserText({ productName, audience, price, brandTone, style });
 
     const anthropicResponse = await callAnthropicWithRetry(
       {
@@ -210,7 +216,6 @@ module.exports = async (req, res) => {
         long: parsed.long || '',
         short: parsed.short || '',
         seo: parsed.seo || '',
-        detectedProduct: parsed.detectedProduct || '',
         remaining: remainingAfter,
         cap: accessCheck.cap
       });
@@ -219,7 +224,6 @@ module.exports = async (req, res) => {
         long: rawText || 'ما قدرنا نحلل الصورة، جرب صورة أوضح.',
         short: '',
         seo: '',
-        detectedProduct: '',
         remaining: remainingAfter,
         cap: accessCheck.cap
       });
