@@ -210,14 +210,15 @@
   <header class="top">
     <img class="brand-logo" src="/assets/logo-horizontal.svg" alt="وصّاف">
     <nav>
+      <a href="#imageGen">توليد من صورة</a>
       <a href="#bulk">رفع جماعي</a>
       <a href="#pricing">الأسعار</a>
     </nav>
   </header>
 
   <section class="hero">
-    <h1>أوصاف منتجات احترافية بالعربي خلال ثواني</h1>
-    <p>نكتب وصف منتجك أطر عمل و صيغ كتابة جاهزة تسويقية مثبتة (AIDA، PAS، BAB) — جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
+    <h1>أوصاف منتجات احترافية بالعربي، خلال ثواني</h1>
+    <p>أداة تكتب وصف منتجك بفريمووركات تسويقية مثبتة (AIDA، PAS، BAB) — جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
   </section>
 
   <section id="pricing">
@@ -262,7 +263,7 @@
     </div>
   </section>
 
-  <div class="section-sub" id="tool" style="margin-top:56px;">أدخل بيانات منتجك واحصل على وصف طويل ، ونسخة قصيرة للسوشال ميديا ، ووصف SEO - بضغطة وحدة.</div>
+  <div class="section-sub" id="tool" style="margin-top:56px;">أدخل بيانات منتجك واحصل على وصف طويل، ونسخة قصيرة للسوشال ميديا، ووصف SEO — بضغطة وحدة.</div>
 
   <div class="settings-box" id="accessBox">
     <div class="settings-title">
@@ -272,7 +273,7 @@
       <label>أدخل كود الوصول اللي أرسلناه لك</label>
       <input type="text" id="accessCodeInput" placeholder="مثال: AB12CD" style="text-transform:uppercase;">
     </div>
-    <div class="field-hint" id="accessStatus">ما عندك كود ؟ راسلنا على واتساب وخلّك أول من يجرب وصّاف.</div>
+    <div class="field-hint" id="accessStatus">ما عندك كود؟ راسلنا على واتساب وخلّك أول من يجرب وصّاف.</div>
   </div>
 
   <div class="settings-box">
@@ -351,6 +352,62 @@
         <button class="copy-btn" data-target="outputSeo">نسخ النص</button>
       </div>
       <div class="output small" id="outputSeo"></div>
+    </div>
+  </div>
+
+  <!-- ===================== توليد من صورة (حصري نصف سنوي/سنوي) ===================== -->
+  <div class="section-title" id="imageGen">ولّد الوصف من صورة المنتج</div>
+  <div class="section-sub">ارفع صورة منتجك بس، ووصّاف يحلّلها ويكتب لك الوصف الطويل والقصير وSEO تلقائياً — بدون ما تكتب كلمة.</div>
+
+  <div class="bulk-box">
+    <div class="field-hint" id="imageLockedNote" style="display:block;">
+      🔒 هذي الميزة حصرية لمشتركي الباقة <strong>النصف سنوية</strong> أو <strong>السنوية</strong>. <a href="#pricing" style="color:var(--accent);font-weight:700;">شوف الباقات وترقّى من هنا</a>.
+    </div>
+
+    <div id="imageUploadArea" style="display:none;">
+      <div class="field">
+        <label>اسم المنتج (إلزامي)</label>
+        <input type="text" id="imageProductName" placeholder="مثال: مرّكن زرع خشبي">
+        <div class="field-hint">حدده بدقة — وصّاف يعتمد على هذا الاسم لتحديد نوع المنتج، والصورة تستخدمها بس لاستخراج التفاصيل (اللون، الخامة، الشكل).</div>
+      </div>
+      <div class="drop-row">
+        <label class="file-label" id="imageFileLabel">
+          <input type="file" id="imageInput" accept="image/*">
+          📷 اضغط لاختيار صورة المنتج، أو اسحبها هنا
+        </label>
+        <div id="imagePreviewWrap" style="display:none;flex:1;min-width:220px;">
+          <img id="imagePreview" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid var(--line);display:block;margin:0 auto;">
+          <button type="button" id="imageRemoveBtn" class="tmpl-link" style="display:block;margin:8px auto 0;">إزالة الصورة</button>
+        </div>
+      </div>
+      <div class="field-hint">وضّح المنتج بالصورة بشكل واضح ومباشر — إضاءة كويسة وخلفية بسيطة تعطي نتيجة أدق.</div>
+    </div>
+
+    <button class="go" id="imageGoBtn" disabled style="display:none;margin-top:16px;">ولّد من الصورة</button>
+    <div class="err" id="imageErr"></div>
+
+    <div class="result" id="imageResultBox">
+      <div class="result-block">
+        <div class="result-head">
+          <div class="label">الوصف الطويل — لصفحة المنتج</div>
+          <button class="copy-btn" data-target="outputImgLong">نسخ النص</button>
+        </div>
+        <div class="output" id="outputImgLong"></div>
+      </div>
+      <div class="result-block">
+        <div class="result-head">
+          <div class="label">الوصف القصير — كابشن / إعلان</div>
+          <button class="copy-btn" data-target="outputImgShort">نسخ النص</button>
+        </div>
+        <div class="output" id="outputImgShort"></div>
+      </div>
+      <div class="result-block">
+        <div class="result-head">
+          <div class="label">وصف SEO — لمحركات البحث</div>
+          <button class="copy-btn" data-target="outputImgSeo">نسخ النص</button>
+        </div>
+        <div class="output small" id="outputImgSeo"></div>
+      </div>
     </div>
   </div>
 
@@ -448,8 +505,21 @@ const accessSavedTag = document.getElementById('accessSavedTag');
 
 let accessCodeValid = false; // هل آخر تحقق كان ناجح؟ (نستخدمه قبل أي توليد)
 let currentCodeCap = null; // الحد الأقصى الشهري للكود الحالي (نستخدمه بقيد الرفع الجماعي)
+let currentCodePlan = null; // اسم الباقة الحالية (نستخدمه بقيد ميزة التوليد من صورة)
 
 const BULK_MIN_CAP = 120; // الرفع الجماعي متاح بس للأكواد بحد 120 وصف فأكثر (شهري/نصف سنوي/سنوي)
+const IMAGE_ALLOWED_PLANS = ['نصف سنوي', 'سنوي']; // ميزة التوليد من صورة مقصورة على هذي الباقات بس
+
+function updateImageFeatureVisibility(){
+  const lockedNote = document.getElementById('imageLockedNote');
+  const uploadArea = document.getElementById('imageUploadArea');
+  const goBtn = document.getElementById('imageGoBtn');
+  if(!lockedNote || !uploadArea || !goBtn) return;
+  const allowed = IMAGE_ALLOWED_PLANS.includes(currentCodePlan);
+  lockedNote.style.display = allowed ? 'none' : 'block';
+  uploadArea.style.display = allowed ? 'block' : 'none';
+  goBtn.style.display = allowed ? 'block' : 'none';
+}
 
 function setAccessStatus(message, kind){
   accessStatus.textContent = message;
@@ -474,16 +544,22 @@ async function validateAccessCode(code, { silent } = {}){
     if(data.valid){
       accessCodeValid = true;
       currentCodeCap = data.cap;
+      currentCodePlan = data.plan || null;
       setAccessStatus(`✓ كود صحيح — تبقى لك ${data.remaining} من ${data.cap} وصف هذا الشهر`, 'ok');
+      updateImageFeatureVisibility();
     }else{
       accessCodeValid = false;
       currentCodeCap = null;
+      currentCodePlan = null;
       setAccessStatus(data.message || 'كود غير صحيح', 'error');
+      updateImageFeatureVisibility();
     }
   }catch(e){
     accessCodeValid = false;
     currentCodeCap = null;
+    currentCodePlan = null;
     setAccessStatus('تعذر التحقق من الكود الآن، جرب مرة ثانية', 'error');
+    updateImageFeatureVisibility();
   }
 }
 
@@ -668,6 +744,113 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     goBtn.textContent = 'ولّد الأوصاف';
   }
 });
+
+/* ==================== توليد من صورة ==================== */
+const imageInput = document.getElementById('imageInput');
+const imageFileLabel = document.getElementById('imageFileLabel');
+const imagePreviewWrap = document.getElementById('imagePreviewWrap');
+const imagePreview = document.getElementById('imagePreview');
+const imageGoBtn = document.getElementById('imageGoBtn');
+const imageErr = document.getElementById('imageErr');
+const imageResultBox = document.getElementById('imageResultBox');
+let selectedImageBase64 = null;
+let selectedImageMediaType = null;
+
+if(imageInput){
+  imageInput.addEventListener('change', () => {
+    const file = imageInput.files[0];
+    if(!file) return;
+    selectedImageMediaType = file.type || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target.result;
+      selectedImageBase64 = result.split(',')[1];
+      imagePreview.src = result;
+      imagePreviewWrap.style.display = 'block';
+      imageFileLabel.style.display = 'none';
+      imageGoBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  ['dragover','dragenter'].forEach(evt => {
+    imageFileLabel.addEventListener(evt, (e) => { e.preventDefault(); imageFileLabel.classList.add('dragover'); });
+  });
+  ['dragleave','drop'].forEach(evt => {
+    imageFileLabel.addEventListener(evt, (e) => { e.preventDefault(); imageFileLabel.classList.remove('dragover'); });
+  });
+  imageFileLabel.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    if(file){ imageInput.files = e.dataTransfer.files; imageInput.dispatchEvent(new Event('change')); }
+  });
+
+  document.getElementById('imageRemoveBtn').addEventListener('click', () => {
+    selectedImageBase64 = null;
+    imageInput.value = '';
+    imagePreviewWrap.style.display = 'none';
+    imageFileLabel.style.display = 'block';
+    imageGoBtn.disabled = true;
+  });
+
+  imageGoBtn.addEventListener('click', async () => {
+    imageErr.style.display = 'none';
+    if(!accessCodeValid){
+      imageErr.textContent = 'أدخل كود وصول صحيح أول';
+      imageErr.style.display = 'block';
+      return;
+    }
+    const imageProductName = document.getElementById('imageProductName').value.trim();
+    if(!imageProductName){
+      imageErr.textContent = 'اكتب اسم المنتج أول — يساعد وصّاف يحدد نوعه بدقة بدل ما يخمّنه من الصورة بس';
+      imageErr.style.display = 'block';
+      return;
+    }
+    if(!selectedImageBase64){
+      imageErr.textContent = 'ارفع صورة المنتج أول';
+      imageErr.style.display = 'block';
+      return;
+    }
+    const oldText = imageGoBtn.textContent;
+    imageGoBtn.disabled = true;
+    imageGoBtn.textContent = 'جاري تحليل الصورة...';
+    try{
+      const activeStyleBtn = document.querySelector('#styleButtons .fw-btn.active');
+      const res = await fetch('/api/generate-from-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: selectedImageBase64,
+          imageMediaType: selectedImageMediaType,
+          productName: imageProductName,
+          audience: document.getElementById('audience').value.trim(),
+          price: document.getElementById('price').value.trim(),
+          brandTone: document.getElementById('brandTone').value.trim(),
+          style: activeStyleBtn ? activeStyleBtn.dataset.style : 'FORMAL',
+          accessCode: getStoredAccessCode(),
+          deviceId
+        })
+      });
+      const data = await res.json();
+      if(!res.ok){
+        imageErr.textContent = data.error || 'صار خطأ، جرب مرة ثانية';
+        imageErr.style.display = 'block';
+        return;
+      }
+      document.getElementById('outputImgLong').textContent = data.long || '';
+      document.getElementById('outputImgShort').textContent = data.short || '';
+      document.getElementById('outputImgSeo').textContent = data.seo || '';
+      imageResultBox.classList.add('show');
+      imageResultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      updateAccessStatusAfterGenerate(data.remaining, data.cap);
+    }catch(e){
+      imageErr.textContent = 'صار خطأ أثناء الاتصال، جرب مرة ثانية';
+      imageErr.style.display = 'block';
+    }finally{
+      imageGoBtn.disabled = false;
+      imageGoBtn.textContent = oldText;
+    }
+  });
+}
 
 /* ==================== رفع جماعي: تحليل CSV ==================== */
 function parseCSV(text){
