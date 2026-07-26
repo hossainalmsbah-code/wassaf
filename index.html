@@ -797,6 +797,7 @@ if(shareBtn){
   shareBtn.addEventListener('click', async () => {
     const long = document.getElementById('outputLong').textContent.trim();
     const short = document.getElementById('outputShort').textContent.trim();
+    const seo = document.getElementById('outputSeo').textContent.trim();
     const productName = document.getElementById('productName').value.trim();
     if(!long && !short){
       shareResultBox.style.display = 'block';
@@ -810,7 +811,7 @@ if(shareBtn){
       const res = await fetch('/api/growth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_share', productName, long, short })
+        body: JSON.stringify({ action: 'create_share', productName, long, short, seo })
       });
       const data = await res.json();
       if(!res.ok || !data.ok){
@@ -819,8 +820,33 @@ if(shareBtn){
         return;
       }
       const fullUrl = location.origin + data.url;
+      const waText = encodeURIComponent(`شوف هذا الوصف اللي سويته بوصّاف: ${fullUrl}`);
+      const mailSubject = encodeURIComponent('وصف منتج بواسطة وصّاف');
+      const mailBody = encodeURIComponent(`شوف هذا الوصف: ${fullUrl}`);
       shareResultBox.style.display = 'block';
-      shareResultBox.innerHTML = `تم إنشاء رابط المشاركة: <a href="${fullUrl}" target="_blank" style="color:var(--accent);font-weight:700;">${fullUrl}</a>`;
+      shareResultBox.innerHTML = `
+        <div style="margin-bottom:8px;">تم إنشاء رابط المشاركة ✓</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="copy-btn" id="copyShareLinkBtn">نسخ الرابط</button>
+          <a class="copy-btn" style="text-decoration:none;display:inline-block;" href="https://wa.me/?text=${waText}" target="_blank" rel="noopener">مشاركة واتساب</a>
+          <a class="copy-btn" style="text-decoration:none;display:inline-block;" href="mailto:?subject=${mailSubject}&body=${mailBody}">مشاركة إيميل</a>
+          <button type="button" class="copy-btn" id="nativeShareBtn" style="display:none;">مشاركة</button>
+        </div>
+      `;
+      document.getElementById('copyShareLinkBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(fullUrl);
+        const btn = document.getElementById('copyShareLinkBtn');
+        const old = btn.textContent;
+        btn.textContent = 'تم النسخ ✓';
+        setTimeout(() => btn.textContent = old, 1500);
+      });
+      const nativeBtn = document.getElementById('nativeShareBtn');
+      if(navigator.share){
+        nativeBtn.style.display = 'inline-block';
+        nativeBtn.addEventListener('click', () => {
+          navigator.share({ title: 'وصف منتج بواسطة وصّاف', url: fullUrl }).catch(() => {});
+        });
+      }
     }catch(e){
       shareResultBox.style.display = 'block';
       shareResultBox.textContent = 'صار خطأ أثناء إنشاء رابط المشاركة';
