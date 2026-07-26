@@ -1,8 +1,8 @@
 const { checkAccessCode, addReferralBonus } = require('./_access');
 const { redisCommand } = require('./_redis');
 
-// عدد الأوصاف الإضافية اللي ياخذها كل طرف (الداعي والمدعو) عند نجاح الإحالة
-const REFERRAL_BONUS = 5;
+// نسبة المكافأة من حد باقة المحيل الرئيسية (50%) — تُحسب ديناميكياً حسب باقة كل محيل
+const REFERRAL_BONUS_RATIO = 0.5;
 // مدة بقاء رابط المشاركة (30 يوم)
 const SHARE_TTL_SECONDS = 30 * 24 * 60 * 60;
 
@@ -70,15 +70,28 @@ async function handleApplyReferral(body, res) {
     return;
   }
 
-  const referredResult = await addReferralBonus(newAccessCode, REFERRAL_BONUS);
-  const referrerResult = await addReferralBonus(referrerCode, REFERRAL_BONUS);
+  let referrerParsed;
+  try {
+    referrerParsed = JSON.parse(referrerData);
+  } catch (e) {
+    await redisCommand(['DEL', guardKey]);
+    res.status(500).json({ error: 'بيانات كود الإحالة تالفة' });
+    return;
+  }
+
+  // المكافأة = 50% من حد باقة المحيل الرئيسية، بحد أدنى 3 أوصاف حتى لو كانت الباقة صغيرة
+  const referrerCap = referrerParsed.cap || 0;
+  const bonus = Math.max(Math.round(referrerCap * REFERRAL_BONUS_RATIO), 3);
+
+  const referredResult = await addReferralBonus(newAccessCode, bonus);
+  const referrerResult = await addReferralBonus(referrerCode, bonus);
   await redisCommand(['INCR', `referral_count:${referrerCode}`]);
 
   res.status(200).json({
     ok: true,
     referredNewCap: referredResult.newCap,
     referrerNewCap: referrerResult.newCap,
-    bonus: REFERRAL_BONUS
+    bonus
   });
 }
 
@@ -87,6 +100,7 @@ async function handleCreateShare(body, res) {
   const productName = (body.productName || '').toString().trim().slice(0, 200);
   const long = (body.long || '').toString().trim().slice(0, 4000);
   const short = (body.short || '').toString().trim().slice(0, 1000);
+  const seo = (body.seo || '').toString().trim().slice(0, 300);
 
   if (!long && !short) {
     res.status(400).json({ error: 'ما فيه نص نشاركه' });
@@ -94,7 +108,7 @@ async function handleCreateShare(body, res) {
   }
 
   const shareId = generateShareId();
-  const payload = JSON.stringify({ productName, long, short, createdAt: Date.now() });
+  const payload = JSON.stringify({ productName, long, short, seo, createdAt: Date.now() });
   await redisCommand(['SET', `share:${shareId}`, payload, 'EX', SHARE_TTL_SECONDS]);
 
   res.status(200).json({ ok: true, shareId, url: `/share.html?id=${shareId}` });
