@@ -95,10 +95,10 @@ async function loadAccount(){
   loadBtn.disabled = true;
   loadBtn.textContent = 'جاري التحميل...';
   try{
-    const res = await fetch('/api/account-info', {
+    const res = await fetch('/api/growth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode: code })
+      body: JSON.stringify({ action: 'account_info', accessCode: code })
     });
     const data = await res.json();
     if(!data.valid){

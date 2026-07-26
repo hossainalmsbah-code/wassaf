@@ -52,7 +52,11 @@ async function loadShare(){
     return;
   }
   try{
-    const res = await fetch('/api/get-share?id=' + encodeURIComponent(id));
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_share', id })
+    });
     const data = await res.json();
     if(!res.ok || !data.ok){
       content.innerHTML = '<div class="notfound">هذا الرابط منتهي أو غير موجود</div>';

@@ -776,10 +776,10 @@ if(referralTrialBtn){
       const code = localStorage.getItem('wassaf_accessCode');
       if(code && localStorage.getItem('wassaf_refAppliedFor') !== code){
         clearInterval(poll);
-        fetch('/api/apply-referral', {
+        fetch('/api/growth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ newAccessCode: code, referrerCode: pendingRef })
+          body: JSON.stringify({ action: 'apply_referral', newAccessCode: code, referrerCode: pendingRef })
         }).then(() => {
           localStorage.setItem('wassaf_refAppliedFor', code);
           localStorage.removeItem('wassaf_pendingRef');
@@ -807,10 +807,10 @@ if(shareBtn){
     shareBtn.disabled = true;
     shareBtn.textContent = 'جاري إنشاء الرابط...';
     try{
-      const res = await fetch('/api/create-share', {
+      const res = await fetch('/api/growth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName, long, short })
+        body: JSON.stringify({ action: 'create_share', productName, long, short })
       });
       const data = await res.json();
       if(!res.ok || !data.ok){
