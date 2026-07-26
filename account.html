@@ -68,7 +68,7 @@
         <input type="text" id="refLinkInput" readonly>
         <button class="copy-btn" id="copyRefBtn">نسخ</button>
       </div>
-      <div class="ref-hint">كل شخص يسجّل تجربة مجانية عبر هالرابط، تاخذ أنت وياه <strong>5 أوصاف إضافية</strong> لكل واحد فيكم. عدد من دعوتهم لحد الحين: <strong id="refCount">0</strong></div>
+      <div class="ref-hint">كل شخص يسجّل تجربة مجانية عبر هالرابط، تاخذ أنت وياه <strong><span id="refBonusHint">—</span> وصف إضافي</strong> لكل واحد فيكم (النسبة تعتمد على باقتك الحالية). عدد من دعوتهم لحد الحين: <strong id="refCount">0</strong></div>
     </div>
   </div>
 </div>
@@ -110,7 +110,8 @@ async function loadAccount(){
     document.getElementById('remainingVal').textContent = `${data.remaining} من ${data.cap}`;
     document.getElementById('usedVal').textContent = data.used;
     document.getElementById('refCount').textContent = data.referralCount;
-    document.getElementById('refLinkInput').value = `https://www.wassaf.space/?ref=${data.referralCode}`;
+    document.getElementById('refLinkInput').value = `https://www.wassaf.space/?ref=${data.referralToken}`;
+    document.getElementById('refBonusHint').textContent = data.estimatedReferralBonus;
     accCard.classList.add('show');
   }catch(e){
     accErr.textContent = 'صار خطأ أثناء التحميل، جرب مرة ثانية';

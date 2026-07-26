@@ -779,7 +779,7 @@ if(referralTrialBtn){
         fetch('/api/growth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'apply_referral', newAccessCode: code, referrerCode: pendingRef })
+          body: JSON.stringify({ action: 'apply_referral', newAccessCode: code, referrerToken: pendingRef })
         }).then(() => {
           localStorage.setItem('wassaf_refAppliedFor', code);
           localStorage.removeItem('wassaf_pendingRef');
