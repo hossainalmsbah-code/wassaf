@@ -10,6 +10,18 @@ function generateShareId() {
   return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 }
 
+// يولّد (أو يرجّع الموجود) توكن إحالة عشوائي مربوط بالكود — بدون ما يكشف الكود نفسه بالرابط المُشارك
+async function getOrCreateReferralToken(accessCode) {
+  const ownerKey = `reftoken_owner_by_code:${accessCode}`;
+  const existing = await redisCommand(['GET', ownerKey]);
+  if (existing) return existing;
+
+  const token = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  await redisCommand(['SET', ownerKey, token]);
+  await redisCommand(['SET', `reftoken_owner:${token}`, accessCode]);
+  return token;
+}
+
 // ---------- بيانات الحساب: الباقة، الاستخدام، كود وعداد الإحالة ----------
 async function handleAccountInfo(body, res) {
   const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
@@ -27,9 +39,11 @@ async function handleAccountInfo(body, res) {
   }
 
   const referralCount = parseInt((await redisCommand(['GET', `referral_count:${accessCode}`])) || '0', 10);
+  const referralToken = await getOrCreateReferralToken(accessCode);
   const cap = result.cap;
   const used = typeof result.used === 'number' ? result.used : (cap - (result.remaining || 0));
   const remaining = typeof result.remaining === 'number' ? result.remaining : Math.max(cap - used, 0);
+  const estimatedReferralBonus = Math.max(Math.round(cap * REFERRAL_BONUS_RATIO), 3);
 
   res.status(200).json({
     valid: true,
@@ -37,20 +51,29 @@ async function handleAccountInfo(body, res) {
     cap,
     used,
     remaining,
-    referralCode: accessCode,
-    referralCount
+    referralToken,
+    referralCount,
+    estimatedReferralBonus
   });
 }
 
 // ---------- تطبيق مكافأة الإحالة على الطرفين ----------
 async function handleApplyReferral(body, res) {
   const newAccessCode = (body.newAccessCode || '').toString().trim().toUpperCase();
-  const referrerCode = (body.referrerCode || '').toString().trim().toUpperCase();
+  const referrerToken = (body.referrerToken || '').toString().trim();
 
-  if (!newAccessCode || !referrerCode) {
+  if (!newAccessCode || !referrerToken) {
     res.status(400).json({ error: 'بيانات الإحالة ناقصة' });
     return;
   }
+
+  // نحل التوكن لكود الوصول الحقيقي — الكود نفسه ما يظهر أبداً بالرابط المُشارك
+  const referrerCode = await redisCommand(['GET', `reftoken_owner:${referrerToken}`]);
+  if (!referrerCode) {
+    res.status(404).json({ error: 'رابط الإحالة غير صالح' });
+    return;
+  }
+
   if (newAccessCode === referrerCode) {
     res.status(400).json({ error: 'ما تقدر تحيل نفسك بنفسك' });
     return;
