@@ -214,6 +214,7 @@
   <header class="top">
     <img class="brand-logo" src="/assets/logo-horizontal.svg" alt="وصّاف">
     <nav>
+      <a href="/account.html">حسابي</a>
       <a href="#imageGen">توليد من صورة</a>
       <a href="#bulk">رفع جماعي</a>
       <a href="#pricing">الأسعار</a>
@@ -360,6 +361,8 @@
       </div>
       <div class="output small" id="outputSeo"></div>
     </div>
+    <button class="go secondary" id="shareBtn" type="button" style="margin-top:8px;">شارك الوصف كرابط</button>
+    <div class="field-hint" id="shareResultBox" style="display:none;margin-top:10px;"></div>
   </div>
 
   <!-- ===================== توليد من صورة (حصري نصف سنوي/سنوي) ===================== -->
@@ -751,6 +754,82 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     goBtn.textContent = 'ولّد الأوصاف';
   }
 });
+
+/* ==================== الإحالات: التقاط رابط ?ref= وتطبيقه بعد التجربة المجانية ==================== */
+(function(){
+  const params = new URLSearchParams(location.search);
+  const ref = params.get('ref');
+  if(ref){
+    localStorage.setItem('wassaf_pendingRef', ref.trim().toUpperCase());
+  }
+})();
+
+// لا نلمس زر التجربة المجانية الأصلي — نضيف مستمع ثاني منفصل يراقب ظهور الكود الجديد بعد نجاح الإنشاء
+const referralTrialBtn = document.getElementById('trialBtn');
+if(referralTrialBtn){
+  referralTrialBtn.addEventListener('click', () => {
+    const pendingRef = localStorage.getItem('wassaf_pendingRef');
+    if(!pendingRef) return;
+    let attempts = 0;
+    const poll = setInterval(() => {
+      attempts++;
+      const code = localStorage.getItem('wassaf_accessCode');
+      if(code && localStorage.getItem('wassaf_refAppliedFor') !== code){
+        clearInterval(poll);
+        fetch('/api/apply-referral', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newAccessCode: code, referrerCode: pendingRef })
+        }).then(() => {
+          localStorage.setItem('wassaf_refAppliedFor', code);
+          localStorage.removeItem('wassaf_pendingRef');
+        }).catch(() => {});
+      }
+      if(attempts > 15) clearInterval(poll);
+    }, 1000);
+  });
+}
+
+/* ==================== مشاركة الوصف كرابط ==================== */
+const shareBtn = document.getElementById('shareBtn');
+const shareResultBox = document.getElementById('shareResultBox');
+if(shareBtn){
+  shareBtn.addEventListener('click', async () => {
+    const long = document.getElementById('outputLong').textContent.trim();
+    const short = document.getElementById('outputShort').textContent.trim();
+    const productName = document.getElementById('productName').value.trim();
+    if(!long && !short){
+      shareResultBox.style.display = 'block';
+      shareResultBox.textContent = 'ولّد وصف أول قبل ما تشاركه';
+      return;
+    }
+    const oldText = shareBtn.textContent;
+    shareBtn.disabled = true;
+    shareBtn.textContent = 'جاري إنشاء الرابط...';
+    try{
+      const res = await fetch('/api/create-share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productName, long, short })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.ok){
+        shareResultBox.style.display = 'block';
+        shareResultBox.textContent = data.error || 'تعذر إنشاء رابط المشاركة';
+        return;
+      }
+      const fullUrl = location.origin + data.url;
+      shareResultBox.style.display = 'block';
+      shareResultBox.innerHTML = `تم إنشاء رابط المشاركة: <a href="${fullUrl}" target="_blank" style="color:var(--accent);font-weight:700;">${fullUrl}</a>`;
+    }catch(e){
+      shareResultBox.style.display = 'block';
+      shareResultBox.textContent = 'صار خطأ أثناء إنشاء رابط المشاركة';
+    }finally{
+      shareBtn.disabled = false;
+      shareBtn.textContent = oldText;
+    }
+  });
+}
 
 /* ==================== توليد من صورة ==================== */
 const imageInput = document.getElementById('imageInput');

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حسابي — وصّاف</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E1B2E;--ink-dim:#6B6785;--bg:#FFFFFF;--bg-raised:#F7F6FB;
+    --line:#E7E4F0;--accent:#E94548;--accent-dim:#FCEAEA;--accent2:#6E5BC7;--good:#16A34A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',sans-serif;line-height:1.9;}
+  .wrap{max-width:640px;margin:0 auto;padding:32px 24px 80px;}
+  a.back{display:inline-block;margin-bottom:20px;color:var(--ink-dim);text-decoration:none;font-size:13px;}
+  h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:24px;margin-bottom:4px;}
+  .sub{color:var(--ink-dim);font-size:13px;margin-bottom:28px;}
+  label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
+  input[type=text]{
+    width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;text-transform:uppercase;
+  }
+  input[type=text]:focus{outline:none;border-color:var(--accent);}
+  .go{
+    width:100%;margin-top:12px;background:var(--accent);color:#1a0e14;border:none;
+    padding:14px;border-radius:8px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;
+  }
+  .go:hover{background:#ff8095;}
+  .err{color:#E8664A;font-size:13px;margin-top:10px;display:none;}
+  .card{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:22px;margin-top:24px;display:none;}
+  .card.show{display:block;}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
+  .row:last-child{border-bottom:none;}
+  .row .k{color:var(--ink-dim);font-size:13px;}
+  .row .v{font-weight:700;font-size:14px;}
+  .plan-pill{background:var(--accent-dim);color:var(--accent2);font-size:12px;font-weight:700;padding:4px 12px;border-radius:12px;}
+  .ref-box{margin-top:20px;padding-top:20px;border-top:1px dashed var(--line);}
+  .ref-title{font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:10px;}
+  .ref-link-row{display:flex;gap:8px;}
+  .ref-link-row input{background:var(--bg);font-size:13px;}
+  .copy-btn{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:0 16px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .copy-btn:hover{border-color:var(--accent);color:var(--ink);}
+  .ref-hint{font-size:12px;color:var(--ink-dim);margin-top:10px;line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← الرجوع للرئيسية</a>
+  <h1>حسابي</h1>
+  <div class="sub">أدخل كود الوصول حقك لعرض باقتك واستخدامك ورابط الإحالة.</div>
+
+  <label>كود الوصول</label>
+  <input type="text" id="accCodeInput" placeholder="مثال: AB12CD">
+  <button class="go" id="loadBtn">عرض بيانات الحساب</button>
+  <div class="err" id="accErr"></div>
+
+  <div class="card" id="accCard">
+    <div class="row"><div class="k">الباقة</div><div class="v"><span class="plan-pill" id="planName"></span></div></div>
+    <div class="row"><div class="k">المتبقي هذا الشهر</div><div class="v" id="remainingVal"></div></div>
+    <div class="row"><div class="k">المستخدم هذا الشهر</div><div class="v" id="usedVal"></div></div>
+
+    <div class="ref-box">
+      <div class="ref-title">رابط الإحالة حقك</div>
+      <div class="ref-link-row">
+        <input type="text" id="refLinkInput" readonly>
+        <button class="copy-btn" id="copyRefBtn">نسخ</button>
+      </div>
+      <div class="ref-hint">كل شخص يسجّل تجربة مجانية عبر هالرابط، تاخذ أنت وياه <strong>5 أوصاف إضافية</strong> لكل واحد فيكم. عدد من دعوتهم لحد الحين: <strong id="refCount">0</strong></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const accCodeInput = document.getElementById('accCodeInput');
+const loadBtn = document.getElementById('loadBtn');
+const accErr = document.getElementById('accErr');
+const accCard = document.getElementById('accCard');
+
+// لو المستخدم جاي من الصفحة الرئيسية وعنده كود محفوظ بالمتصفح، نعبّيه تلقائياً تسهيلاً
+const savedCode = localStorage.getItem('wassaf_accessCode');
+if(savedCode) accCodeInput.value = savedCode;
+
+async function loadAccount(){
+  const code = accCodeInput.value.trim().toUpperCase();
+  accErr.style.display = 'none';
+  accCard.classList.remove('show');
+  if(!code){
+    accErr.textContent = 'اكتب كود الوصول أول';
+    accErr.style.display = 'block';
+    return;
+  }
+  loadBtn.disabled = true;
+  loadBtn.textContent = 'جاري التحميل...';
+  try{
+    const res = await fetch('/api/account-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode: code })
+    });
+    const data = await res.json();
+    if(!data.valid){
+      accErr.textContent = data.message || 'كود غير صحيح';
+      accErr.style.display = 'block';
+      return;
+    }
+    document.getElementById('planName').textContent = data.plan;
+    document.getElementById('remainingVal').textContent = `${data.remaining} من ${data.cap}`;
+    document.getElementById('usedVal').textContent = data.used;
+    document.getElementById('refCount').textContent = data.referralCount;
+    document.getElementById('refLinkInput').value = `https://www.wassaf.space/?ref=${data.referralCode}`;
+    accCard.classList.add('show');
+  }catch(e){
+    accErr.textContent = 'صار خطأ أثناء التحميل، جرب مرة ثانية';
+    accErr.style.display = 'block';
+  }finally{
+    loadBtn.disabled = false;
+    loadBtn.textContent = 'عرض بيانات الحساب';
+  }
+}
+
+loadBtn.addEventListener('click', loadAccount);
+if(savedCode) loadAccount();
+
+document.getElementById('copyRefBtn').addEventListener('click', () => {
+  const input = document.getElementById('refLinkInput');
+  input.select();
+  navigator.clipboard.writeText(input.value);
+  const btn = document.getElementById('copyRefBtn');
+  const old = btn.textContent;
+  btn.textContent = 'تم ✓';
+  setTimeout(() => btn.textContent = old, 1500);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>وصف منتج بواسطة وصّاف</title>
+<meta name="robots" content="noindex, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E1B2E;--ink-dim:#6B6785;--bg:#FFFFFF;--bg-raised:#F7F6FB;
+    --line:#E7E4F0;--accent:#E94548;--accent-dim:#FCEAEA;--accent2:#6E5BC7;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',sans-serif;line-height:1.9;}
+  .wrap{max-width:640px;margin:0 auto;padding:32px 24px 60px;}
+  .logo{font-family:'Tajawal',sans-serif;font-weight:900;font-size:22px;color:var(--accent);text-align:center;margin-bottom:24px;}
+  .product-name{font-family:'Tajawal',sans-serif;font-weight:800;font-size:20px;margin-bottom:16px;}
+  .card{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:16px;white-space:pre-wrap;font-size:15px;}
+  .label{font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:10px;}
+  .footer-note{text-align:center;color:var(--ink-dim);font-size:13px;margin-top:32px;}
+  .cta{
+    display:block;text-align:center;margin-top:16px;background:var(--accent);color:#1a0e14;
+    text-decoration:none;font-size:16px;font-weight:700;padding:16px;border-radius:8px;
+  }
+  .cta:hover{background:#ff8095;}
+  .loading, .notfound{text-align:center;color:var(--ink-dim);padding:60px 20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">وصّاف</div>
+  <div id="content">
+    <div class="loading">جاري تحميل الوصف...</div>
+  </div>
+</div>
+
+<script>
+function escapeHTML(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function loadShare(){
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  const content = document.getElementById('content');
+  if(!id){
+    content.innerHTML = '<div class="notfound">رابط غير صحيح</div>';
+    return;
+  }
+  try{
+    const res = await fetch('/api/get-share?id=' + encodeURIComponent(id));
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      content.innerHTML = '<div class="notfound">هذا الرابط منتهي أو غير موجود</div>';
+      return;
+    }
+    let html = '';
+    if(data.productName){
+      html += `<div class="product-name">${escapeHTML(data.productName)}</div>`;
+    }
+    if(data.long){
+      html += `<div class="label">الوصف</div><div class="card">${escapeHTML(data.long)}</div>`;
+    }
+    if(data.short){
+      html += `<div class="label">نسخة قصيرة</div><div class="card">${escapeHTML(data.short)}</div>`;
+    }
+    html += `<div class="footer-note">تم إنشاء هذا الوصف خلال 8 ثوانٍ بواسطة وصّاف</div>`;
+    html += `<a class="cta" href="https://www.wassaf.space/">جرّب مجاناً</a>`;
+    content.innerHTML = html;
+  }catch(e){
+    content.innerHTML = '<div class="notfound">صار خطأ أثناء تحميل الوصف</div>';
+  }
+}
+loadShare();
+</script>
+</body>
+</html>
