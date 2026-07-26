@@ -122,8 +122,10 @@ module.exports = async (req, res) => {
     const event = JSON.parse(rawBody.toString('utf8'));
     const eventName = event.meta && event.meta.event_name;
 
-    // نهتم بس بحدث اشتراك جديد ناجح — باقي الأحداث (إلغاء، تجديد...) نتجاهلها بهذا الإصدار المبسّط
-    if (eventName !== 'subscription_created') {
+    // [تعديل ضروري] نهتم الآن بحدثين: اشتراك جديد ناجح، وانتهاء الاشتراك فعلياً (subscription_expired)
+    // subscription_expired يصير بالضبط بنهاية الفترة المدفوعة (نفس يوم الاشتراك بالشهر التالي) — سواء التاجر ألغى بنفسه أو فشل التجديد
+    // ما نستمع لـ subscription_cancelled لأنه يصير وقت الإلغاء نفسه، بينما الاشتراك يفضل فعّال لين نهاية الفترة المدفوعة فعلياً
+    if (eventName !== 'subscription_created' && eventName !== 'subscription_expired') {
       res.status(200).json({ received: true, ignored: eventName || 'unknown' });
       return;
     }
@@ -132,7 +134,9 @@ module.exports = async (req, res) => {
     // نستخدم معرّف الاشتراك الفريد كقفل بـ Redis — أول وحدة توصل تاخذ القفل وتكمل، أي تكرار بعدها يتجاهل فوراً
     const subscriptionId = event.data && event.data.id;
     if (subscriptionId) {
-      const lockKey = `webhook:lock:${subscriptionId}`;
+      // [تعديل ضروري] قفل التكرار صار مربوط باسم الحدث نفسه أيضاً، عشان حدث subscription_expired
+      // ما ياخذ نفس قفل subscription_created لنفس الاشتراك (لأنه معرّف الاشتراك واحد لكن الحدث مختلف تماماً)
+      const lockKey = `webhook:lock:${eventName}:${subscriptionId}`;
       // NX: يحط القيمة بس لو المفتاح مو موجود أصلاً | EX 2592000: القفل ينتهي تلقائياً بعد 30 يوم
       const lockResult = await redisCommand(['SET', lockKey, '1', 'NX', 'EX', '2592000']);
       if (lockResult !== 'OK') {
@@ -140,6 +144,44 @@ module.exports = async (req, res) => {
         res.status(200).json({ received: true, duplicate: true, subscriptionId });
         return;
       }
+    }
+
+    // [إضافة جديدة] معالجة حدث انتهاء الاشتراك فعلياً — نطفّي الكود المرتبط بالكامل بغض النظر عن أي أوصاف متبقية
+    if (eventName === 'subscription_expired') {
+      if (!subscriptionId) {
+        res.status(200).json({ received: true, ignored: 'no subscription id' });
+        return;
+      }
+
+      const linkedCode = await redisCommand(['GET', `subscription_code:${subscriptionId}`]);
+      if (!linkedCode) {
+        // اشتراك ما نعرف الكود المرتبط فيه (غالباً كان موجود قبل هالتحديث) — نسجله للمراجعة اليدوية بدل ما نتجاهله بصمت
+        await redisCommand(['HSET', 'pending:review_expired', subscriptionId, JSON.stringify({
+          subscriptionId,
+          receivedAt: new Date().toISOString()
+        })]);
+        res.status(200).json({ received: true, codeNotFound: true, subscriptionId });
+        return;
+      }
+
+      const raw = await redisCommand(['GET', `code:${linkedCode}`]);
+      if (raw) {
+        let parsed;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e) {
+          parsed = null;
+        }
+        if (parsed) {
+          parsed.active = false;
+          parsed.deactivatedAt = new Date().toISOString();
+          parsed.deactivationReason = 'subscription_expired';
+          await redisCommand(['SET', `code:${linkedCode}`, JSON.stringify(parsed)]);
+        }
+      }
+
+      res.status(200).json({ received: true, deactivated: true, code: linkedCode, subscriptionId });
+      return;
     }
 
     const attrs = (event.data && event.data.attributes) || {};
@@ -174,9 +216,15 @@ module.exports = async (req, res) => {
       active: true,
       createdAt: new Date().toISOString(),
       source: 'webhook',
-      email
+      email,
+      subscriptionId: subscriptionId || null
     });
     await redisCommand(['SET', `code:${code}`, codeValue]);
+
+    // [إضافة جديدة] نخزّن الربط بين معرّف الاشتراك والكود — أساسي عشان نقدر نطفّي الكود الصحيح عند subscription_expired لاحقاً
+    if (subscriptionId) {
+      await redisCommand(['SET', `subscription_code:${subscriptionId}`, code]);
+    }
 
     let emailSent = false;
     let emailError = null;
