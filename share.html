@@ -77,6 +77,7 @@ async function loadShare(){
       html += `<div class="label">وصف SEO</div><div class="card">${escapeHTML(data.seo)}</div>`;
     }
     html += `<div class="footer-note">تم إنشاء هذا الوصف بواسطة وصّاف</div>`;
+    html += `<div style="text-align:center;margin-top:8px;"><a href="mailto:wassaf.sa@gmail.com" style="color:var(--ink-dim);font-size:12px;text-decoration:none;">تواصل معنا</a></div>`;
     html += `<a class="cta" href="https://www.wassaf.space/">جرّب مجاناً</a>`;
     content.innerHTML = html;
   }catch(e){
