@@ -9,24 +9,8 @@ function generateRandomCode(length = 6) {
   return code;
 }
 
-function currentMonthKey() {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
-}
-
-// نستخرج IP الزائر الحقيقي من رؤوس الطلب (Vercel يمرره عبر x-forwarded-for)
-function getClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    return forwarded.toString().split(',')[0].trim();
-  }
-  return (req.socket && req.socket.remoteAddress) || 'unknown';
-}
-
 const TRIAL_CAP = 10;
-const MAX_TRIAL_MONTHS = 2; // بعد ما نفس الشبكة تاخذ تجربة بشهرين مختلفين (حتى لو مو متتاليين)، نوقفها
+const TRIAL_DURATION_SECONDS = 10 * 24 * 60 * 60; // 10 أيام بالضبط — الكود ينتهي تلقائياً بعدها حتى لو ما استخدم كل الحصة
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -35,25 +19,21 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const ip = getClientIp(req);
-    const trialKey = `trial_ip:${ip}:${currentMonthKey()}`;
-    const countKey = `trial_count:${ip}`;
+    const body = req.body || {};
+    const deviceId = (body.deviceId || '').toString().trim();
 
-    const existing = await redisCommand(['GET', trialKey]);
-    if (existing) {
-      res.status(403).json({
-        error: 'جرّبت وصّاف مجاناً هالشهر من قبل. تقدر تشترك بأي باقة عشان تكمل التوليد.',
-        code: 'TRIAL_ALREADY_USED'
-      });
+    if (!deviceId) {
+      res.status(400).json({ error: 'تعذر تحديد الجهاز، جرب تحدّث الصفحة', code: 'NO_DEVICE_ID' });
       return;
     }
 
-    // نتحقق من العداد الدائم (كم شهر مختلف استخدمت فيه هالشبكة تجربة مجانية)
-    const usedMonths = parseInt((await redisCommand(['GET', countKey])) || '0', 10);
-    if (usedMonths >= MAX_TRIAL_MONTHS) {
+    // مرة وحدة فقط لكل جهاز، للأبد — بدون تصفير شهري
+    const deviceKey = `trial_device:${deviceId}`;
+    const alreadyUsed = await redisCommand(['GET', deviceKey]);
+    if (alreadyUsed) {
       res.status(403).json({
-        error: 'هذه الشبكة استخدمت التجربة المجانية أكثر من مرة من قبل. تواصل معنا لو تحتاج مساعدة، أو اشترك بأي باقة.',
-        code: 'TRIAL_LIMIT_REACHED'
+        error: 'جرّبت وصّاف مجاناً من قبل على هالجهاز. تقدر تشترك بأي باقة عشان تكمل التوليد.',
+        code: 'TRIAL_ALREADY_USED'
       });
       return;
     }
@@ -64,17 +44,16 @@ module.exports = async (req, res) => {
       plan: 'تجربة',
       active: true,
       createdAt: new Date().toISOString(),
-      source: 'self_serve_trial'
+      source: 'self_serve_trial',
+      deviceId
     });
 
-    await redisCommand(['SET', `code:${code}`, value]);
+    // EX هنا هو صلب الميزة: الكود نفسه يختفي من Redis تلقائياً بعد 10 أيام بالضبط،
+    // فحتى لو التاجر ما استخدم كل العشر أوصاف، أي محاولة توليد بعدها تفشل تلقائياً بدون أي كود إضافي بـ_access.js
+    await redisCommand(['SET', `code:${code}`, value, 'EX', TRIAL_DURATION_SECONDS]);
 
-    // نربط هالـ IP بكود التجربة هذا الشهر، ونخليه ينتهي تلقائياً بعد 35 يوم
-    await redisCommand(['SET', trialKey, code]);
-    await redisCommand(['EXPIRE', trialKey, 35 * 24 * 60 * 60]);
-
-    // نزيد العداد الدائم لهالشبكة (بدون انتهاء صلاحية — يفضل محفوظ لين نفكه يدوياً)
-    await redisCommand(['SET', countKey, (usedMonths + 1).toString()]);
+    // نسجل هالجهاز على إنه أخذ تجربته، للأبد بدون انتهاء صلاحية — يمنع أي محاولة ثانية من نفس الجهاز مستقبلاً
+    await redisCommand(['SET', deviceKey, code]);
 
     res.status(200).json({ code, cap: TRIAL_CAP });
   } catch (err) {
