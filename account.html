@@ -49,7 +49,13 @@
 <body>
 <div class="wrap">
   <a class="back" href="/">← الرجوع للرئيسية</a>
-  <div style="text-align:left;"><a href="mailto:wassaf.sa@gmail.com" style="color:var(--ink-dim);font-size:12px;text-decoration:none;">تواصل معنا</a></div>
+  <div style="text-align:left;">
+    <a href="#" id="contactLink" style="color:var(--ink-dim);font-size:12px;text-decoration:none;">تواصل معنا</a>
+    <div id="contactBox" style="display:none;margin-top:6px;font-size:12px;color:var(--ink-dim);">
+      <span style="font-family:monospace;">wassaf.sa@gmail.com</span>
+      <button type="button" id="contactCopyBtn" class="copy-btn" style="margin-right:8px;">نسخ</button>
+    </div>
+  </div>
   <h1>حسابي</h1>
   <div class="sub">أدخل كود الوصول حقك لعرض باقتك واستخدامك ورابط الإحالة.</div>
 
@@ -135,6 +141,22 @@ document.getElementById('copyRefBtn').addEventListener('click', () => {
   btn.textContent = 'تم ✓';
   setTimeout(() => btn.textContent = old, 1500);
 });
+
+const contactLink = document.getElementById('contactLink');
+const contactBox = document.getElementById('contactBox');
+if(contactLink && contactBox){
+  contactLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    contactBox.style.display = contactBox.style.display === 'none' ? 'block' : 'none';
+  });
+  const contactCopyBtn = document.getElementById('contactCopyBtn');
+  contactCopyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText('wassaf.sa@gmail.com');
+    const old = contactCopyBtn.textContent;
+    contactCopyBtn.textContent = 'تم ✓';
+    setTimeout(() => contactCopyBtn.textContent = old, 1500);
+  });
+}
 </script>
 </body>
 </html>

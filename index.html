@@ -464,7 +464,11 @@
     <a href="/privacy.html">سياسة الخصوصية</a>
     <a href="/terms.html">الشروط والأحكام</a>
     <a href="/refund.html">سياسة الاسترجاع</a>
-    <a href="mailto:wassaf.sa@gmail.com">تواصل معنا</a>
+    <a href="mailto:wassaf.sa@gmail.com" id="contactLink" onclick="return false;" style="cursor:pointer;">تواصل معنا</a>
+    <div id="contactBox" style="display:none;margin-top:12px;font-size:12px;color:var(--ink-dim);">
+      <span id="contactEmailText" style="font-family:monospace;">wassaf.sa@gmail.com</span>
+      <button type="button" id="contactCopyBtn" class="copy-btn" style="margin-right:8px;">نسخ</button>
+    </div>
     <div class="copy">© 2026 وصّاف. جميع الحقوق محفوظة.</div>
   </footer>
 
@@ -1277,6 +1281,22 @@ exportBtn.addEventListener('click', () => {
   a.click();
   URL.revokeObjectURL(url);
 });
+
+/* ==================== تواصل معنا: عرض الإيميل مباشرة + نسخ ==================== */
+const contactLink = document.getElementById('contactLink');
+const contactBox = document.getElementById('contactBox');
+if(contactLink && contactBox){
+  contactLink.addEventListener('click', () => {
+    contactBox.style.display = contactBox.style.display === 'none' ? 'block' : 'none';
+  });
+  const contactCopyBtn = document.getElementById('contactCopyBtn');
+  contactCopyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText('wassaf.sa@gmail.com');
+    const old = contactCopyBtn.textContent;
+    contactCopyBtn.textContent = 'تم ✓';
+    setTimeout(() => contactCopyBtn.textContent = old, 1500);
+  });
+}
 </script>
 </body>
 </html>
