@@ -267,7 +267,10 @@
 
   <div class="section-sub" id="tool" style="margin-top:56px;">أدخل بيانات منتجك واحصل على وصف طويل ، ونسخة قصيرة للسوشال ميديا ، ووصف SEO - بضغطة وحدة.</div>
 
-  <div class="settings-box" id="accessBox">
+  <div class="settings-box" id="accessBox" style="display:none;">
+    <div class="field-hint" id="subscribeNudge" style="display:none;margin-bottom:14px;font-weight:700;color:var(--accent);">
+      خلصت تجربتك المجانية 🎉 اشترك بأي باقة عشان تكمل التوليد — <a href="#pricing" style="color:var(--accent);">شوف الباقات من هنا</a>
+    </div>
     <div class="settings-title">
       كود الوصول <span class="saved-tag" id="accessSavedTag">تم الحفظ ✓</span>
     </div>
@@ -464,7 +467,7 @@
     <a href="/privacy.html">سياسة الخصوصية</a>
     <a href="/terms.html">الشروط والأحكام</a>
     <a href="/refund.html">سياسة الاسترجاع</a>
-    <a href="mailto:wassaf.sa@gmail.com" id="contactLink" onclick="return false;" style="cursor:pointer;">تواصل معنا</a>
+    <a href="mailto:wassaf.sa@gmail.com" id="contactLink" style="cursor:pointer;">تواصل معنا</a>
     <div id="contactBox" style="display:none;margin-top:12px;font-size:12px;color:var(--ink-dim);">
       <span id="contactEmailText" style="font-family:monospace;">wassaf.sa@gmail.com</span>
       <button type="button" id="contactCopyBtn" class="copy-btn" style="margin-right:8px;">نسخ</button>
@@ -585,7 +588,11 @@ loadAccessCode();
 (async function autoCreateTrialIfNeeded(){
   if(getStoredAccessCode()) return; // عنده كود أصلاً (تجربة سابقة أو باقة مدفوعة) — ما نسوي شي
   try{
-    const res = await fetch('/api/create-trial', { method: 'POST' });
+    const res = await fetch('/api/create-trial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId })
+    });
     const data = await res.json();
     if(res.ok && data.code){
       accessCodeInput.value = data.code;
@@ -604,8 +611,11 @@ loadAccessCode();
           localStorage.removeItem('wassaf_pendingRef');
         }).catch(() => {});
       }
+    } else {
+      // جهازه أخذ تجربته من قبل — نعرض صندوق كود الوصول مع رسالة اشتراك واضحة
+      document.getElementById('accessBox').style.display = 'block';
+      document.getElementById('subscribeNudge').style.display = 'block';
     }
-    // لو فشل (مثلاً IP استخدم حصته هالشهر أصلاً) — نتجاهل بصمت، والمستخدم يقدر يدخل كود يدوي عادي
   }catch(e){ /* تجاهل بصمت */ }
 })();
 
@@ -782,6 +792,11 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     errBox.textContent = e.userMessage || 'صار خطأ أثناء التوليد، جرب مرة ثانية';
     errBox.style.display = 'block';
     outputLong.textContent = '';
+    // [إضافة] لو السبب انتهاء/استنفاد حصة التجربة، نعرض صندوق كود الوصول مع رسالة الاشتراك
+    if(e.code === 'QUOTA_EXHAUSTED' || e.code === 'INVALID_CODE'){
+      document.getElementById('accessBox').style.display = 'block';
+      document.getElementById('subscribeNudge').style.display = 'block';
+    }
   }finally{
     goBtn.disabled = false;
     goBtn.textContent = 'ولّد الأوصاف';
