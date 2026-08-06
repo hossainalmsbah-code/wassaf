@@ -382,15 +382,15 @@
 
   <!-- ===================== رفع جماعي ===================== -->
   <div class="section-title" id="bulk">رفع دفعة منتجات ( Bulk )</div>
-  <div class="section-sub">ارفع ملف CSV فيه منتجاتك ، وخلّي وصّاف يولّد الأوصاف الثلاثة لكل منتج تلقائياً ، ثم صدّرها كملف واحد جاهز.</div>
+  <div class="section-sub">ارفع ملف Excel فيه منتجاتك ، وخلّي وصّاف يولّد الأوصاف الثلاثة لكل منتج تلقائياً ، ثم صدّرها كملف واحد جاهز.</div>
 
   <div class="bulk-box">
     <div class="drop-row">
       <label class="file-label" id="fileLabel">
-        <input type="file" id="csvInput" accept=".csv,text/csv">
-        📄 اضغط لاختيار ملف CSV ، أو اسحبه هنا
+        <input type="file" id="csvInput" accept=".xlsx">
+        📊 اضغط لاختيار ملف Excel، أو اسحبه هنا
       </label>
-      <button class="tmpl-link" id="tmplBtn" type="button">تحميل نموذج CSV فارغ</button>
+      <button class="tmpl-link" id="tmplBtn" type="button">تحميل نموذج Excel فارغ</button>
     </div>
     <div class="field-hint">
       الأعمدة المطلوبة: <strong>اسم المنتج</strong> ( إلزامي ) ، <strong>المميزات</strong> ( إلزامي ) ، وتقدر تضيف اختيارياً: الجمهور ، السعر ، الإطار (AIDA أو PAS أو BAB) . لو ما حددت الإطار أو النبرة لصف معين ، بيستخدم الإعدادات العامة أعلاه .
@@ -405,7 +405,7 @@
 
     <div class="bulk-actions">
       <button class="go" id="bulkGoBtn" disabled>ابدأ التوليد الجماعي</button>
-      <button class="go secondary" id="exportBtn" style="display:none;">تحميل النتائج CSV</button>
+      <button class="go secondary" id="exportBtn" style="display:none;">تحميل النتائج Excel</button>
     </div>
 
     <div class="bulk-table-wrap" id="bulkTableWrap">
@@ -481,6 +481,9 @@
 <!-- شارة توثيق منصة الأعمال (المركز السعودي للتنافسية والأعمال) -->
 <div class="sbc-verify-seal" data-token="NFlCWFhIR3R4elp4M21UbVNubnBCUT09" data-position="bottom-left"></div>
 <script src="https://eauthenticate.saudibusiness.gov.sa/EAuthSealApi/seal.js" async></script>
+
+<!-- SheetJS: لقراءة وكتابة ملفات Excel (.xlsx) مباشرة بالمتصفح بدون خادم إضافي -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
 /* ==================== إعدادات عامة محفوظة محلياً ==================== */
@@ -1013,30 +1016,7 @@ if(imageInput){
   });
 }
 
-/* ==================== رفع جماعي: تحليل CSV ==================== */
-function parseCSV(text){
-  text = text.replace(/^\uFEFF/, '');
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
-  for(let i=0;i<text.length;i++){
-    const c = text[i];
-    if(inQuotes){
-      if(c === '"'){
-        if(text[i+1] === '"'){ field += '"'; i++; }
-        else { inQuotes = false; }
-      } else field += c;
-    } else {
-      if(c === '"') inQuotes = true;
-      else if(c === ','){ row.push(field); field=''; }
-      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
-      else if(c === '\r'){ /* skip */ }
-      else field += c;
-    }
-  }
-  if(field.length || row.length){ row.push(field); rows.push(row); }
-  return rows.filter(r => r.length && r.some(c => c.trim() !== ''));
-}
-
+/* ==================== رفع جماعي: قراءة ملف Excel ==================== */
 function normalizeHeader(h){
   return h.trim().replace(/[إأآ]/g,'ا').replace(/[\s_]+/g,'');
 }
@@ -1052,7 +1032,7 @@ const HEADER_MAP = {
 function mapHeaders(headerRow){
   const map = {};
   headerRow.forEach((raw, idx) => {
-    const norm = normalizeHeader(raw);
+    const norm = normalizeHeader(String(raw || ''));
     for(const key in HEADER_MAP){
       if(HEADER_MAP[key].includes(norm)){ map[key] = idx; }
     }
@@ -1078,27 +1058,52 @@ csvInput.addEventListener('change', () => {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    const rows = parseCSV(e.target.result);
-    if(rows.length < 2){
-      bulkErr.textContent = 'الملف فاضي أو ما فيه صفوف بيانات تحت رأس الأعمدة';
+    let workbook;
+    try{
+      workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+    }catch(err){
+      bulkErr.textContent = 'تعذر قراءة الملف — تأكد إنه ملف Excel (.xlsx) صحيح وغير تالف';
       bulkErr.style.display = 'block';
       return;
     }
-    const headerMap = mapHeaders(rows[0]);
-    if(headerMap.name === undefined || headerMap.features === undefined){
+
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+      .map(r => r.map(c => (c === null || c === undefined) ? '' : String(c).trim()))
+      .filter(r => r.some(c => c !== ''));
+
+    if(allRows.length < 1){
+      bulkErr.textContent = 'الملف فاضي أو ما فيه بيانات';
+      bulkErr.style.display = 'block';
+      return;
+    }
+
+    // نبحث عن صف الرأس تلقائياً (بدل افتراض إنه أول صف) — لأن قالبنا فيه سطر شرح فوق الجدول
+    let headerRowIdx = -1;
+    let headerMap = {};
+    for(let i = 0; i < Math.min(allRows.length, 10); i++){
+      const map = mapHeaders(allRows[i]);
+      if(map.name !== undefined && map.features !== undefined){
+        headerRowIdx = i;
+        headerMap = map;
+        break;
+      }
+    }
+
+    if(headerRowIdx === -1){
       bulkErr.textContent = 'لازم يكون بالملف عمود "اسم_المنتج" وعمود "المميزات" على الأقل';
       bulkErr.style.display = 'block';
       return;
     }
 
-    const dataRows = rows.slice(1);
+    const dataRows = allRows.slice(headerRowIdx + 1);
     parsedRows = dataRows.map(r => ({
       name: (r[headerMap.name] || '').trim(),
       audience: headerMap.audience !== undefined ? (r[headerMap.audience] || '').trim() : '',
       features: headerMap.features !== undefined ? (r[headerMap.features] || '').trim() : '',
       price: headerMap.price !== undefined ? (r[headerMap.price] || '').trim() : '',
       framework: headerMap.framework !== undefined ? (r[headerMap.framework] || '').trim().toUpperCase() : ''
-    })).filter(r => r.name && r.features);
+    })).filter(r => r.name && r.features && !r.name.includes('احذف هذا الصف'));
 
     fileInfo.innerHTML = `<strong>${file.name}</strong> — تم العثور على ${parsedRows.length} منتج صالح.`;
 
@@ -1116,22 +1121,14 @@ csvInput.addEventListener('change', () => {
 
     bulkGoBtn.disabled = false;
   };
-  reader.readAsText(file, 'UTF-8');
+  reader.readAsArrayBuffer(file);
 });
 
 document.getElementById('tmplBtn').addEventListener('click', () => {
-  const sample = '\uFEFF' + [
-    'اسم_المنتج,الجمهور,المميزات,السعر,الإطار',
-    '"سماعة بلوتوث لاسلكية","محبي الرياضة","بطارية 30 ساعة, مقاومة للماء, صوت نقي","129 ريال",AIDA',
-    '"حقيبة ظهر لابتوب","طلاب وموظفين","مقاس 15.6 بوصة, جيوب متعددة, قماش مقاوم للماء","95 ريال",PAS'
-  ].join('\r\n');
-  const blob = new Blob([sample], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'نموذج-وصاف.csv';
+  a.href = '/assets/wassaf-template.xlsx';
+  a.download = 'قالب-منتجات-وصاف.xlsx';
   a.click();
-  URL.revokeObjectURL(url);
 });
 
 /* ==================== رفع جماعي: التنفيذ بالتوازي المحدود ==================== */
@@ -1279,23 +1276,19 @@ function escapeHTML(str){
   return div.innerHTML;
 }
 
-/* ==================== تصدير النتائج CSV ==================== */
+/* ==================== تصدير النتائج Excel ==================== */
 exportBtn.addEventListener('click', () => {
   const header = ['اسم المنتج', 'الوصف الطويل', 'الوصف القصير', 'SEO'];
-  const escape = (v) => '"' + String(v || '').replace(/"/g, '""') + '"';
-  const lines = [header.map(escape).join(',')];
+  const rows = [header];
   bulkResults.forEach(r => {
     if(!r || r.error) return;
-    lines.push([r.name, r.long, r.short, r.seo].map(escape).join(','));
+    rows.push([r.name, r.long, r.short, r.seo]);
   });
-  const csvContent = '\uFEFF' + lines.join('\r\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'اوصاف-وصاف.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 28 }, { wch: 60 }, { wch: 40 }, { wch: 40 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'الأوصاف');
+  XLSX.writeFile(wb, 'اوصاف-وصاف.xlsx');
 });
 
 /* ==================== تواصل معنا: عرض الإيميل مباشرة + نسخ ==================== */
