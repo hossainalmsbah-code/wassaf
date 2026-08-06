@@ -84,6 +84,33 @@ function buildFrameworkInstruction(framework) {
   return `استخدم إطار ${FRAMEWORK_LABELS[framework]} بالضبط.`;
 }
 
+// [إضافة جديدة] محتوى تسويقي جاهز (واتساب وإنستقرام) — حصري لباقتي النصف سنوي والسنوي
+// مدموج بنفس ملف generate.js (مو ملف API منفصل) عشان ما نتجاوز حد الـ12 Serverless Function بخطة Vercel Hobby
+const MARKETING_ALLOWED_PLANS = ['نصف سنوي', 'سنوي'];
+
+const SYSTEM_PROMPT_MARKETING = `أنت مساعد تسويقي متخصص بكتابة محتوى بيعي جاهز للنشر مباشرة، بلهجة سعودية خليجية ودودة، لتجار متاجر إلكترونية سعودية (سلة، شوبيفاي، زد).
+
+بناءً على بيانات المنتج المعطاة، اكتب قطعتين محتوى:
+
+1. "whatsapp": رسالة واتساب مباشرة قصيرة (3-5 أسطر بحد أقصى)، بأسلوب بيعي ودود مباشر، مناسبة يرسلها التاجر لعميل مهتم أو ينشرها بحالة واتساب. أسلوب طبيعي محادثي، بدون علامات ترقيم رسمية زيادة.
+
+2. "instagram": منشور إنستقرام جاهز — كابشن جذاب (3-6 أسطر) يبرز أهم ميزة أو فايدة بالمنتج، متبوع بسطر فاضي ثم 4-6 هاشتاقات مناسبة (مزيج عربي وإنجليزي، مرتبطة بالمنتج ونوع المتجر).
+
+مهم جداً: أجب فقط بكائن JSON صحيح وخام بدون أي شيء آخر — بدون علامات كود، بدون شرح، بدون مقدمة. الصيغة يجب أن تكون بالضبط:
+{"whatsapp":"...","instagram":"..."}`;
+
+function buildMarketingPrompt({ productName, audience, features, price, brandTone, longDescription }) {
+  const user = [
+    `اسم المنتج: ${productName}`,
+    `الجمهور المستهدف: ${audience || 'عام'}`,
+    `الخصائص: ${features}`,
+    price ? `السعر: ${price}` : '',
+    `نبرة العلامة التجارية: ${brandTone || 'ما فيه تفضيل محدد — اختر نبرة مناسبة لطبيعة المنتج والجمهور.'}`,
+    longDescription ? `الوصف الطويل المُولّد مسبقاً لنفس المنتج (استخدمه كمرجع للتفاصيل والأسلوب): ${longDescription}` : ''
+  ].filter(Boolean).join('\n');
+  return { system: SYSTEM_PROMPT_MARKETING, user };
+}
+
 function buildPrompt({ productName, audience, features, price, framework, brandTone, style }) {
   const frameworkInstruction = buildFrameworkInstruction(framework);
 
@@ -202,6 +229,8 @@ module.exports = async (req, res) => {
     const style = (body.style || 'FORMAL').toString().trim().toUpperCase();
     const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
     const deviceId = (body.deviceId || '').toString().trim();
+    const mode = (body.mode || 'description').toString().trim(); // [إضافة] 'description' (افتراضي، السلوك الأصلي) أو 'marketing'
+    const longDescription = (body.longDescription || '').toString().trim(); // [إضافة] تُستخدم بوضع marketing بس
 
     if (!productName || !features) {
       res.status(400).json({ error: 'اسم المنتج والمميزات مطلوبة' });
@@ -238,13 +267,24 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // [إضافة] وضع المحتوى التسويقي حصري لباقتي النصف سنوي والسنوي — تحقق إلزامي بالخادم، مو بس بالواجهة
+    if (mode === 'marketing' && !MARKETING_ALLOWED_PLANS.includes(accessCheck.plan)) {
+      res.status(403).json({
+        error: 'محتوى تسويقي جاهز حصري لمشتركي الباقة النصف سنوية أو السنوية — رقّي باقتك عشان تستخدم هالميزة',
+        code: 'PLAN_NOT_ALLOWED'
+      });
+      return;
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       res.status(500).json({ error: 'Server misconfigured: missing API key' });
       return;
     }
 
-    const { system, user } = buildPrompt({ productName, audience, features, price, framework, brandTone, style });
+    const { system, user } = mode === 'marketing'
+      ? buildMarketingPrompt({ productName, audience, features, price, brandTone, longDescription })
+      : buildPrompt({ productName, audience, features, price, framework, brandTone, style });
 
     const anthropicResponse = await callAnthropicWithRetry(
       {
@@ -284,6 +324,25 @@ module.exports = async (req, res) => {
     } catch (incrErr) {
       // حتى لو فشل تسجيل الاستخدام لأي سبب، ما نمنع التاجر من نتيجته اللي دفع/يستحقها
       remainingAfter = accessCheck.remaining - 1;
+    }
+
+    if (mode === 'marketing') {
+      if (parsed && (parsed.whatsapp || parsed.instagram)) {
+        res.status(200).json({
+          whatsapp: parsed.whatsapp || '',
+          instagram: parsed.instagram || '',
+          remaining: remainingAfter,
+          cap: accessCheck.cap
+        });
+      } else {
+        res.status(200).json({
+          whatsapp: rawText || 'ما رجع نص، جرب مرة ثانية.',
+          instagram: '',
+          remaining: remainingAfter,
+          cap: accessCheck.cap
+        });
+      }
+      return;
     }
 
     if (parsed && (parsed.long || parsed.short || parsed.seo)) {
