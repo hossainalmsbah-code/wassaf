@@ -881,10 +881,10 @@ marketingBtn.addEventListener('click', async () => {
 
   try{
     const accessCode = getStoredAccessCode();
-    const response = await fetch('/api/generate-marketing-content', {
+    const response = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...lastGeneratedProduct, accessCode, deviceId })
+      body: JSON.stringify({ ...lastGeneratedProduct, mode: 'marketing', accessCode, deviceId })
     });
     const data = await response.json();
     if(!response.ok){
