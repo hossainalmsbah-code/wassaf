@@ -64,7 +64,7 @@
   gtag('config', 'G-L24PSWJHPN');
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#1E1B2E;
@@ -83,7 +83,8 @@
     margin:0;
     background:var(--bg);
     color:var(--ink);
-    font-family:'IBM Plex Sans Arabic','Tajawal',sans-serif;
+    font-family:'Inter','IBM Plex Sans Arabic','Tajawal',sans-serif;
+    font-size:16px;
     min-height:100vh;
   }
   .wrap{max-width:920px;margin:0 auto;padding:32px 24px 80px;}
@@ -96,14 +97,14 @@
   nav a{color:var(--ink-dim);text-decoration:none;font-size:13px;margin-inline-start:18px;}
   nav a:hover{color:var(--ink);}
   .hero{text-align:center;padding:20px 0 40px;}
-  .hero h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:32px;margin:0 0 12px;line-height:1.4;}
-  .hero p{color:var(--ink-dim);font-size:16px;max-width:520px;margin:0 auto;line-height:1.8;}
+  .hero h1{font-family:'Inter','Tajawal',sans-serif;font-weight:900;font-size:36px;margin:0 0 12px;line-height:1.4;}
+  .hero p{color:var(--ink-dim);font-size:17px;max-width:520px;margin:0 auto;line-height:1.8;}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
   @media (max-width:640px){ .grid{grid-template-columns:1fr;} .pricing{grid-template-columns:1fr 1fr !important;} .plan:last-child{grid-column:1 / -1;} }
-  label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
+  label{display:block;font-size:14px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
   input[type=text], input[type=file], textarea, select{
     width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
-    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical;
+    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:16px;resize:vertical;
   }
   select{cursor:pointer;}
   input[type=text]:focus, textarea:focus, select:focus{outline:none;border-color:var(--accent);}
@@ -118,7 +119,7 @@
   .fw-hint{font-size:12px;color:var(--ink-dim);margin-top:8px;line-height:1.6;}
   .go{
     width:100%;margin-top:8px;background:var(--accent);color:#1a0e14;border:none;
-    padding:16px;border-radius:8px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+    padding:16px;border-radius:8px;font-size:17px;font-weight:700;font-family:inherit;cursor:pointer;
   }
   .go:hover{background:#ff8095;}
   .go:disabled{background:var(--line);color:var(--ink-dim);cursor:not-allowed;}
@@ -131,8 +132,8 @@
   .result-head .label{font-size:12px;color:var(--accent2);font-weight:700;letter-spacing:.5px;}
   .copy-btn{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;}
   .copy-btn:hover{border-color:var(--accent);color:var(--ink);}
-  .output{font-size:16px;line-height:2;white-space:pre-wrap;}
-  .output.small{font-size:14px;color:var(--ink-dim);}
+  .output{font-size:17px;line-height:2;white-space:pre-wrap;}
+  .output.small{font-size:15px;color:var(--ink-dim);}
   .loading{display:flex;align-items:center;gap:10px;color:var(--ink-dim);font-size:14px;padding:20px 0;}
   .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite ease-in-out;}
   .dot:nth-child(2){animation-delay:.2s;}
@@ -140,8 +141,8 @@
   @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8);}50%{opacity:1;transform:scale(1.1);}}
   .err{color:#E8664A;font-size:13px;margin-top:10px;display:none;}
   .ok-msg{color:var(--good);font-size:13px;margin-top:10px;display:none;}
-  .section-title{font-family:'Tajawal',sans-serif;font-weight:800;font-size:20px;margin:56px 0 8px;text-align:center;}
-  .section-sub{color:var(--ink-dim);font-size:13px;text-align:center;margin-bottom:28px;line-height:1.8;}
+  .section-title{font-family:'Inter','Tajawal',sans-serif;font-weight:800;font-size:20px;margin:56px 0 8px;text-align:center;}
+  .section-sub{color:var(--ink-dim);font-size:14px;text-align:center;margin-bottom:28px;line-height:1.8;}
   .pricing{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
   .plan{position:relative;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:18px 16px;box-shadow:0 1px 4px rgba(30,27,46,0.05);display:flex;flex-direction:column;height:100%;gap:4px;}
   .plan.featured{border-color:var(--accent);}
@@ -152,7 +153,7 @@
   .icon-img{width:14px;height:14px;vertical-align:-2px;margin-left:4px;color:var(--accent);}
   .plan-name{font-size:13px;color:var(--ink-dim);font-weight:600;margin-bottom:10px;}
   .plan-old{font-size:13px;color:var(--ink-dim);text-decoration:line-through;margin-bottom:2px;}
-  .plan-price{font-family:'Tajawal',sans-serif;font-weight:900;font-size:24px;color:var(--ink);margin-bottom:6px;}
+  .plan-price{font-family:'Inter','Tajawal',sans-serif;font-weight:900;font-size:24px;color:var(--ink);margin-bottom:6px;}
   .plan-price span{font-size:12px;font-weight:500;color:var(--ink-dim);}
   .plan-note{font-size:12px;color:var(--ink-dim);line-height:1.6;}
   .plan-btn{
@@ -226,7 +227,7 @@
     <p>نكتب وصف منتجك بأطر عمل تسويقية مثبتة و صيغ كتابة جاهزة  (AIDA، PAS، BAB) - جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
   </section>
 
-  <p style="text-align:center;font-family:'Tajawal',sans-serif;font-weight:800;font-size:20px;color:var(--accent);margin:40px 0 4px;">جرّبها الحين مجاناً</p>
+  <p style="text-align:center;font-family:'Inter','Tajawal',sans-serif;font-weight:800;font-size:20px;color:var(--accent);margin:40px 0 4px;">جرّبها الحين مجاناً</p>
   <div class="section-sub" id="tool" style="margin-top:0;">أدخل بيانات منتجك واحصل على وصف طويل ، ونسخة قصيرة للسوشال ميديا ، ووصف SEO - بضغطة وحدة.</div>
 
   <div class="settings-box" id="accessBox" style="display:none;">
