@@ -13,47 +13,57 @@
     --line:#E7E4F0;--accent:#E94548;--accent-dim:#FCEAEA;--accent2:#6E5BC7;--good:#16A34A;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',sans-serif;line-height:1.9;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',sans-serif;line-height:1.9;font-size:16px;}
   .wrap{max-width:640px;margin:0 auto;padding:32px 24px 80px;}
-  a.back{display:inline-block;margin-bottom:20px;color:var(--ink-dim);text-decoration:none;font-size:13px;}
-  h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:24px;margin-bottom:4px;}
-  .sub{color:var(--ink-dim);font-size:13px;margin-bottom:28px;}
-  label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
+  .logo-row{text-align:center;margin-bottom:6px;}
+  .logo-row img{height:46px;width:auto;}
+  .today-date{text-align:center;font-size:13px;color:var(--ink-dim);margin-bottom:22px;}
+  a.back{display:inline-block;margin-bottom:20px;color:var(--ink-dim);text-decoration:none;font-size:14px;}
+  h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:26px;margin-bottom:4px;}
+  .sub{color:var(--ink-dim);font-size:14px;margin-bottom:28px;}
+  label{display:block;font-size:14px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
   input[type=text]{
     width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
-    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;text-transform:uppercase;
+    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:16px;text-transform:uppercase;
   }
   input[type=text]:focus{outline:none;border-color:var(--accent);}
   .go{
     width:100%;margin-top:12px;background:var(--accent);color:#1a0e14;border:none;
-    padding:14px;border-radius:8px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;
+    padding:14px;border-radius:8px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
   }
   .go:hover{background:#ff8095;}
-  .err{color:#E8664A;font-size:13px;margin-top:10px;display:none;}
+  .err{color:#E8664A;font-size:14px;margin-top:10px;display:none;}
   .card{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:22px;margin-top:24px;display:none;}
   .card.show{display:block;}
   .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
   .row:last-child{border-bottom:none;}
-  .row .k{color:var(--ink-dim);font-size:13px;}
-  .row .v{font-weight:700;font-size:14px;}
-  .plan-pill{background:var(--accent-dim);color:var(--accent2);font-size:12px;font-weight:700;padding:4px 12px;border-radius:12px;}
+  .row .k{color:var(--ink-dim);font-size:14px;}
+  .row .v{font-weight:700;font-size:15px;}
+  .plan-pill{background:var(--accent-dim);color:var(--accent2);font-size:13px;font-weight:700;padding:4px 12px;border-radius:12px;}
   .ref-box{margin-top:20px;padding-top:20px;border-top:1px dashed var(--line);}
-  .ref-title{font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:10px;}
+  .ref-title{font-size:14px;font-weight:700;color:var(--accent2);margin-bottom:10px;}
   .ref-link-row{display:flex;gap:8px;}
-  .ref-link-row input{background:var(--bg);font-size:13px;}
-  .copy-btn{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:0 16px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .ref-link-row input{background:var(--bg);font-size:14px;}
+  .ref-share-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+  .copy-btn{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;}
   .copy-btn:hover{border-color:var(--accent);color:var(--ink);}
-  .ref-hint{font-size:12px;color:var(--ink-dim);margin-top:10px;line-height:1.7;}
+  .ref-hint{font-size:13px;color:var(--ink-dim);margin-top:10px;line-height:1.7;}
+  .contact-row{text-align:left;}
+  .contact-row #contactLink{color:var(--ink-dim);font-size:13px;text-decoration:none;}
+  .contact-mail-link{font-size:16px;font-weight:500;color:var(--accent2);text-decoration:none;}
+  .contact-mail-link:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="logo-row"><img src="/assets/logo-horizontal.svg" alt="وصّاف"></div>
+  <div class="today-date" id="todayDate"></div>
+
   <a class="back" href="/">← الرجوع للرئيسية</a>
-  <div style="text-align:left;">
-    <a href="#" id="contactLink" style="color:var(--ink-dim);font-size:12px;text-decoration:none;">تواصل معنا</a>
-    <div id="contactBox" style="display:none;margin-top:6px;font-size:12px;color:var(--ink-dim);">
-      <span style="font-family:monospace;">wassaf.sa@gmail.com</span>
-      <button type="button" id="contactCopyBtn" class="copy-btn" style="margin-right:8px;">نسخ</button>
+  <div class="contact-row">
+    <a href="#" id="contactLink">تواصل معنا</a>
+    <div id="contactBox" style="display:none;margin-top:8px;">
+      <a href="mailto:wassaf.sa@gmail.com" class="contact-mail-link">wassaf.sa@gmail.com</a>
     </div>
   </div>
   <h1>حسابي</h1>
@@ -73,7 +83,11 @@
       <div class="ref-title">رابط الإحالة</div>
       <div class="ref-link-row">
         <input type="text" id="refLinkInput" readonly>
+      </div>
+      <div class="ref-share-row">
         <button class="copy-btn" id="copyRefBtn">نسخ</button>
+        <button class="copy-btn" id="waRefBtn">واتساب</button>
+        <button class="copy-btn" id="mailRefBtn">إيميل</button>
       </div>
       <div class="ref-hint">كل شخص يسجّل تجربة مجانية عبر هالرابط، يأخذ كلا منكم <strong><span id="refBonusHint">—</span> وصف إضافي</strong> لكل واحد فيكم (النسبة تعتمد على باقتك الحالية). عدد من دعوتهم لحد الحين: <strong id="refCount">0</strong></div>
     </div>
@@ -81,6 +95,13 @@
 </div>
 
 <script>
+/* تاريخ اليوم — عنصر ديكوري بس، ميلادي بالعربي */
+const arDays = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const arMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const todayNow = new Date();
+document.getElementById('todayDate').textContent =
+  `${arDays[todayNow.getDay()]}، ${todayNow.getDate()} ${arMonths[todayNow.getMonth()]} ${todayNow.getFullYear()}`;
+
 const accCodeInput = document.getElementById('accCodeInput');
 const loadBtn = document.getElementById('loadBtn');
 const accErr = document.getElementById('accErr');
@@ -142,19 +163,27 @@ document.getElementById('copyRefBtn').addEventListener('click', () => {
   setTimeout(() => btn.textContent = old, 1500);
 });
 
+document.getElementById('waRefBtn').addEventListener('click', () => {
+  const link = document.getElementById('refLinkInput').value;
+  if(!link) return;
+  const text = encodeURIComponent(`جرّب وصّاف مجاناً من خلال هالرابط، وناخذ كلنا وصف إضافي: ${link}`);
+  window.open(`https://wa.me/?text=${text}`, '_blank');
+});
+
+document.getElementById('mailRefBtn').addEventListener('click', () => {
+  const link = document.getElementById('refLinkInput').value;
+  if(!link) return;
+  const subject = encodeURIComponent('جرّب وصّاف مجاناً');
+  const body = encodeURIComponent(`جرّب وصّاف مجاناً من خلال هالرابط: ${link}`);
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+});
+
 const contactLink = document.getElementById('contactLink');
 const contactBox = document.getElementById('contactBox');
 if(contactLink && contactBox){
   contactLink.addEventListener('click', (e) => {
     e.preventDefault();
     contactBox.style.display = contactBox.style.display === 'none' ? 'block' : 'none';
-  });
-  const contactCopyBtn = document.getElementById('contactCopyBtn');
-  contactCopyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText('wassaf.sa@gmail.com');
-    const old = contactCopyBtn.textContent;
-    contactCopyBtn.textContent = 'تم ✓';
-    setTimeout(() => contactCopyBtn.textContent = old, 1500);
   });
 }
 </script>
