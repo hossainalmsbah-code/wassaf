@@ -206,7 +206,17 @@
   footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;text-align:center;}
   footer a{color:var(--ink-dim);text-decoration:none;font-size:12px;margin:0 10px;}
   footer a:hover{color:var(--ink);}
-  footer .copy{color:var(--ink-dim);font-size:12px;margin-top:10px;}
+  footer .copy{color:var(--ink-dim);font-size:12px;margin-top:10px;}  .shine-text{
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 40%, #ffffff 50%, var(--accent) 60%, var(--accent) 100%);
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shine 2.5s linear infinite;
+  }
+  @keyframes shine{
+    to{ background-position: -200% center; }
+  }
 </style>
 </head>
 <body>
@@ -227,7 +237,7 @@
     <p>نكتب وصف منتجك بأطر عمل تسويقية مثبتة و صيغ كتابة جاهزة <br> (AIDA، PAS، BAB) - جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
   </section>
 
-  <p style="text-align:center;font-family:'Inter','Tajawal',sans-serif;font-weight:800;font-size:24px;color:var(--accent);margin:40px 0 4px;">جرّبها الحين مجاناً</p>
+  <p class="shine-text" style="text-align:center;font-family:'Inter','Tajawal',sans-serif;font-weight:800;font-size:24px;margin:40px 0 4px;">جرّبها الحين مجاناً</p>
   <div class="section-sub" id="tool" style="margin-top:0;">أدخل بيانات منتجك واحصل على وصف طويل ، ونسخة قصيرة للسوشال ميديا ، ووصف SEO - بضغطة وحدة.</div>
 
   <div class="settings-box" id="accessBox" style="display:none;">
