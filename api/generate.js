@@ -1,5 +1,6 @@
 const { redisCommand } = require('./_redis');
 const { checkAccessCode, incrementUsage } = require('./_access');
+const { buildCacheKey, getCachedGeneration, setCachedGeneration, logGeneration } = require('./_library');
 
 const FRAMEWORK_LABELS = {
   AIDA: 'AIDA (الانتباه ← الاهتمام ← الرغبة ← الفعل) — الأنسب للمنتجات العاطفية ولايف ستايل (عطور، إكسسوارات، هدايا)',
@@ -282,40 +283,62 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const { system, user } = mode === 'marketing'
-      ? buildMarketingPrompt({ productName, audience, features, price, brandTone, longDescription })
-      : buildPrompt({ productName, audience, features, price, framework, brandTone, style });
-
-    const anthropicResponse = await callAnthropicWithRetry(
-      {
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
-        system,
-        messages: [{ role: 'user', content: user }]
-      },
-      apiKey
-    );
-
-    if (!anthropicResponse.ok) {
-      if (anthropicResponse.status === 429 || anthropicResponse.status === 529) {
-        // حتى بعد كل محاولات الـ retry، الضغط لسا مستمر — نطلب من التاجر يعيد المحاولة بنفسه بعد شوي
-        res.status(503).json({
-          error: 'الخدمة مزدحمة حالياً، جرب تولّد مرة ثانية بعد شوي.'
-        });
-        return;
-      }
-      const errText = await anthropicResponse.text();
-      res.status(502).json({ error: 'Upstream error', detail: errText });
-      return;
+    // [إضافة] كاش الأوصاف — بس بوضع description العادي (مو المحتوى التسويقي)
+    // لو نفس بيانات المنتج بالضبط سبق تولّدت (لأي تاجر)، نرجّع نفس النتيجة فوراً بدون أي استدعاء لـAnthropic — توفير كامل بتكلفة هالطلب
+    let cacheKey = null;
+    let cachedResult = null;
+    if (mode !== 'marketing') {
+      cacheKey = buildCacheKey({ productName, audience, features, price, framework, brandTone, style });
+      cachedResult = await getCachedGeneration(cacheKey);
     }
 
-    const data = await anthropicResponse.json();
-    const rawText = (data.content || [])
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n');
+    let parsed;
+    let rawText;
 
-    const parsed = safeParseModelJSON(rawText);
+    if (cachedResult) {
+      parsed = cachedResult;
+      rawText = '';
+    } else {
+      const { system, user } = mode === 'marketing'
+        ? buildMarketingPrompt({ productName, audience, features, price, brandTone, longDescription })
+        : buildPrompt({ productName, audience, features, price, framework, brandTone, style });
+
+      const anthropicResponse = await callAnthropicWithRetry(
+        {
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1200,
+          system,
+          messages: [{ role: 'user', content: user }]
+        },
+        apiKey
+      );
+
+      if (!anthropicResponse.ok) {
+        if (anthropicResponse.status === 429 || anthropicResponse.status === 529) {
+          // حتى بعد كل محاولات الـ retry، الضغط لسا مستمر — نطلب من التاجر يعيد المحاولة بنفسه بعد شوي
+          res.status(503).json({
+            error: 'الخدمة مزدحمة حالياً، جرب تولّد مرة ثانية بعد شوي.'
+          });
+          return;
+        }
+        const errText = await anthropicResponse.text();
+        res.status(502).json({ error: 'Upstream error', detail: errText });
+        return;
+      }
+
+      const data = await anthropicResponse.json();
+      rawText = (data.content || [])
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join('\n');
+
+      parsed = safeParseModelJSON(rawText);
+
+      // نحفظ بالكاش بس لو التوليد نجح فعلياً وطلع بصيغة سليمة، وبس لوضع الوصف العادي
+      if (mode !== 'marketing' && cacheKey && parsed && (parsed.long || parsed.short || parsed.seo)) {
+        await setCachedGeneration(cacheKey, parsed);
+      }
+    }
 
     // التوليد نجح فعلياً هنا، فالحين بس نحسبه على رصيد الكود
     let remainingAfter = accessCheck.remaining - 1;
@@ -346,6 +369,22 @@ module.exports = async (req, res) => {
     }
 
     if (parsed && (parsed.long || parsed.short || parsed.seo)) {
+      // [إضافة] نسجّل العملية كاملة بالمكتبة — أدق البيانات: المنتج، سعره، الوصف الناتج، والتاجر (كود الوصول)
+      await logGeneration({
+        accessCode,
+        productName,
+        audience,
+        features,
+        price,
+        framework,
+        brandTone,
+        style,
+        long: parsed.long || '',
+        short: parsed.short || '',
+        seo: parsed.seo || '',
+        fromCache: Boolean(cachedResult)
+      });
+
       res.status(200).json({
         long: parsed.long || '',
         short: parsed.short || '',
