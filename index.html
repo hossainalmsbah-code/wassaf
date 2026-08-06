@@ -322,6 +322,29 @@
     </div>
     <button class="go secondary" id="shareBtn" type="button" style="margin-top:8px;">شارك الوصف كرابط</button>
     <div class="field-hint" id="shareResultBox" style="display:none;margin-top:10px;"></div>
+
+    <!-- ===================== محتوى تسويقي جاهز (حصري نصف سنوي/سنوي) ===================== -->
+    <div class="field-hint" id="marketingLockedNote" style="display:block;margin-top:18px;padding-top:16px;border-top:1px dashed var(--line);">
+      🔒 محتوى تسويقي جاهز (واتساب وإنستقرام) حصري لمشتركي الباقة <strong>النصف سنوية</strong> أو <strong>السنوية</strong>. <a href="#pricing" style="color:var(--accent);font-weight:700;">شوف الباقات وترقّى من هنا</a>.
+    </div>
+    <button class="go secondary" id="marketingBtn" type="button" style="margin-top:14px;display:none;">ولّد محتوى تسويقي جاهز (واتساب وإنستقرام)</button>
+    <div class="err" id="marketingErr" style="margin-top:8px;"></div>
+    <div id="marketingResult" style="display:none;margin-top:16px;">
+      <div class="result-block">
+        <div class="result-head">
+          <div class="label">رسالة واتساب جاهزة</div>
+          <button class="copy-btn" data-target="outputWhatsapp">نسخ النص</button>
+        </div>
+        <div class="output" id="outputWhatsapp"></div>
+      </div>
+      <div class="result-block">
+        <div class="result-head">
+          <div class="label">منشور إنستقرام جاهز</div>
+          <button class="copy-btn" data-target="outputInstagram">نسخ النص</button>
+        </div>
+        <div class="output" id="outputInstagram"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ===================== توليد من صورة (حصري نصف سنوي/سنوي) ===================== -->
@@ -525,6 +548,7 @@ let currentCodePlan = null; // اسم الباقة الحالية (نستخدم�
 
 const BULK_MIN_CAP = 120; // الرفع الجماعي متاح بس للأكواد بحد 120 وصف فأكثر (شهري/نصف سنوي/سنوي)
 const IMAGE_ALLOWED_PLANS = ['نصف سنوي', 'سنوي']; // ميزة التوليد من صورة مقصورة على هذي الباقات بس
+const MARKETING_ALLOWED_PLANS = ['نصف سنوي', 'سنوي']; // محتوى تسويقي جاهز مقصور على نفس الباقتين
 
 function updateImageFeatureVisibility(){
   const lockedNote = document.getElementById('imageLockedNote');
@@ -535,6 +559,15 @@ function updateImageFeatureVisibility(){
   lockedNote.style.display = allowed ? 'none' : 'block';
   uploadArea.style.display = allowed ? 'block' : 'none';
   goBtn.style.display = allowed ? 'block' : 'none';
+}
+
+function updateMarketingFeatureVisibility(){
+  const lockedNote = document.getElementById('marketingLockedNote');
+  const btn = document.getElementById('marketingBtn');
+  if(!lockedNote || !btn) return;
+  const allowed = MARKETING_ALLOWED_PLANS.includes(currentCodePlan);
+  lockedNote.style.display = allowed ? 'none' : 'block';
+  btn.style.display = allowed ? 'block' : 'none';
 }
 
 function setAccessStatus(message, kind){
@@ -563,12 +596,14 @@ async function validateAccessCode(code, { silent } = {}){
       currentCodePlan = data.plan || null;
       setAccessStatus(`✓ كود صحيح — تبقى لك ${data.remaining} من ${data.cap} وصف هذا الشهر`, 'ok');
       updateImageFeatureVisibility();
+      updateMarketingFeatureVisibility();
     }else{
       accessCodeValid = false;
       currentCodeCap = null;
       currentCodePlan = null;
       setAccessStatus(data.message || 'كود غير صحيح', 'error');
       updateImageFeatureVisibility();
+      updateMarketingFeatureVisibility();
     }
   }catch(e){
     accessCodeValid = false;
@@ -576,6 +611,7 @@ async function validateAccessCode(code, { silent } = {}){
     currentCodePlan = null;
     setAccessStatus('تعذر التحقق من الكود الآن، جرب مرة ثانية', 'error');
     updateImageFeatureVisibility();
+      updateMarketingFeatureVisibility();
   }
 }
 
@@ -727,6 +763,8 @@ document.querySelectorAll('.copy-btn').forEach(btn => {
 });
 
 /* ==================== استدعاء واجهة التوليد ==================== */
+let lastGeneratedProduct = null; // آخر منتج تم توليد وصفه بنجاح — نستخدمه لميزة المحتوى التسويقي بدون إعادة إدخال البيانات
+
 async function callGenerate({ productName, audience, features, price, framework, brandTone, style }){
   const accessCode = getStoredAccessCode();
   const response = await fetch('/api/generate', {
@@ -786,12 +824,18 @@ document.getElementById('goBtn').addEventListener('click', async () => {
   outputLong.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> يكتب الأوصاف الآن</div>';
   outputShort.textContent = '';
   outputSeo.textContent = '';
+  // [إضافة] تصفير صندوق المحتوى التسويقي — منتج جديد يبدأ من الصفر
+  document.getElementById('marketingResult').style.display = 'none';
+  document.getElementById('marketingErr').style.display = 'none';
+  lastGeneratedProduct = null;
 
   try{
     const data = await callGenerate({ productName, audience, features, price, framework, brandTone, style });
     outputLong.textContent = data.long || 'ما رجع نص، جرب مرة ثانية.';
     outputShort.textContent = data.short || '—';
     outputSeo.textContent = data.seo || '—';
+    // [إضافة] نحفظ بيانات المنتج الحالي لاستخدامها لو التاجر ضغط "ولّد محتوى تسويقي" بعدين
+    lastGeneratedProduct = { productName, audience, features, price, framework, brandTone, style, longDescription: data.long || '' };
   }catch(e){
     errBox.textContent = e.userMessage || 'صار خطأ أثناء التوليد، جرب مرة ثانية';
     errBox.style.display = 'block';
@@ -804,6 +848,61 @@ document.getElementById('goBtn').addEventListener('click', async () => {
   }finally{
     goBtn.disabled = false;
     goBtn.textContent = 'ولّد الأوصاف';
+  }
+});
+
+/* ==================== محتوى تسويقي جاهز (واتساب وإنستقرام) — حصري نصف سنوي/سنوي ==================== */
+const marketingBtn = document.getElementById('marketingBtn');
+const marketingErr = document.getElementById('marketingErr');
+const marketingResult = document.getElementById('marketingResult');
+const outputWhatsapp = document.getElementById('outputWhatsapp');
+const outputInstagram = document.getElementById('outputInstagram');
+
+marketingBtn.addEventListener('click', async () => {
+  marketingErr.style.display = 'none';
+
+  if(!lastGeneratedProduct){
+    marketingErr.textContent = 'ولّد وصف المنتج أول قبل ما تقدر تسوي محتوى تسويقي له';
+    marketingErr.style.display = 'block';
+    return;
+  }
+
+  if(!getStoredAccessCode()){
+    marketingErr.textContent = 'أدخل كود الوصول بالصندوق فوق قبل ما تقدر تولّد';
+    marketingErr.style.display = 'block';
+    return;
+  }
+
+  marketingBtn.disabled = true;
+  marketingBtn.textContent = 'جاري التوليد...';
+  marketingResult.style.display = 'block';
+  outputWhatsapp.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> يكتب المحتوى الآن</div>';
+  outputInstagram.textContent = '';
+
+  try{
+    const accessCode = getStoredAccessCode();
+    const response = await fetch('/api/generate-marketing-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...lastGeneratedProduct, accessCode, deviceId })
+    });
+    const data = await response.json();
+    if(!response.ok){
+      const err = new Error(data.error || 'صار خطأ أثناء التوليد');
+      err.userMessage = data.error;
+      err.code = data.code;
+      throw err;
+    }
+    outputWhatsapp.textContent = data.whatsapp || 'ما رجع نص، جرب مرة ثانية.';
+    outputInstagram.textContent = data.instagram || '—';
+  }catch(e){
+    marketingErr.textContent = e.userMessage || 'صار خطأ أثناء التوليد، جرب مرة ثانية';
+    marketingErr.style.display = 'block';
+    outputWhatsapp.textContent = '';
+    marketingResult.style.display = 'none';
+  }finally{
+    marketingBtn.disabled = false;
+    marketingBtn.textContent = 'ولّد محتوى تسويقي جاهز (واتساب وإنستقرام)';
   }
 });
 
