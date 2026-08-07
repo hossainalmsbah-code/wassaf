@@ -67,7 +67,6 @@ async function handleApplyReferral(body, res) {
     return;
   }
 
-  // نحل التوكن لكود الوصول الحقيقي — الكود نفسه ما يظهر أبداً بالرابط المُشارك
   const referrerCode = await redisCommand(['GET', `reftoken_owner:${referrerToken}`]);
   if (!referrerCode) {
     res.status(404).json({ error: 'رابط الإحالة غير صالح' });
@@ -102,7 +101,6 @@ async function handleApplyReferral(body, res) {
     return;
   }
 
-  // المكافأة = 50% من حد باقة المحيل الرئيسية، بحد أدنى 3 أوصاف حتى لو كانت الباقة صغيرة
   const referrerCap = referrerParsed.cap || 0;
   const bonus = Math.max(Math.round(referrerCap * REFERRAL_BONUS_RATIO), 3);
 
@@ -162,7 +160,147 @@ async function handleGetShare(body, res) {
   res.status(200).json({ ok: true, ...data });
 }
 
-// نقطة دخول واحدة لكل ميزات النمو (حساب، إحالة، مشاركة) — تفادياً لتجاوز حد الـ12 Serverless Function بباقة Vercel المجانية
+// ==================== [إضافة جديدة] تكامل سلة — قراءة المنتجات وتوليد وصف وكتابته رجوع ====================
+// ملاحظة تصميم: هذي مرحلة تجريبية، ما تستهلك من رصيد كود الوصول العادي حالياً — تُربط بنظام الاشتراك لاحقاً عند الإطلاق الفعلي
+
+async function getSallaStoreToken(merchant) {
+  const raw = await redisCommand(['GET', `salla_store:${merchant}`]);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+// ---------- سلة: جلب قائمة منتجات المتجر ----------
+async function handleSallaListProducts(body, res) {
+  const merchant = (body.merchant || '').toString().trim();
+  if (!merchant) {
+    res.status(400).json({ error: 'رقم المتجر مطلوب' });
+    return;
+  }
+
+  const store = await getSallaStoreToken(merchant);
+  if (!store) {
+    res.status(404).json({ error: 'المتجر غير مربوط بوصّاف — تأكد التطبيق مثبّت' });
+    return;
+  }
+
+  try {
+    const response = await fetch('https://api.salla.dev/admin/v2/products?per_page=50', {
+      headers: { Authorization: `Bearer ${store.accessToken}` }
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      // 401 هنا غالباً معناه التوكن انتهى (صلاحيته ساعتين بس) — لسا ما بنينا آلية تحديث تلقائي، نوضحها كخطوة تالية
+      res.status(response.status).json({ error: 'تعذر جلب المنتجات من سلة — يمكن التوكن منتهي', detail: data });
+      return;
+    }
+    const products = (data.data || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price && p.price.amount,
+      currentDescription: p.description || ''
+    }));
+    res.status(200).json({ ok: true, products });
+  } catch (err) {
+    res.status(500).json({ error: 'صار خطأ أثناء الاتصال بسلة' });
+  }
+}
+
+// ---------- سلة: توليد وصف واحد متكامل لمنتج محدد ----------
+async function handleSallaGenerateDescription(body, res) {
+  const productName = (body.productName || '').toString().trim();
+  const features = (body.features || '').toString().trim();
+  const price = (body.price || '').toString().trim();
+
+  if (!productName) {
+    res.status(400).json({ error: 'اسم المنتج مطلوب' });
+    return;
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({ error: 'Server misconfigured' });
+    return;
+  }
+
+  const systemPrompt = 'أنت كاتب محتوى تسويقي محترف، تكتب وصف منتج واحد متكامل بالعربي (فصحى سهلة)، جاهز للنشر مباشرة بمتجر إلكتروني سعودي. اكتب فقرة أو فقرتين، أسلوب مقنع يبرز الفائدة، بدون عناوين أو تنسيق HTML زائد. أجب بالنص فقط بدون أي مقدمة.';
+  const userPrompt = `اسم المنتج: ${productName}\nالمميزات: ${features || 'غير محددة'}${price ? `\nالسعر: ${price}` : ''}`;
+
+  try {
+    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    if (!aiResponse.ok) {
+      res.status(502).json({ error: 'تعذر التوليد الآن، جرب بعد شوي' });
+      return;
+    }
+
+    const data = await aiResponse.json();
+    const text = (data.content || [])
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n')
+      .trim();
+
+    res.status(200).json({ ok: true, description: text || 'ما رجع نص، جرب مرة ثانية.' });
+  } catch (err) {
+    res.status(500).json({ error: 'صار خطأ أثناء التوليد' });
+  }
+}
+
+// ---------- سلة: كتابة الوصف رجوع بالمنتج مباشرة ----------
+async function handleSallaWriteBack(body, res) {
+  const merchant = (body.merchant || '').toString().trim();
+  const productId = (body.productId || '').toString().trim();
+  const description = (body.description || '').toString().trim();
+
+  if (!merchant || !productId || !description) {
+    res.status(400).json({ error: 'بيانات ناقصة' });
+    return;
+  }
+
+  const store = await getSallaStoreToken(merchant);
+  if (!store) {
+    res.status(404).json({ error: 'المتجر غير مربوط بوصّاف' });
+    return;
+  }
+
+  try {
+    const response = await fetch(`https://api.salla.dev/admin/v2/products/${productId}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${store.accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ description })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      res.status(response.status).json({ error: 'تعذر تحديث المنتج بسلة', detail: data });
+      return;
+    }
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'صار خطأ أثناء الكتابة رجوع' });
+  }
+}
+
+// نقطة دخول واحدة لكل ميزات النمو (حساب، إحالة، مشاركة، تكامل سلة) — تفادياً لتجاوز حد الـ12 Serverless Function بباقة Vercel المجانية
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -185,6 +323,15 @@ module.exports = async (req, res) => {
         break;
       case 'get_share':
         await handleGetShare(body, res);
+        break;
+      case 'salla_list_products':
+        await handleSallaListProducts(body, res);
+        break;
+      case 'salla_generate_description':
+        await handleSallaGenerateDescription(body, res);
+        break;
+      case 'salla_write_back':
+        await handleSallaWriteBack(body, res);
         break;
       default:
         res.status(400).json({ error: 'action غير معروف' });
