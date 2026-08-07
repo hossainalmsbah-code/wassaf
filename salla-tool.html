@@ -173,6 +173,12 @@ async function initFromSallaToken(token) {
     if (!res.ok || !data.ok) {
       productsSection.classList.add('hidden');
       noMerchant.textContent = data.error || 'تعذر التحقق من متجرك، جرب تفتح الأداة مرة ثانية من لوحة سلة';
+      if (data.detail) {
+        const debugLine = document.createElement('pre');
+        debugLine.style.cssText = 'white-space:pre-wrap;text-align:right;font-size:11px;color:#999;margin-top:10px;direction:ltr;';
+        debugLine.textContent = JSON.stringify(data.detail, null, 2);
+        noMerchant.parentNode.insertBefore(debugLine, noMerchant.nextSibling);
+      }
       noMerchant.style.display = 'block';
       return;
     }
