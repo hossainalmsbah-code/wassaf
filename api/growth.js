@@ -164,6 +164,46 @@ async function handleGetShare(body, res) {
 // ملاحظة تصميم: هذي مرحلة تجريبية، ما تستهلك من رصيد كود الوصول العادي حالياً — تُربط بنظام الاشتراك لاحقاً عند الإطلاق الفعلي
 
 const SALLA_TOKEN_URL = 'https://accounts.salla.sa/oauth2/token';
+const SALLA_INTROSPECT_URL = 'https://api.salla.dev/exchange-authority/v1/introspect';
+
+// ---------- سلة: فك توكن الصفحة المضمنة (Embedded Page) والحصول على رقم المتجر ----------
+// [مهم] قيمة رأس subject مو مؤكدة 100% لحالتنا (الصفحات المضمنة تحديداً) — لو فشلت، رسالة الخطأ من سلة توضح السبب
+async function handleSallaIntrospectToken(body, res) {
+  const token = (body.token || '').toString().trim();
+  if (!token) {
+    res.status(400).json({ error: 'توكن الصفحة المضمنة مفقود' });
+    return;
+  }
+
+  const appId = process.env.SALLA_CLIENT_ID;
+  if (!appId) {
+    res.status(500).json({ error: 'Server misconfigured' });
+    return;
+  }
+
+  try {
+    const response = await fetch(SALLA_INTROSPECT_URL, {
+      method: 'POST',
+      headers: {
+        's-source': appId,
+        'subject': 'embedded-page',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ token })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success || !data.data || !data.data.store_id) {
+      res.status(response.status || 502).json({ error: 'تعذر التحقق من توكن سلة', detail: data });
+      return;
+    }
+
+    res.status(200).json({ ok: true, merchant: String(data.data.store_id) });
+  } catch (err) {
+    res.status(500).json({ error: 'صار خطأ أثناء التحقق من التوكن' });
+  }
+}
 // [مهم] لم أجد تأكيد 100% حرفي لهذا المسار بتوثيق سلة النصي رغم البحث، بس هو المسار القياسي بمعيار OAuth2
 // وهو نفس القاعدة اللي عليها رابط التفويض المؤكد (accounts.salla.sa/oauth2/auth). أول اختبار فعلي يثبته أو ينفيه.
 
@@ -445,6 +485,9 @@ module.exports = async (req, res) => {
         break;
       case 'salla_write_back':
         await handleSallaWriteBack(body, res);
+        break;
+      case 'salla_introspect_token':
+        await handleSallaIntrospectToken(body, res);
         break;
       default:
         res.status(400).json({ error: 'action غير معروف' });
