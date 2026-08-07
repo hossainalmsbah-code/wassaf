@@ -163,14 +163,81 @@ async function handleGetShare(body, res) {
 // ==================== [إضافة جديدة] تكامل سلة — قراءة المنتجات وتوليد وصف وكتابته رجوع ====================
 // ملاحظة تصميم: هذي مرحلة تجريبية، ما تستهلك من رصيد كود الوصول العادي حالياً — تُربط بنظام الاشتراك لاحقاً عند الإطلاق الفعلي
 
-async function getSallaStoreToken(merchant) {
-  const raw = await redisCommand(['GET', `salla_store:${merchant}`]);
-  if (!raw) return null;
+const SALLA_TOKEN_URL = 'https://accounts.salla.sa/oauth2/token';
+// [مهم] لم أجد تأكيد 100% حرفي لهذا المسار بتوثيق سلة النصي رغم البحث، بس هو المسار القياسي بمعيار OAuth2
+// وهو نفس القاعدة اللي عليها رابط التفويض المؤكد (accounts.salla.sa/oauth2/auth). أول اختبار فعلي يثبته أو ينفيه.
+
+// نجدد التوكن قبل انتهائه بـ5 دقايق احتياطية (300 ثانية) بدل ما ننتظر لين اللحظة الأخيرة بالضبط
+const TOKEN_REFRESH_MARGIN_SECONDS = 300;
+
+async function refreshSallaToken(merchant, store) {
+  const clientId = process.env.SALLA_CLIENT_ID;
+  const clientSecret = process.env.SALLA_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret || !store.refreshToken) {
+    return null;
+  }
+
   try {
-    return JSON.parse(raw);
+    const response = await fetch(SALLA_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: store.refreshToken,
+        client_id: clientId,
+        client_secret: clientSecret
+      }).toString()
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data.access_token) {
+      return null;
+    }
+
+    // [مهم] سلة توثيقها يقول صراحة: لازم نستخدم آخر refresh_token يرجع لنا بكل مرة — نحدّثه كامل، مو بس access_token
+    const updatedStore = {
+      ...store,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || store.refreshToken,
+      expiresAt: Math.floor(Date.now() / 1000) + (data.expires_in || 7200),
+      refreshedAt: new Date().toISOString()
+    };
+
+    await redisCommand(['SET', `salla_store:${merchant}`, JSON.stringify(updatedStore)]);
+    return updatedStore;
   } catch (e) {
     return null;
   }
+}
+
+// يرجّع توكن صالح للاستخدام دايماً — يجدده تلقائياً بالخلفية لو قرب ينتهي أو انتهى فعلاً
+async function getSallaStoreToken(merchant) {
+  const raw = await redisCommand(['GET', `salla_store:${merchant}`]);
+  if (!raw) return null;
+
+  let store;
+  try {
+    store = JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const isExpiringSoon = !store.expiresAt || (store.expiresAt - nowSeconds) <= TOKEN_REFRESH_MARGIN_SECONDS;
+
+  if (isExpiringSoon) {
+    const refreshed = await refreshSallaToken(merchant, store);
+    if (refreshed) return refreshed;
+    // فشل التحديث (يمكن refresh token نفسه انتهى بعد شهر) — نرجّع القديم ونخلي الخطوة اللي بعده تتعامل مع الخطأ
+    return store;
+  }
+
+  return store;
 }
 
 // ---------- سلة: جلب قائمة منتجات المتجر ----------
