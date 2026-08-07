@@ -174,7 +174,10 @@ async function refreshSallaToken(merchant, store) {
   const clientId = process.env.SALLA_CLIENT_ID;
   const clientSecret = process.env.SALLA_CLIENT_SECRET;
 
+  console.log('[SALLA_REFRESH_DEBUG] clientId موجود؟', !!clientId, '- clientSecret موجود؟', !!clientSecret, '- refreshToken موجود؟', !!store.refreshToken);
+
   if (!clientId || !clientSecret || !store.refreshToken) {
+    console.log('[SALLA_REFRESH_DEBUG] توقفنا مبكراً — أحد المتطلبات ناقص');
     return null;
   }
 
@@ -190,11 +193,17 @@ async function refreshSallaToken(merchant, store) {
       }).toString()
     });
 
+    console.log('[SALLA_REFRESH_DEBUG] رد سلة — الحالة:', response.status);
+
     if (!response.ok) {
+      const errText = await response.text();
+      console.log('[SALLA_REFRESH_DEBUG] فشل الطلب — نص الرد:', errText.slice(0, 500));
       return null;
     }
 
     const data = await response.json();
+    console.log('[SALLA_REFRESH_DEBUG] نجح — access_token موجود؟', !!data.access_token);
+
     if (!data.access_token) {
       return null;
     }
@@ -229,6 +238,8 @@ async function getSallaStoreToken(merchant) {
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   const isExpiringSoon = !store.expiresAt || (store.expiresAt - nowSeconds) <= TOKEN_REFRESH_MARGIN_SECONDS;
+
+  console.log('[SALLA_REFRESH_DEBUG] الوقت الحالي:', nowSeconds, '- انتهاء التوكن:', store.expiresAt, '- محتاج تحديث؟', isExpiringSoon);
 
   if (isExpiringSoon) {
     const refreshed = await refreshSallaToken(merchant, store);
