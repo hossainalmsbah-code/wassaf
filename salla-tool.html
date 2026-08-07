@@ -43,6 +43,9 @@
   .loading{color:var(--ink-dim);font-size:14px;text-align:center;padding:20px;}
 </style>
 <!-- Salla Embedded SDK — لازم تبلّغ لوحة سلة إن الصفحة جاهزة، وإلا سلة تعتبرها فشلت وترجع تلقائياً -->
+<!-- [إصلاح ضروري] مكتبة سلة الرسمية فيها خلل بالبناء — مكتوبة لبيئة Node.js وتتوقع متغير "process" اللي مو موجود بالمتصفح إطلاقاً.
+     نعرّفه وهمي فاضي هنا قبل تحميل مكتبتهم، عشان ما تنهار وقت التنفيذ (process is not defined) -->
+<script>window.process = window.process || { env: {} };</script>
 <script src="https://unpkg.com/@salla.sa/embedded-sdk/dist/umd/index.js"></script>
 </head>
 <body>
