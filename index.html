@@ -218,6 +218,9 @@
     to{ background-position: -200% center; }
   }
 </style>
+<!-- [إضافة] وعي سلة — يشتغل بس لو الصفحة مفتوحة جوّا لوحة سلة، وإلا يبقى الموقع تماماً زي ما هو -->
+<script>window.process = window.process || { env: {} };</script>
+<script src="https://unpkg.com/@salla.sa/embedded-sdk/dist/umd/index.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -231,6 +234,18 @@
       <a href="#pricing">الأسعار</a>
     </nav>
   </header>
+
+  <!-- [إضافة] يظهر بس لو الصفحة مفتوحة جوّا لوحة سلة -->
+  <div class="settings-box" id="sallaBox" style="display:none;">
+    <div class="settings-title">🛍️ متصل بمتجرك على سلة</div>
+    <div class="field" style="margin-bottom:0;">
+      <label>اختر منتج من متجرك</label>
+      <select id="sallaProductSelect">
+        <option value="">جاري تحميل منتجاتك...</option>
+      </select>
+    </div>
+    <div class="field-hint">اختر منتج، وبيتعبّى اسمه وسعره تلقائياً تحت. بعد ما تولّد، بيظهر لك زر تكتب فيه الوصف رجوع بمنتجك مباشرة.</div>
+  </div>
 
   <section class="hero">
     <h1>أوصاف منتجات احترافية بالعربي خلال ثواني</h1>
@@ -316,6 +331,9 @@
         <button class="copy-btn" data-target="outputLong">نسخ النص</button>
       </div>
       <div class="output" id="outputLong"></div>
+      <button class="go secondary hidden-salla" id="sallaWriteBackBtn" type="button" style="display:none;margin-top:10px;">اكتب هذا الوصف رجوع بمنتجي بسلة</button>
+      <div class="err" id="sallaWriteErr" style="margin-top:6px;"></div>
+      <div class="ok-msg" id="sallaWriteSuccess" style="margin-top:6px;">تم تحديث المنتج بمتجرك على سلة ✓</div>
     </div>
     <div class="result-block">
       <div class="result-head">
@@ -1417,6 +1435,113 @@ if(contactLink && contactBox){
     setTimeout(() => contactCopyBtn.textContent = old, 1500);
   });
 }
+/* ==================== [إضافة] وعي سلة — يشتغل بس جوّا لوحة سلة ==================== */
+let sallaMerchant = null;
+let sallaSelectedProduct = null;
+
+const sallaBox = document.getElementById('sallaBox');
+const sallaProductSelect = document.getElementById('sallaProductSelect');
+const sallaWriteBackBtn = document.getElementById('sallaWriteBackBtn');
+const sallaWriteErr = document.getElementById('sallaWriteErr');
+const sallaWriteSuccess = document.getElementById('sallaWriteSuccess');
+
+(async function bootstrapSallaEmbedded(){
+  if(typeof Salla === 'undefined' || !Salla.embedded) return; // مكتبة سلة ما تحمّلت (اتصال بطيء مثلاً) — نتجاهل بصمت
+  try{
+    await Salla.embedded.init({ debug: false });
+    const token = Salla.embedded.auth.getToken();
+    if(!token){ Salla.embedded.ready(); return; }
+
+    const introspectRes = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'salla_introspect_token', token })
+    });
+    const introspectData = await introspectRes.json();
+    if(!introspectRes.ok || !introspectData.ok){ Salla.embedded.ready(); return; }
+
+    sallaMerchant = introspectData.merchant;
+    sallaBox.style.display = 'block';
+
+    const listRes = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'salla_list_products', merchant: sallaMerchant })
+    });
+    const listData = await listRes.json();
+    if(listRes.ok && listData.ok && listData.products.length){
+      sallaProductSelect.innerHTML = '<option value="">اختر منتج...</option>' +
+        listData.products.map(p => `<option value="${p.id}">${p.name}${p.price ? ' — ' + p.price + ' ريال' : ''}</option>`).join('');
+    } else {
+      sallaProductSelect.innerHTML = '<option value="">ما لقينا منتجات بمتجرك</option>';
+    }
+
+    Salla.embedded.ready();
+    Salla.embedded.page.setTitle('وصّاف');
+  }catch(err){
+    if(window.Salla && Salla.embedded) Salla.embedded.ready();
+  }
+})();
+
+sallaProductSelect && sallaProductSelect.addEventListener('change', () => {
+  const id = sallaProductSelect.value;
+  if(!id){ sallaSelectedProduct = null; return; }
+  const label = sallaProductSelect.options[sallaProductSelect.selectedIndex].textContent;
+  const namepart = label.split(' — ')[0];
+  const pricepart = label.includes(' — ') ? label.split(' — ')[1].replace(' ريال','') : '';
+  sallaSelectedProduct = { id, name: namepart };
+  document.getElementById('productName').value = namepart;
+  if(pricepart) document.getElementById('price').value = pricepart + ' ريال';
+});
+
+// [إضافة] لما التوليد العادي ينجح ونحن جوّا سلة، نظهر زر الكتابة رجوع
+const originalGoBtnClick = goBtn.onclick;
+goBtn.addEventListener('click', () => {
+  sallaWriteBackBtn.style.display = 'none';
+  sallaWriteSuccess.style.display = 'none';
+  sallaWriteErr.style.display = 'none';
+});
+
+// نراقب ظهور resultBox (بعد نجاح التوليد) لعرض زر سلة لو بسياق سلة
+const resultObserver = new MutationObserver(() => {
+  if(sallaMerchant && sallaSelectedProduct && resultBox.classList.contains('show') && outputLong.textContent.trim()){
+    sallaWriteBackBtn.style.display = 'block';
+  }
+});
+resultObserver.observe(resultBox, { attributes: true, childList: true, subtree: true });
+
+sallaWriteBackBtn && sallaWriteBackBtn.addEventListener('click', async () => {
+  if(!sallaSelectedProduct || !sallaMerchant) return;
+  sallaWriteErr.style.display = 'none';
+  sallaWriteSuccess.style.display = 'none';
+  sallaWriteBackBtn.disabled = true;
+  sallaWriteBackBtn.textContent = 'جاري الكتابة...';
+  try{
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'salla_write_back',
+        merchant: sallaMerchant,
+        productId: sallaSelectedProduct.id,
+        description: outputLong.textContent
+      })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      sallaWriteErr.textContent = data.error || 'تعذر الكتابة رجوع بمتجرك';
+      sallaWriteErr.style.display = 'block';
+      return;
+    }
+    sallaWriteSuccess.style.display = 'block';
+  }catch(e){
+    sallaWriteErr.textContent = 'صار خطأ، جرب مرة ثانية';
+    sallaWriteErr.style.display = 'block';
+  }finally{
+    sallaWriteBackBtn.disabled = false;
+    sallaWriteBackBtn.textContent = 'اكتب هذا الوصف رجوع بمنتجي بسلة';
+  }
+});
 </script>
 </body>
 </html>
