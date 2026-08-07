@@ -1,4 +1,4 @@
-const { checkAccessCode, addReferralBonus } = require('./_access');
+const { checkAccessCode, addReferralBonus, incrementUsage } = require('./_access');
 const { redisCommand } = require('./_redis');
 
 // نسبة المكافأة من حد باقة المحيل الرئيسية (50%) — تُحسب ديناميكياً حسب باقة كل محيل
@@ -174,10 +174,7 @@ async function refreshSallaToken(merchant, store) {
   const clientId = process.env.SALLA_CLIENT_ID;
   const clientSecret = process.env.SALLA_CLIENT_SECRET;
 
-  console.log('[SALLA_REFRESH_DEBUG] clientId موجود؟', !!clientId, '- clientSecret موجود؟', !!clientSecret, '- refreshToken موجود؟', !!store.refreshToken);
-
   if (!clientId || !clientSecret || !store.refreshToken) {
-    console.log('[SALLA_REFRESH_DEBUG] توقفنا مبكراً — أحد المتطلبات ناقص');
     return null;
   }
 
@@ -193,17 +190,11 @@ async function refreshSallaToken(merchant, store) {
       }).toString()
     });
 
-    console.log('[SALLA_REFRESH_DEBUG] رد سلة — الحالة:', response.status);
-
     if (!response.ok) {
-      const errText = await response.text();
-      console.log('[SALLA_REFRESH_DEBUG] فشل الطلب — نص الرد:', errText.slice(0, 500));
       return null;
     }
 
     const data = await response.json();
-    console.log('[SALLA_REFRESH_DEBUG] نجح — access_token موجود؟', !!data.access_token);
-
     if (!data.access_token) {
       return null;
     }
@@ -238,8 +229,6 @@ async function getSallaStoreToken(merchant) {
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   const isExpiringSoon = !store.expiresAt || (store.expiresAt - nowSeconds) <= TOKEN_REFRESH_MARGIN_SECONDS;
-
-  console.log('[SALLA_REFRESH_DEBUG] الوقت الحالي:', nowSeconds, '- انتهاء التوكن:', store.expiresAt, '- محتاج تحديث؟', isExpiringSoon);
 
   if (isExpiringSoon) {
     const refreshed = await refreshSallaToken(merchant, store);
@@ -292,9 +281,42 @@ async function handleSallaGenerateDescription(body, res) {
   const productName = (body.productName || '').toString().trim();
   const features = (body.features || '').toString().trim();
   const price = (body.price || '').toString().trim();
+  const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
+  const deviceId = (body.deviceId || '').toString().trim();
 
   if (!productName) {
     res.status(400).json({ error: 'اسم المنتج مطلوب' });
+    return;
+  }
+
+  // [إضافة] ربط الميزة برصيد كود الوصول العادي — نفس منطق generate.js بالضبط، بدل ما تكون مجانية بلا حدود
+  if (!accessCode) {
+    res.status(401).json({ error: 'أدخل كود الوصول أول عشان تقدر تولّد', code: 'NO_ACCESS_CODE' });
+    return;
+  }
+
+  let accessCheck;
+  try {
+    accessCheck = await checkAccessCode(accessCode, deviceId);
+  } catch (e) {
+    res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
+    return;
+  }
+
+  if (!accessCheck.ok) {
+    if (accessCheck.reason === 'exhausted') {
+      res.status(403).json({
+        error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك أو تواصل معنا لترقية باقتك.`,
+        code: 'QUOTA_EXHAUSTED'
+      });
+    } else if (accessCheck.reason === 'device_mismatch') {
+      res.status(403).json({
+        error: 'هذا الكود مستخدم فعلاً بجهاز ثاني. تواصل معنا لو غيّرت جهازك.',
+        code: 'DEVICE_MISMATCH'
+      });
+    } else {
+      res.status(403).json({ error: 'كود الوصول غير صحيح، تأكد منه أو تواصل معنا', code: 'INVALID_CODE' });
+    }
     return;
   }
 
@@ -335,7 +357,20 @@ async function handleSallaGenerateDescription(body, res) {
       .join('\n')
       .trim();
 
-    res.status(200).json({ ok: true, description: text || 'ما رجع نص، جرب مرة ثانية.' });
+    // التوليد نجح فعلياً هنا — الحين بس نحسبه على رصيد الكود
+    let remainingAfter = accessCheck.remaining - 1;
+    try {
+      await incrementUsage(accessCheck.usageKey);
+    } catch (e) {
+      remainingAfter = accessCheck.remaining - 1;
+    }
+
+    res.status(200).json({
+      ok: true,
+      description: text || 'ما رجع نص، جرب مرة ثانية.',
+      remaining: remainingAfter,
+      cap: accessCheck.cap
+    });
   } catch (err) {
     res.status(500).json({ error: 'صار خطأ أثناء التوليد' });
   }
