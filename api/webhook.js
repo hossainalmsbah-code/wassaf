@@ -275,6 +275,11 @@ async function handleSallaWebhook(req, res) {
   const authHeader = (authHeaderRaw || '').toString().replace(/^Bearer\s+/i, '').trim();
   const expectedSecret = (SALLA_WEBHOOK_SECRET || '').toString().trim();
 
+  // [تشخيص مؤقت — نحذفه بعد ما نحل المشكلة] نطبع معلومات آمنة بدون كشف القيم الحقيقية
+  console.log('[SALLA_DEBUG] كل الرؤوس الواردة:', JSON.stringify(Object.keys(req.headers)));
+  console.log('[SALLA_DEBUG] قيمة authorization موجودة؟', !!authHeaderRaw, '- طولها:', authHeaderRaw ? authHeaderRaw.length : 0);
+  console.log('[SALLA_DEBUG] SALLA_WEBHOOK_SECRET موجود بالمتغيرات؟', !!SALLA_WEBHOOK_SECRET, '- طوله:', expectedSecret.length);
+
   if (!expectedSecret || authHeader !== expectedSecret) {
     res.status(401).json({ error: 'Invalid token' });
     return;
