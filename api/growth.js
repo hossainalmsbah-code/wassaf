@@ -164,10 +164,29 @@ async function handleGetShare(body, res) {
 // ملاحظة تصميم: هذي مرحلة تجريبية، ما تستهلك من رصيد كود الوصول العادي حالياً — تُربط بنظام الاشتراك لاحقاً عند الإطلاق الفعلي
 
 const SALLA_TOKEN_URL = 'https://accounts.salla.sa/oauth2/token';
-const SALLA_INTROSPECT_URL = 'https://api.salla.dev/exchange-authority/v1/introspect';
 
-// ---------- سلة: فك توكن الصفحة المضمنة (Embedded Page) والحصول على رقم المتجر ----------
-// [مهم] قيمة رأس subject مو مؤكدة 100% لحالتنا (الصفحات المضمنة تحديداً) — لو فشلت، رسالة الخطأ من سلة توضح السبب
+// ---------- سلة: فك توكن الصفحة المضمنة (Embedded Page) مباشرة ----------
+// [مهم] توكن v4.public موقّع فقط (Signed)، مو مشفّر — بياناته نص عادي مقروء بمجرد فك base64.
+// اكتشفنا هذا بعد ما جربنا استدعاء introspect API الرسمي وطلع "Decryption failed" — لأنه غير مخصص لهالنوع من التوكن أصلاً.
+// [تنويه أمني مهم] هذا الفك حالياً بدون تحقق من التوقيع (Signature) — يعني أي شخص يقدر نظرياً يزوّر توكن ببيانات مزيّفة.
+// قبل أي استخدام حقيقي مع تجار فعليين، لازم نضيف تحقق توقيع Ed25519 باستخدام المفتاح العام لسلة (خطوة أمنية لاحقة، مو منفّذة الآن).
+function decodeSallaEmbeddedToken(token) {
+  const parts = token.split('.');
+  if (parts.length < 3 || parts[0] !== 'v4' || parts[1] !== 'public') {
+    return null;
+  }
+  const payloadB64 = parts[2];
+  try {
+    const raw = Buffer.from(payloadB64, 'base64url');
+    // آخر 64 بايت هي توقيع Ed25519 المرفق بنفس الكتلة — الباقي قبلها هو الـJSON الفعلي
+    const messageBytes = raw.subarray(0, raw.length - 64);
+    const parsed = JSON.parse(messageBytes.toString('utf8'));
+    return parsed;
+  } catch (e) {
+    return null;
+  }
+}
+
 async function handleSallaIntrospectToken(body, res) {
   const token = (body.token || '').toString().trim();
   if (!token) {
@@ -175,34 +194,22 @@ async function handleSallaIntrospectToken(body, res) {
     return;
   }
 
-  const appId = process.env.SALLA_CLIENT_ID;
-  if (!appId) {
-    res.status(500).json({ error: 'Server misconfigured' });
+  const decoded = decodeSallaEmbeddedToken(token);
+  if (!decoded || !decoded.data || !decoded.data.merchant_id) {
+    res.status(422).json({ error: 'تعذر قراءة توكن سلة', detail: decoded });
     return;
   }
 
-  try {
-    const response = await fetch(SALLA_INTROSPECT_URL, {
-      method: 'POST',
-      headers: {
-        's-source': appId,
-        'subject': 'embedded-page',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ token })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success || !data.data || !data.data.store_id) {
-      res.status(response.status || 502).json({ error: 'تعذر التحقق من توكن سلة', detail: data });
+  // تحقق بسيط من انتهاء الصلاحية (exp) — التوكن نفسه يحمل وقت انتهاء صريح
+  if (decoded.exp) {
+    const expDate = new Date(decoded.exp);
+    if (!isNaN(expDate.getTime()) && expDate.getTime() < Date.now()) {
+      res.status(401).json({ error: 'انتهت صلاحية جلستك، أعد فتح الأداة من لوحة سلة' });
       return;
     }
-
-    res.status(200).json({ ok: true, merchant: String(data.data.store_id) });
-  } catch (err) {
-    res.status(500).json({ error: 'صار خطأ أثناء التحقق من التوكن' });
   }
+
+  res.status(200).json({ ok: true, merchant: String(decoded.data.merchant_id) });
 }
 // [مهم] لم أجد تأكيد 100% حرفي لهذا المسار بتوثيق سلة النصي رغم البحث، بس هو المسار القياسي بمعيار OAuth2
 // وهو نفس القاعدة اللي عليها رابط التفويض المؤكد (accounts.salla.sa/oauth2/auth). أول اختبار فعلي يثبته أو ينفيه.
