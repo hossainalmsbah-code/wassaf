@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>وصّاف × سلة</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E1B2E;--ink-dim:#6B6785;--bg:#FFFFFF;--bg-raised:#F7F6FB;
+    --line:#E7E4F0;--accent:#E94548;--accent-dim:#FCEAEA;--accent2:#6E5BC7;--good:#16A34A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',sans-serif;line-height:1.9;font-size:16px;}
+  .wrap{max-width:680px;margin:0 auto;padding:32px 24px 80px;}
+  .logo-row{text-align:center;margin-bottom:20px;}
+  .logo-row img{height:44px;width:auto;}
+  h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:22px;margin-bottom:6px;text-align:center;}
+  .sub{color:var(--ink-dim);font-size:14px;margin-bottom:28px;text-align:center;}
+  .card{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:12px;cursor:pointer;transition:border-color .15s;}
+  .card:hover{border-color:var(--accent);}
+  .card.selected{border-color:var(--accent);background:var(--accent-dim);}
+  .card .pname{font-weight:700;font-size:15px;}
+  .card .pmeta{color:var(--ink-dim);font-size:13px;margin-top:4px;}
+  label{display:block;font-size:14px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;margin-top:16px;}
+  textarea, input[type=text]{
+    width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;resize:vertical;
+  }
+  .go{
+    width:100%;margin-top:16px;background:var(--accent);color:#1a0e14;border:none;
+    padding:14px;border-radius:8px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+  }
+  .go:hover{background:#ff8095;}
+  .go:disabled{opacity:.6;cursor:not-allowed;}
+  .go.secondary{background:var(--bg-raised);color:var(--ink);border:1px solid var(--line);}
+  .err{color:#E8664A;font-size:14px;margin-top:10px;display:none;}
+  .output{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px;font-size:15px;line-height:1.9;white-space:pre-wrap;display:none;}
+  .success-msg{color:var(--good);font-weight:700;font-size:14px;margin-top:10px;display:none;}
+  .hidden{display:none;}
+  .loading{color:var(--ink-dim);font-size:14px;text-align:center;padding:20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo-row"><img src="/assets/logo-horizontal.svg" alt="وصّاف"></div>
+  <h1>وصّاف لمتجرك على سلة</h1>
+  <div class="sub">اختر منتج، ولّد وصفه، واكتبه رجوع لمتجرك بضغطة وحدة.</div>
+
+  <div id="noMerchant" class="err" style="display:block;text-align:center;"></div>
+
+  <div id="productsSection">
+    <div id="productsList" class="loading">جاري جلب منتجاتك من سلة...</div>
+  </div>
+
+  <div id="editSection" class="hidden">
+    <label>اسم المنتج</label>
+    <input type="text" id="productNameInput" readonly>
+
+    <label>المميزات (اكتبها بنفسك — سلة ما يخزّنها منفصلة)</label>
+    <textarea id="featuresInput" rows="3" placeholder="مثال: بطارية 30 ساعة, مقاومة للماء, صوت نقي"></textarea>
+
+    <button class="go" id="generateBtn">ولّد الوصف</button>
+    <div class="err" id="genErr"></div>
+    <div class="output" id="genOutput"></div>
+
+    <button class="go secondary hidden" id="writeBackBtn">اكتب رجوع بمتجري</button>
+    <div class="err" id="writeErr"></div>
+    <div class="success-msg" id="writeSuccess">تم تحديث المنتج بمتجرك بنجاح ✓</div>
+
+    <button class="go secondary" id="backBtn" style="margin-top:24px;">← رجوع لقائمة المنتجات</button>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const merchant = params.get('merchant');
+
+const noMerchant = document.getElementById('noMerchant');
+const productsSection = document.getElementById('productsSection');
+const productsList = document.getElementById('productsList');
+const editSection = document.getElementById('editSection');
+const productNameInput = document.getElementById('productNameInput');
+const featuresInput = document.getElementById('featuresInput');
+const generateBtn = document.getElementById('generateBtn');
+const genErr = document.getElementById('genErr');
+const genOutput = document.getElementById('genOutput');
+const writeBackBtn = document.getElementById('writeBackBtn');
+const writeErr = document.getElementById('writeErr');
+const writeSuccess = document.getElementById('writeSuccess');
+const backBtn = document.getElementById('backBtn');
+
+let selectedProduct = null;
+let generatedDescription = '';
+
+if (!merchant) {
+  productsSection.classList.add('hidden');
+  noMerchant.textContent = 'رابط غير صحيح — لازم يوصل رقم المتجر بالرابط (?merchant=...)';
+  noMerchant.style.display = 'block';
+} else {
+  loadProducts();
+}
+
+async function loadProducts() {
+  try {
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'salla_list_products', merchant })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      productsList.textContent = data.error || 'تعذر جلب المنتجات';
+      return;
+    }
+    if (!data.products.length) {
+      productsList.textContent = 'ما فيه منتجات بمتجرك حالياً';
+      return;
+    }
+    productsList.innerHTML = '';
+    data.products.forEach((p) => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `<div class="pname">${p.name}</div><div class="pmeta">${p.price ? p.price + ' ريال' : ''}</div>`;
+      div.addEventListener('click', () => selectProduct(p));
+      productsList.appendChild(div);
+    });
+  } catch (e) {
+    productsList.textContent = 'صار خطأ أثناء جلب المنتجات، جرب تحدّث الصفحة';
+  }
+}
+
+function selectProduct(p) {
+  selectedProduct = p;
+  productsSection.classList.add('hidden');
+  editSection.classList.remove('hidden');
+  productNameInput.value = p.name;
+  featuresInput.value = '';
+  genOutput.style.display = 'none';
+  genErr.style.display = 'none';
+  writeBackBtn.classList.add('hidden');
+  writeSuccess.style.display = 'none';
+  writeErr.style.display = 'none';
+}
+
+backBtn.addEventListener('click', () => {
+  editSection.classList.add('hidden');
+  productsSection.classList.remove('hidden');
+  selectedProduct = null;
+});
+
+generateBtn.addEventListener('click', async () => {
+  if (!selectedProduct) return;
+  genErr.style.display = 'none';
+  generateBtn.disabled = true;
+  generateBtn.textContent = 'جاري التوليد...';
+  genOutput.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'salla_generate_description',
+        productName: selectedProduct.name,
+        features: featuresInput.value.trim(),
+        price: selectedProduct.price
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      genErr.textContent = data.error || 'صار خطأ أثناء التوليد';
+      genErr.style.display = 'block';
+      return;
+    }
+    generatedDescription = data.description;
+    genOutput.textContent = generatedDescription;
+    genOutput.style.display = 'block';
+    writeBackBtn.classList.remove('hidden');
+  } catch (e) {
+    genErr.textContent = 'صار خطأ، جرب مرة ثانية';
+    genErr.style.display = 'block';
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'ولّد الوصف';
+  }
+});
+
+writeBackBtn.addEventListener('click', async () => {
+  if (!selectedProduct || !generatedDescription) return;
+  writeErr.style.display = 'none';
+  writeSuccess.style.display = 'none';
+  writeBackBtn.disabled = true;
+  writeBackBtn.textContent = 'جاري الكتابة...';
+
+  try {
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'salla_write_back',
+        merchant,
+        productId: selectedProduct.id,
+        description: generatedDescription
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      writeErr.textContent = data.error || 'تعذر الكتابة رجوع بمتجرك';
+      writeErr.style.display = 'block';
+      return;
+    }
+    writeSuccess.style.display = 'block';
+  } catch (e) {
+    writeErr.textContent = 'صار خطأ، جرب مرة ثانية';
+    writeErr.style.display = 'block';
+  } finally {
+    writeBackBtn.disabled = false;
+    writeBackBtn.textContent = 'اكتب رجوع بمتجري';
+  }
+});
+</script>
+</body>
+</html>
