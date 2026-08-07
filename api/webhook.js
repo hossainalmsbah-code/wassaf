@@ -94,6 +94,13 @@ module.exports = async (req, res) => {
     return;
   }
 
+  // [إضافة] أحداث سلة تُفرز فوراً بمعامل صريح بالرابط (source=salla) — قبل أي معالجة تخص Lemon Squeezy
+  // هذا يفصل المسارين بشكل كامل، صفر تداخل بينهم حتى لو تشابهت أشكال البيانات مستقبلاً
+  if (req.query && req.query.source === 'salla') {
+    await handleSallaWebhook(req, res);
+    return;
+  }
+
   try {
     const rawBody = await readRawBody(req);
 
@@ -257,3 +264,39 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: 'Webhook error', detail: err.message });
   }
 };
+
+// ==================== [إضافة جديدة] استقبال أحداث تطبيق سلة — منفصلة تماماً عن منطق Lemon Squeezy فوق ====================
+// رابط الاستقبال المسجّل بلوحة سلة: https://www.wassaf.space/api/webhook?source=salla
+// خطة الحماية المختارة: Token — سلة ترسل المفتاح السري مباشرة برأس Authorization
+async function handleSallaWebhook(req, res) {
+  const SALLA_WEBHOOK_SECRET = process.env.SALLA_WEBHOOK_SECRET;
+  const authHeader = req.headers['authorization'];
+
+  if (!SALLA_WEBHOOK_SECRET || authHeader !== SALLA_WEBHOOK_SECRET) {
+    res.status(401).json({ error: 'Invalid token' });
+    return;
+  }
+
+  const { event, merchant, data } = req.body || {};
+
+  try {
+    if (event === 'app.store.authorize') {
+      // يوصل تلقائياً أول ما تاجر يثبّت التطبيق (وضع Easy Mode) — يحتوي رمز الوصول ورمز التحديث
+      const record = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt: data.expires, // unix timestamp
+        scope: data.scope,
+        installedAt: new Date().toISOString()
+      };
+      await redisCommand(['SET', `salla_store:${merchant}`, JSON.stringify(record)]);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    // [مكان جاهز للتوسعة] أحداث سلة الثانية (تركيب، إلغاء تركيب، تحديث منتج) تنضاف هنا مستقبلاً
+    res.status(200).json({ ok: true, ignored: event || 'unknown' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+}
