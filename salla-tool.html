@@ -80,7 +80,8 @@
 
 <script>
 const params = new URLSearchParams(window.location.search);
-const merchant = params.get('merchant');
+const sallaToken = params.get('token');
+let merchant = null; // [تعديل] صار يُحدد ديناميكياً بعد فك التوكن، مو من رابط مباشر
 
 // [إضافة] نستخدم نفس مفاتيح التخزين المحلي حق الموقع الرئيسي — لو التاجر جرّب وصّاف من قبل بنفس المتصفح، الكود يتعبّى تلقائياً
 const accessCodeInput = document.getElementById('accessCodeInput');
@@ -114,12 +115,36 @@ const backBtn = document.getElementById('backBtn');
 let selectedProduct = null;
 let generatedDescription = '';
 
-if (!merchant) {
+if (!sallaToken) {
   productsSection.classList.add('hidden');
-  noMerchant.textContent = 'رابط غير صحيح — لازم يوصل رقم المتجر بالرابط (?merchant=...)';
+  noMerchant.textContent = 'رابط غير صحيح — افتح الأداة من داخل لوحة تحكم سلة مباشرة';
   noMerchant.style.display = 'block';
 } else {
-  loadProducts();
+  initFromSallaToken();
+}
+
+async function initFromSallaToken() {
+  productsList.textContent = 'جاري التحقق من متجرك...';
+  try {
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'salla_introspect_token', token: sallaToken })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      productsSection.classList.add('hidden');
+      noMerchant.textContent = data.error || 'تعذر التحقق من متجرك، جرب تفتح الأداة مرة ثانية من لوحة سلة';
+      noMerchant.style.display = 'block';
+      return;
+    }
+    merchant = data.merchant;
+    loadProducts();
+  } catch (e) {
+    productsSection.classList.add('hidden');
+    noMerchant.textContent = 'صار خطأ أثناء التحقق من متجرك';
+    noMerchant.style.display = 'block';
+  }
 }
 
 async function loadProducts() {
