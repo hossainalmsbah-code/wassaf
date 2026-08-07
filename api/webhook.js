@@ -270,9 +270,12 @@ module.exports = async (req, res) => {
 // خطة الحماية المختارة: Token — سلة ترسل المفتاح السري مباشرة برأس Authorization
 async function handleSallaWebhook(req, res) {
   const SALLA_WEBHOOK_SECRET = process.env.SALLA_WEBHOOK_SECRET;
-  const authHeader = req.headers['authorization'];
+  const authHeaderRaw = req.headers['authorization'];
+  // [تعديل] بعض الأنظمة ترسل الرأس بصيغة "Bearer <token>" بدل التوكن مجرد لحاله — نتعامل مع الحالتين، ونتجاهل أي مسافات زائدة
+  const authHeader = (authHeaderRaw || '').toString().replace(/^Bearer\s+/i, '').trim();
+  const expectedSecret = (SALLA_WEBHOOK_SECRET || '').toString().trim();
 
-  if (!SALLA_WEBHOOK_SECRET || authHeader !== SALLA_WEBHOOK_SECRET) {
+  if (!expectedSecret || authHeader !== expectedSecret) {
     res.status(401).json({ error: 'Invalid token' });
     return;
   }
