@@ -49,6 +49,10 @@
   <h1>وصّاف لمتجرك على سلة</h1>
   <div class="sub">اختر منتج، ولّد وصفه، واكتبه رجوع لمتجرك بضغطة وحدة.</div>
 
+  <label>كود الوصول</label>
+  <input type="text" id="accessCodeInput" placeholder="مثال: AB12CD" style="text-transform:uppercase;">
+  <div class="err" id="accessErr"></div>
+
   <div id="noMerchant" class="err" style="display:block;text-align:center;"></div>
 
   <div id="productsSection">
@@ -77,6 +81,21 @@
 <script>
 const params = new URLSearchParams(window.location.search);
 const merchant = params.get('merchant');
+
+// [إضافة] نستخدم نفس مفاتيح التخزين المحلي حق الموقع الرئيسي — لو التاجر جرّب وصّاف من قبل بنفس المتصفح، الكود يتعبّى تلقائياً
+const accessCodeInput = document.getElementById('accessCodeInput');
+const accessErr = document.getElementById('accessErr');
+const savedCode = localStorage.getItem('wassaf_accessCode');
+if (savedCode) accessCodeInput.value = savedCode;
+accessCodeInput.addEventListener('input', () => {
+  localStorage.setItem('wassaf_accessCode', accessCodeInput.value.trim().toUpperCase());
+});
+
+let deviceId = localStorage.getItem('wassaf_deviceId');
+if (!deviceId) {
+  deviceId = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+  localStorage.setItem('wassaf_deviceId', deviceId);
+}
 
 const noMerchant = document.getElementById('noMerchant');
 const productsSection = document.getElementById('productsSection');
@@ -154,6 +173,15 @@ backBtn.addEventListener('click', () => {
 generateBtn.addEventListener('click', async () => {
   if (!selectedProduct) return;
   genErr.style.display = 'none';
+  accessErr.style.display = 'none';
+
+  const accessCode = accessCodeInput.value.trim().toUpperCase();
+  if (!accessCode) {
+    accessErr.textContent = 'أدخل كود الوصول أول';
+    accessErr.style.display = 'block';
+    return;
+  }
+
   generateBtn.disabled = true;
   generateBtn.textContent = 'جاري التوليد...';
   genOutput.style.display = 'none';
@@ -166,7 +194,9 @@ generateBtn.addEventListener('click', async () => {
         action: 'salla_generate_description',
         productName: selectedProduct.name,
         features: featuresInput.value.trim(),
-        price: selectedProduct.price
+        price: selectedProduct.price,
+        accessCode,
+        deviceId
       })
     });
     const data = await res.json();
