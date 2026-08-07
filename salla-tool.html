@@ -53,10 +53,34 @@
   <div class="logo-row"><img src="/assets/logo-horizontal.svg" alt="وصّاف"></div>
   <h1>وصّاف لمتجرك على سلة</h1>
   <div class="sub">اختر منتج، ولّد وصفه، واكتبه رجوع لمتجرك بضغطة وحدة.</div>
+  <div class="sub" id="trialBadge" style="color:var(--accent2);font-weight:700;"></div>
 
-  <label>كود الوصول</label>
-  <input type="text" id="accessCodeInput" placeholder="مثال: AB12CD" style="text-transform:uppercase;">
-  <div class="err" id="accessErr"></div>
+  <div id="accessCodeSection" class="hidden">
+    <label>كود الوصول</label>
+    <input type="text" id="accessCodeInput" placeholder="مثال: AB12CD" style="text-transform:uppercase;">
+    <div class="err" id="accessErr"></div>
+    <button type="button" id="showPricingBtn" class="go secondary" style="margin-top:8px;">ما عندك كود؟ اشترك من هنا</button>
+  </div>
+
+  <div id="pricingSection" class="hidden" style="margin-top:16px;">
+    <div class="card" style="margin-bottom:10px;">
+      <div class="pname">أسبوعي — 39 ريال/أسبوع</div>
+      <a class="go" style="margin-top:10px;" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/00674b3b-0188-495e-a279-ce5a80f59815" target="_blank" rel="noopener">اشترك الآن</a>
+    </div>
+    <div class="card" style="margin-bottom:10px;">
+      <div class="pname">شهري — 59 ريال/شهر</div>
+      <a class="go" style="margin-top:10px;" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/42258741-fa2c-43ac-87ed-3d9483dc013b" target="_blank" rel="noopener">اشترك الآن</a>
+    </div>
+    <div class="card" style="margin-bottom:10px;">
+      <div class="pname">نصف سنوي — 49 ريال/شهر</div>
+      <a class="go" style="margin-top:10px;" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/92383064-5150-403f-bd87-57cce5ea8374" target="_blank" rel="noopener">اشترك الآن</a>
+    </div>
+    <div class="card">
+      <div class="pname">سنوي — 29 ريال/شهر</div>
+      <a class="go" style="margin-top:10px;" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/092dc02f-3393-4739-9519-1e8b3ad151e3" target="_blank" rel="noopener">اشترك الآن</a>
+    </div>
+    <div class="sub" style="margin-top:12px;font-size:13px;">بعد الاشتراك، بيوصلك كود الوصول على إيميلك — ارجع هنا واكتبه بخانة "كود الوصول" فوق.</div>
+  </div>
 
   <div id="noMerchant" class="err" style="display:block;text-align:center;"></div>
 
@@ -71,16 +95,57 @@
     <label>المميزات (اكتبها بنفسك — سلة ما يخزّنها منفصلة)</label>
     <textarea id="featuresInput" rows="3" placeholder="مثال: بطارية 30 ساعة, مقاومة للماء, صوت نقي"></textarea>
 
-    <button class="go" id="generateBtn">ولّد الوصف</button>
-    <div class="err" id="genErr"></div>
-    <div class="output" id="genOutput"></div>
+    <label>الإطار الإقناعي</label>
+    <select id="frameworkSelect" style="width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:12px 14px;font-family:inherit;font-size:15px;">
+      <option value="AUTO">تلقائي (يختار وصّاف الأنسب)</option>
+      <option value="AIDA">AIDA</option>
+      <option value="PAS">PAS</option>
+      <option value="BAB">BAB</option>
+    </select>
 
-    <button class="go secondary hidden" id="writeBackBtn">اكتب رجوع بمتجري</button>
-    <div class="err" id="writeErr"></div>
-    <div class="success-msg" id="writeSuccess">تم تحديث المنتج بمتجرك بنجاح ✓</div>
+    <label>نبرة العلامة التجارية (اختياري)</label>
+    <input type="text" id="brandToneInput" placeholder="مثال: ودودة وبسيطة، أو فاخرة واحترافية">
+
+    <label style="margin-top:20px;">أو ولّد من صورة المنتج (حصري نصف سنوي/سنوي)</label>
+    <input type="file" id="imageInput" accept="image/*" style="width:100%;background:var(--bg-raised);border:1px solid var(--line);border-radius:8px;padding:12px 14px;">
+    <button class="go secondary" id="generateFromImageBtn" style="margin-top:8px;">ولّد من الصورة</button>
+    <div class="err" id="imageErr"></div>
+
+    <button class="go" id="generateBtn" style="margin-top:16px;">ولّد الأوصاف من النص</button>
+    <div class="err" id="genErr"></div>
+
+    <div id="resultsWrap" class="hidden" style="margin-top:16px;">
+      <label>الوصف الطويل</label>
+      <div class="output" id="genOutputLong"></div>
+      <button type="button" class="go secondary" id="copyLongBtn" style="margin-top:6px;">نسخ الوصف الطويل</button>
+      <button class="go secondary hidden" id="writeBackBtn" style="margin-top:6px;">اكتب الوصف الطويل رجوع بمتجري</button>
+      <div class="err" id="writeErr"></div>
+      <div class="success-msg" id="writeSuccess">تم تحديث المنتج بمتجرك بنجاح ✓</div>
+
+      <label style="margin-top:20px;">وصف قصير (سوشال ميديا)</label>
+      <div class="output" id="genOutputShort"></div>
+      <button type="button" class="go secondary" id="copyShortBtn" style="margin-top:6px;">نسخ</button>
+
+      <label style="margin-top:20px;">وصف SEO</label>
+      <div class="output" id="genOutputSeo"></div>
+      <button type="button" class="go secondary" id="copySeoBtn" style="margin-top:6px;">نسخ</button>
+
+      <button class="go secondary" id="showMarketingBtn" style="margin-top:20px;">ولّد محتوى تسويقي جاهز (واتساب وإنستقرام)</button>
+      <div class="err" id="marketingErr"></div>
+      <div id="marketingWrap" class="hidden" style="margin-top:12px;">
+        <label>رسالة واتساب</label>
+        <div class="output" id="outputWhatsapp"></div>
+        <button type="button" class="go secondary" id="copyWaBtn" style="margin-top:6px;">نسخ</button>
+
+        <label style="margin-top:16px;">منشور إنستقرام</label>
+        <div class="output" id="outputInstagram"></div>
+        <button type="button" class="go secondary" id="copyIgBtn" style="margin-top:6px;">نسخ</button>
+      </div>
+    </div>
 
     <button class="go secondary" id="backBtn" style="margin-top:24px;">← رجوع لقائمة المنتجات</button>
   </div>
+
 
   <a href="https://www.wassaf.space" target="_blank" rel="noopener"
      style="display:block;text-align:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--line);font-size:13px;color:var(--accent2);text-decoration:none;">
@@ -92,6 +157,15 @@
 const params = new URLSearchParams(window.location.search);
 const sallaToken = params.get('token');
 let merchant = null; // [تعديل] صار يُحدد ديناميكياً بعد فك التوكن، مو من رابط مباشر
+
+const trialBadge = document.getElementById('trialBadge');
+const accessCodeSection = document.getElementById('accessCodeSection');
+const pricingSection = document.getElementById('pricingSection');
+const showPricingBtn = document.getElementById('showPricingBtn');
+
+showPricingBtn.addEventListener('click', () => {
+  pricingSection.classList.toggle('hidden');
+});
 
 // [إضافة] نستخدم نفس مفاتيح التخزين المحلي حق الموقع الرئيسي — لو التاجر جرّب وصّاف من قبل بنفس المتصفح، الكود يتعبّى تلقائياً
 const accessCodeInput = document.getElementById('accessCodeInput');
@@ -114,13 +188,160 @@ const productsList = document.getElementById('productsList');
 const editSection = document.getElementById('editSection');
 const productNameInput = document.getElementById('productNameInput');
 const featuresInput = document.getElementById('featuresInput');
+const frameworkSelect = document.getElementById('frameworkSelect');
+const brandToneInput = document.getElementById('brandToneInput');
 const generateBtn = document.getElementById('generateBtn');
 const genErr = document.getElementById('genErr');
-const genOutput = document.getElementById('genOutput');
+const resultsWrap = document.getElementById('resultsWrap');
+const genOutputLong = document.getElementById('genOutputLong');
+const genOutputShort = document.getElementById('genOutputShort');
+const genOutputSeo = document.getElementById('genOutputSeo');
 const writeBackBtn = document.getElementById('writeBackBtn');
 const writeErr = document.getElementById('writeErr');
 const writeSuccess = document.getElementById('writeSuccess');
 const backBtn = document.getElementById('backBtn');
+
+document.getElementById('copyLongBtn').addEventListener('click', () => copyText(genOutputLong.textContent));
+document.getElementById('copyShortBtn').addEventListener('click', () => copyText(genOutputShort.textContent));
+document.getElementById('copySeoBtn').addEventListener('click', () => copyText(genOutputSeo.textContent));
+
+/* ==================== توليد من صورة ==================== */
+const imageInput = document.getElementById('imageInput');
+const generateFromImageBtn = document.getElementById('generateFromImageBtn');
+const imageErr = document.getElementById('imageErr');
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+generateFromImageBtn.addEventListener('click', async () => {
+  imageErr.style.display = 'none';
+  accessErr.style.display = 'none';
+  const file = imageInput.files[0];
+  if (!file) {
+    imageErr.textContent = 'اختر صورة أول';
+    imageErr.style.display = 'block';
+    return;
+  }
+  const accessCode = accessCodeInput.value.trim().toUpperCase();
+  if (!accessCode) {
+    accessCodeSection.classList.remove('hidden');
+    pricingSection.classList.remove('hidden');
+    imageErr.textContent = 'هذي الميزة تحتاج كود وصول بباقة نصف سنوي أو سنوي';
+    imageErr.style.display = 'block';
+    return;
+  }
+
+  generateFromImageBtn.disabled = true;
+  generateFromImageBtn.textContent = 'جاري التحليل والتوليد...';
+  resultsWrap.classList.add('hidden');
+
+  try {
+    const imageBase64 = await fileToBase64(file);
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'salla_generate_from_image',
+        imageBase64,
+        imageMediaType: file.type || 'image/jpeg',
+        price: selectedProduct.price,
+        accessCode,
+        deviceId,
+        merchant
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      imageErr.textContent = data.error || 'صار خطأ أثناء التوليد من الصورة';
+      imageErr.style.display = 'block';
+      if (data.code === 'INVALID_CODE' || data.code === 'PLAN_NOT_ALLOWED' || data.code === 'NO_ACCESS_CODE') {
+        accessCodeSection.classList.remove('hidden');
+        pricingSection.classList.remove('hidden');
+      }
+      return;
+    }
+    generatedDescription = data.long || '';
+    genOutputLong.textContent = data.long || '—';
+    genOutputShort.textContent = data.short || '—';
+    genOutputSeo.textContent = data.seo || '—';
+    resultsWrap.classList.remove('hidden');
+    writeBackBtn.classList.remove('hidden');
+  } catch (e) {
+    imageErr.textContent = 'صار خطأ، جرب مرة ثانية';
+    imageErr.style.display = 'block';
+  } finally {
+    generateFromImageBtn.disabled = false;
+    generateFromImageBtn.textContent = 'ولّد من الصورة';
+  }
+});
+
+/* ==================== محتوى تسويقي (واتساب وإنستقرام) ==================== */
+const showMarketingBtn = document.getElementById('showMarketingBtn');
+const marketingErr = document.getElementById('marketingErr');
+const marketingWrap = document.getElementById('marketingWrap');
+const outputWhatsapp = document.getElementById('outputWhatsapp');
+const outputInstagram = document.getElementById('outputInstagram');
+
+document.getElementById('copyWaBtn').addEventListener('click', () => copyText(outputWhatsapp.textContent));
+document.getElementById('copyIgBtn').addEventListener('click', () => copyText(outputInstagram.textContent));
+
+showMarketingBtn.addEventListener('click', async () => {
+  marketingErr.style.display = 'none';
+  const accessCode = accessCodeInput.value.trim().toUpperCase();
+  if (!accessCode) {
+    accessCodeSection.classList.remove('hidden');
+    pricingSection.classList.remove('hidden');
+    marketingErr.textContent = 'هذي الميزة تحتاج كود وصول بباقة نصف سنوي أو سنوي';
+    marketingErr.style.display = 'block';
+    return;
+  }
+
+  showMarketingBtn.disabled = true;
+  showMarketingBtn.textContent = 'جاري التوليد...';
+
+  try {
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'salla_generate_marketing',
+        productName: selectedProduct.name,
+        features: featuresInput.value.trim(),
+        price: selectedProduct.price,
+        longDescription: generatedDescription,
+        accessCode,
+        deviceId
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      marketingErr.textContent = data.error || 'صار خطأ أثناء التوليد';
+      marketingErr.style.display = 'block';
+      if (data.code === 'INVALID_CODE' || data.code === 'PLAN_NOT_ALLOWED' || data.code === 'NO_ACCESS_CODE') {
+        accessCodeSection.classList.remove('hidden');
+        pricingSection.classList.remove('hidden');
+      }
+      return;
+    }
+    outputWhatsapp.textContent = data.whatsapp || '—';
+    outputInstagram.textContent = data.instagram || '—';
+    marketingWrap.classList.remove('hidden');
+  } catch (e) {
+    marketingErr.textContent = 'صار خطأ، جرب مرة ثانية';
+    marketingErr.style.display = 'block';
+  } finally {
+    showMarketingBtn.disabled = false;
+    showMarketingBtn.textContent = 'ولّد محتوى تسويقي جاهز (واتساب وإنستقرام)';
+  }
+});
+
+function copyText(text){ if(text) navigator.clipboard.writeText(text); }
 
 let selectedProduct = null;
 let generatedDescription = '';
@@ -226,7 +447,9 @@ function selectProduct(p) {
   editSection.classList.remove('hidden');
   productNameInput.value = p.name;
   featuresInput.value = '';
-  genOutput.style.display = 'none';
+  frameworkSelect.value = 'AUTO';
+  brandToneInput.value = '';
+  resultsWrap.classList.add('hidden');
   genErr.style.display = 'none';
   writeBackBtn.classList.add('hidden');
   writeSuccess.style.display = 'none';
@@ -245,15 +468,10 @@ generateBtn.addEventListener('click', async () => {
   accessErr.style.display = 'none';
 
   const accessCode = accessCodeInput.value.trim().toUpperCase();
-  if (!accessCode) {
-    accessErr.textContent = 'أدخل كود الوصول أول';
-    accessErr.style.display = 'block';
-    return;
-  }
 
   generateBtn.disabled = true;
   generateBtn.textContent = 'جاري التوليد...';
-  genOutput.style.display = 'none';
+  resultsWrap.classList.add('hidden');
 
   try {
     const res = await fetch('/api/growth', {
@@ -264,20 +482,36 @@ generateBtn.addEventListener('click', async () => {
         productName: selectedProduct.name,
         features: featuresInput.value.trim(),
         price: selectedProduct.price,
-        accessCode,
-        deviceId
+        framework: frameworkSelect.value,
+        brandTone: brandToneInput.value.trim(),
+        accessCode: accessCode || undefined,
+        deviceId,
+        merchant
       })
     });
     const data = await res.json();
     if (!res.ok || !data.ok) {
       genErr.textContent = data.error || 'صار خطأ أثناء التوليد';
       genErr.style.display = 'block';
+      // [إضافة] لو السبب استنفاد التجربة أو الكود، نعرض خانة الكود وقسم الأسعار تلقائياً
+      if (data.code === 'TRIAL_EXHAUSTED' || data.code === 'QUOTA_EXHAUSTED' || data.code === 'INVALID_CODE') {
+        accessCodeSection.classList.remove('hidden');
+        pricingSection.classList.remove('hidden');
+      }
       return;
     }
-    generatedDescription = data.description;
-    genOutput.textContent = generatedDescription;
-    genOutput.style.display = 'block';
+    generatedDescription = data.long || '';
+    genOutputLong.textContent = data.long || '—';
+    genOutputShort.textContent = data.short || '—';
+    genOutputSeo.textContent = data.seo || '—';
+    resultsWrap.classList.remove('hidden');
     writeBackBtn.classList.remove('hidden');
+    // [إضافة] نحدّث شارة التجربة/الرصيد بعد كل توليد ناجح
+    if (data.usingTrial) {
+      trialBadge.textContent = `تجربة مجانية — تبقى لك ${data.remaining} من ${data.cap}`;
+    } else {
+      trialBadge.textContent = '';
+    }
   } catch (e) {
     genErr.textContent = 'صار خطأ، جرب مرة ثانية';
     genErr.style.display = 'block';
