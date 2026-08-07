@@ -42,6 +42,8 @@
   .hidden{display:none;}
   .loading{color:var(--ink-dim);font-size:14px;text-align:center;padding:20px;}
 </style>
+<!-- Salla Embedded SDK — لازم تبلّغ لوحة سلة إن الصفحة جاهزة، وإلا سلة تعتبرها فشلت وترجع تلقائياً -->
+<script src="https://unpkg.com/@salla.sa/embedded-sdk/dist/umd/index.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -115,21 +117,49 @@ const backBtn = document.getElementById('backBtn');
 let selectedProduct = null;
 let generatedDescription = '';
 
-if (!sallaToken) {
-  productsSection.classList.add('hidden');
-  noMerchant.textContent = 'رابط غير صحيح — افتح الأداة من داخل لوحة تحكم سلة مباشرة';
-  noMerchant.style.display = 'block';
-} else {
-  initFromSallaToken();
+// [إضافة] نستخدم مكتبة سلة الرسمية بدل قراءة الرابط يدوياً بس — وهي اللي تخلينا نبلّغ سلة "جاهزين" (ready)
+bootstrapSallaEmbedded();
+
+async function bootstrapSallaEmbedded() {
+  try {
+    // 1. نهيّئ المكتبة ونستنى تتصل بلوحة سلة
+    await Salla.embedded.init({ debug: false });
+
+    // 2. نجيب التوكن من المكتبة الرسمية (أدق من قراءته يدوياً من الرابط)
+    const officialToken = Salla.embedded.auth.getToken();
+    const tokenToUse = officialToken || sallaToken; // احتياطي لو المكتبة ما رجعت شي لأي سبب
+
+    if (!tokenToUse) {
+      noMerchant.textContent = 'تعذر الحصول على بيانات المتجر من سلة';
+      noMerchant.style.display = 'block';
+      productsSection.classList.add('hidden');
+      Salla.embedded.ready(); // نبلّغ جاهزية حتى برسالة الخطأ، وإلا الصفحة تفضل عالقة
+      return;
+    }
+
+    // 3. نتحقق من التوكن عندنا بالخادم ونجيب رقم المتجر
+    await initFromSallaToken(tokenToUse);
+
+    // 4. [الأهم] نبلّغ سلة إن الصفحة جاهزة ومحمّلة بالكامل
+    Salla.embedded.ready();
+    Salla.embedded.page.setTitle('وصّاف');
+  } catch (err) {
+    noMerchant.textContent = 'تعذر تحميل الأداة جوّا لوحة سلة';
+    noMerchant.style.display = 'block';
+    productsSection.classList.add('hidden');
+    if (window.Salla && Salla.embedded) {
+      Salla.embedded.ready();
+    }
+  }
 }
 
-async function initFromSallaToken() {
+async function initFromSallaToken(token) {
   productsList.textContent = 'جاري التحقق من متجرك...';
   try {
     const res = await fetch('/api/growth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'salla_introspect_token', token: sallaToken })
+      body: JSON.stringify({ action: 'salla_introspect_token', token })
     });
     const data = await res.json();
     if (!res.ok || !data.ok) {
