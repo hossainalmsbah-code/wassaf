@@ -330,41 +330,61 @@ async function handleSallaGenerateDescription(body, res) {
   const price = (body.price || '').toString().trim();
   const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
   const deviceId = (body.deviceId || '').toString().trim();
+  const merchant = (body.merchant || '').toString().trim();
 
   if (!productName) {
     res.status(400).json({ error: 'اسم المنتج مطلوب' });
     return;
   }
 
-  // [إضافة] ربط الميزة برصيد كود الوصول العادي — نفس منطق generate.js بالضبط، بدل ما تكون مجانية بلا حدود
+  // [إضافة] تجربة مجانية 3 مرات للأبد لكل متجر — ما تحتاج كود وصول إطلاقاً
+  const SALLA_TRIAL_LIMIT = 3;
+  let usingTrial = false;
+  let trialUsageKey = null;
+  let trialUsedCount = 0;
+
   if (!accessCode) {
-    res.status(401).json({ error: 'أدخل كود الوصول أول عشان تقدر تولّد', code: 'NO_ACCESS_CODE' });
-    return;
-  }
-
-  let accessCheck;
-  try {
-    accessCheck = await checkAccessCode(accessCode, deviceId);
-  } catch (e) {
-    res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
-    return;
-  }
-
-  if (!accessCheck.ok) {
-    if (accessCheck.reason === 'exhausted') {
-      res.status(403).json({
-        error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك أو تواصل معنا لترقية باقتك.`,
-        code: 'QUOTA_EXHAUSTED'
-      });
-    } else if (accessCheck.reason === 'device_mismatch') {
-      res.status(403).json({
-        error: 'هذا الكود مستخدم فعلاً بجهاز ثاني. تواصل معنا لو غيّرت جهازك.',
-        code: 'DEVICE_MISMATCH'
-      });
-    } else {
-      res.status(403).json({ error: 'كود الوصول غير صحيح، تأكد منه أو تواصل معنا', code: 'INVALID_CODE' });
+    if (!merchant) {
+      res.status(400).json({ error: 'بيانات المتجر مفقودة' });
+      return;
     }
-    return;
+    trialUsageKey = `salla_trial_used:${merchant}`;
+    trialUsedCount = parseInt((await redisCommand(['GET', trialUsageKey])) || '0', 10);
+    if (trialUsedCount >= SALLA_TRIAL_LIMIT) {
+      res.status(403).json({
+        error: `خلصت تجربتك المجانية (${SALLA_TRIAL_LIMIT} أوصاف). اشترك بأي باقة عشان تكمل التوليد.`,
+        code: 'TRIAL_EXHAUSTED'
+      });
+      return;
+    }
+    usingTrial = true;
+  }
+
+  let accessCheck = null;
+  if (!usingTrial) {
+    try {
+      accessCheck = await checkAccessCode(accessCode, deviceId);
+    } catch (e) {
+      res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
+      return;
+    }
+
+    if (!accessCheck.ok) {
+      if (accessCheck.reason === 'exhausted') {
+        res.status(403).json({
+          error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك أو تواصل معنا لترقية باقتك.`,
+          code: 'QUOTA_EXHAUSTED'
+        });
+      } else if (accessCheck.reason === 'device_mismatch') {
+        res.status(403).json({
+          error: 'هذا الكود مستخدم فعلاً بجهاز ثاني. تواصل معنا لو غيّرت جهازك.',
+          code: 'DEVICE_MISMATCH'
+        });
+      } else {
+        res.status(403).json({ error: 'كود الوصول غير صحيح، تأكد منه أو تواصل معنا', code: 'INVALID_CODE' });
+      }
+      return;
+    }
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -373,7 +393,26 @@ async function handleSallaGenerateDescription(body, res) {
     return;
   }
 
-  const systemPrompt = 'أنت كاتب محتوى تسويقي محترف، تكتب وصف منتج واحد متكامل بالعربي (فصحى سهلة)، جاهز للنشر مباشرة بمتجر إلكتروني سعودي. اكتب فقرة أو فقرتين، أسلوب مقنع يبرز الفائدة، بدون عناوين أو تنسيق HTML زائد. أجب بالنص فقط بدون أي مقدمة.';
+  const framework = (body.framework || 'AUTO').toString().trim().toUpperCase();
+  const brandTone = (body.brandTone || '').toString().trim();
+
+  const FRAMEWORK_LABELS = {
+    AIDA: 'AIDA (انتباه، اهتمام، رغبة، فعل)',
+    PAS: 'PAS (مشكلة، تحريض، حل)',
+    BAB: 'BAB (قبل، بعد، جسر)'
+  };
+  const frameworkInstruction = (framework === 'AUTO' || !FRAMEWORK_LABELS[framework])
+    ? `اختر أنت الإطار الأنسب لهذا المنتج من بين: ${FRAMEWORK_LABELS.AIDA}, ${FRAMEWORK_LABELS.PAS}, ${FRAMEWORK_LABELS.BAB}`
+    : `استخدم إطار ${FRAMEWORK_LABELS[framework]} بالضبط.`;
+
+  const systemPrompt = `أنت كاتب محتوى تسويقي محترف بالعربي، تكتب لمتاجر إلكترونية سعودية بسلة. بناءً على بيانات المنتج، اكتب 3 نسخ:
+1. "long": وصف طويل متكامل (فقرتين لثلاث)، ${frameworkInstruction}
+2. "short": نسخة قصيرة جداً (سطر أو سطرين) تصلح للسوشال ميديا
+3. "seo": وصف محسّن لمحركات البحث (150-160 حرف تقريباً)، يحتوي كلمات مفتاحية طبيعية
+
+${brandTone ? `نبرة العلامة التجارية المطلوبة: ${brandTone}` : 'استخدم فصحى سهلة احترافية.'}
+
+أجب بصيغة JSON فقط بدون أي نص إضافي، بالضبط: {"long":"...","short":"...","seo":"..."}`;
   const userPrompt = `اسم المنتج: ${productName}\nالمميزات: ${features || 'غير محددة'}${price ? `\nالسعر: ${price}` : ''}`;
 
   try {
@@ -386,7 +425,7 @@ async function handleSallaGenerateDescription(body, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 600,
+        max_tokens: 1200,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }]
       })
@@ -398,25 +437,54 @@ async function handleSallaGenerateDescription(body, res) {
     }
 
     const data = await aiResponse.json();
-    const text = (data.content || [])
+    const rawText = (data.content || [])
       .filter((b) => b.type === 'text')
       .map((b) => b.text)
       .join('\n')
       .trim();
 
-    // التوليد نجح فعلياً هنا — الحين بس نحسبه على رصيد الكود
-    let remainingAfter = accessCheck.remaining - 1;
+    let parsed = null;
     try {
-      await incrementUsage(accessCheck.usageKey);
+      const cleaned = rawText.replace(/^```(json)?/i, '').replace(/```$/i, '').trim();
+      parsed = JSON.parse(cleaned);
     } catch (e) {
+      const match = rawText.match(/\{[\s\S]*\}/);
+      if (match) {
+        try { parsed = JSON.parse(match[0]); } catch (e2) { parsed = null; }
+      }
+    }
+    // احتياط: لو فك الـJSON فشل تماماً، نستخدم النص الخام كوصف طويل بدل ما نرجع فاضي
+    if (!parsed) {
+      parsed = { long: rawText, short: '', seo: '' };
+    }
+
+    // التوليد نجح فعلياً هنا — الحين بس نسجّله حسب المسار المستخدم
+    let remainingAfter;
+    let capValue;
+
+    if (usingTrial) {
+      const newTrialCount = trialUsedCount + 1;
+      await redisCommand(['SET', trialUsageKey, String(newTrialCount)]);
+      remainingAfter = SALLA_TRIAL_LIMIT - newTrialCount;
+      capValue = SALLA_TRIAL_LIMIT;
+    } else {
       remainingAfter = accessCheck.remaining - 1;
+      try {
+        await incrementUsage(accessCheck.usageKey);
+      } catch (e) {
+        remainingAfter = accessCheck.remaining - 1;
+      }
+      capValue = accessCheck.cap;
     }
 
     res.status(200).json({
       ok: true,
-      description: text || 'ما رجع نص، جرب مرة ثانية.',
+      long: parsed.long || '',
+      short: parsed.short || '',
+      seo: parsed.seo || '',
       remaining: remainingAfter,
-      cap: accessCheck.cap
+      cap: capValue,
+      usingTrial
     });
   } catch (err) {
     res.status(500).json({ error: 'صار خطأ أثناء التوليد' });
@@ -460,6 +528,214 @@ async function handleSallaWriteBack(body, res) {
   }
 }
 
+// ---------- سلة: توليد وصف من صورة المنتج ----------
+async function handleSallaGenerateFromImage(body, res) {
+  const imageBase64 = (body.imageBase64 || '').toString();
+  const imageMediaType = (body.imageMediaType || 'image/jpeg').toString();
+  const audience = (body.audience || '').toString().trim();
+  const price = (body.price || '').toString().trim();
+  const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
+  const deviceId = (body.deviceId || '').toString().trim();
+  const merchant = (body.merchant || '').toString().trim();
+
+  if (!imageBase64) {
+    res.status(400).json({ error: 'صورة المنتج مطلوبة' });
+    return;
+  }
+
+  // [إضافة] توليد من صورة حصري لباقتي النصف سنوي والسنوي — نفس قيد الموقع الرئيسي بالضبط، ما يشتغل بالتجربة المجانية
+  if (!accessCode) {
+    res.status(401).json({ error: 'ميزة التوليد من صورة تحتاج كود وصول بباقة نصف سنوي أو سنوي', code: 'NO_ACCESS_CODE' });
+    return;
+  }
+
+  let accessCheck;
+  try {
+    accessCheck = await checkAccessCode(accessCode, deviceId);
+  } catch (e) {
+    res.status(500).json({ error: 'صار خطأ بالتحقق من الكود' });
+    return;
+  }
+  if (!accessCheck.ok) {
+    res.status(403).json({ error: 'كود الوصول غير صحيح أو منتهي', code: 'INVALID_CODE' });
+    return;
+  }
+  const IMAGE_ALLOWED_PLANS = ['نصف سنوي', 'سنوي'];
+  if (!IMAGE_ALLOWED_PLANS.includes(accessCheck.plan)) {
+    res.status(403).json({
+      error: 'التوليد من صورة حصري لمشتركي الباقة النصف سنوية أو السنوية',
+      code: 'PLAN_NOT_ALLOWED'
+    });
+    return;
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({ error: 'Server misconfigured' });
+    return;
+  }
+
+  const systemPrompt = `أنت كاتب محتوى تسويقي محترف. انظر لصورة المنتج المرفقة، وحدد نوعه ومميزاته الظاهرة، واكتب 3 نسخ وصف بالعربي جاهزة للنشر بمتجر سلة:
+1. "long": وصف طويل متكامل (فقرتين لثلاث) يبرز المميزات الظاهرة بالصورة
+2. "short": نسخة قصيرة للسوشال ميديا
+3. "seo": وصف محسّن لمحركات البحث (150-160 حرف)
+${audience ? `الجمهور المستهدف: ${audience}` : ''}${price ? `\nالسعر: ${price}` : ''}
+أجب بصيغة JSON فقط: {"long":"...","short":"...","seo":"..."}`;
+
+  try {
+    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1200,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: imageMediaType, data: imageBase64 } },
+            { type: 'text', text: 'ولّد لي وصف هذا المنتج.' }
+          ]
+        }]
+      })
+    });
+
+    if (!aiResponse.ok) {
+      res.status(502).json({ error: 'تعذر التوليد من الصورة، جرب مرة ثانية' });
+      return;
+    }
+
+    const data = await aiResponse.json();
+    const rawText = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
+    let parsed = null;
+    try {
+      const cleaned = rawText.replace(/^```(json)?/i, '').replace(/```$/i, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      const match = rawText.match(/\{[\s\S]*\}/);
+      if (match) { try { parsed = JSON.parse(match[0]); } catch (e2) { parsed = null; } }
+    }
+    if (!parsed) parsed = { long: rawText, short: '', seo: '' };
+
+    const remainingAfter = accessCheck.remaining - 1;
+    try { await incrementUsage(accessCheck.usageKey); } catch (e) {}
+
+    res.status(200).json({
+      ok: true,
+      long: parsed.long || '',
+      short: parsed.short || '',
+      seo: parsed.seo || '',
+      remaining: remainingAfter,
+      cap: accessCheck.cap
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'صار خطأ أثناء التوليد من الصورة' });
+  }
+}
+
+// ---------- سلة: محتوى تسويقي جاهز (واتساب وإنستقرام) ----------
+async function handleSallaGenerateMarketing(body, res) {
+  const productName = (body.productName || '').toString().trim();
+  const features = (body.features || '').toString().trim();
+  const price = (body.price || '').toString().trim();
+  const longDescription = (body.longDescription || '').toString().trim();
+  const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
+  const deviceId = (body.deviceId || '').toString().trim();
+
+  if (!productName) {
+    res.status(400).json({ error: 'اسم المنتج مطلوب' });
+    return;
+  }
+  if (!accessCode) {
+    res.status(401).json({ error: 'محتوى تسويقي جاهز يحتاج كود وصول بباقة نصف سنوي أو سنوي', code: 'NO_ACCESS_CODE' });
+    return;
+  }
+
+  let accessCheck;
+  try {
+    accessCheck = await checkAccessCode(accessCode, deviceId);
+  } catch (e) {
+    res.status(500).json({ error: 'صار خطأ بالتحقق من الكود' });
+    return;
+  }
+  if (!accessCheck.ok) {
+    res.status(403).json({ error: 'كود الوصول غير صحيح أو منتهي', code: 'INVALID_CODE' });
+    return;
+  }
+  const MARKETING_ALLOWED_PLANS = ['نصف سنوي', 'سنوي'];
+  if (!MARKETING_ALLOWED_PLANS.includes(accessCheck.plan)) {
+    res.status(403).json({
+      error: 'محتوى تسويقي جاهز حصري لمشتركي الباقة النصف سنوية أو السنوية',
+      code: 'PLAN_NOT_ALLOWED'
+    });
+    return;
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({ error: 'Server misconfigured' });
+    return;
+  }
+
+  const systemPrompt = `أنت مساعد تسويقي متخصص بكتابة محتوى بيعي جاهز للنشر، بلهجة سعودية خليجية ودودة، لتجار سلة.
+اكتب قطعتين:
+1. "whatsapp": رسالة واتساب مباشرة قصيرة (3-5 أسطر)، أسلوب بيعي ودود محادثي
+2. "instagram": كابشن إنستقرام (3-6 أسطر) + سطر فاضي + 4-6 هاشتاقات مناسبة
+أجب بصيغة JSON فقط: {"whatsapp":"...","instagram":"..."}`;
+  const userPrompt = `اسم المنتج: ${productName}\nالمميزات: ${features || 'غير محددة'}${price ? `\nالسعر: ${price}` : ''}${longDescription ? `\nالوصف المُولّد مسبقاً: ${longDescription}` : ''}`;
+
+  try {
+    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    if (!aiResponse.ok) {
+      res.status(502).json({ error: 'تعذر التوليد الآن، جرب بعد شوي' });
+      return;
+    }
+
+    const data = await aiResponse.json();
+    const rawText = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim();
+    let parsed = null;
+    try {
+      const cleaned = rawText.replace(/^```(json)?/i, '').replace(/```$/i, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      const match = rawText.match(/\{[\s\S]*\}/);
+      if (match) { try { parsed = JSON.parse(match[0]); } catch (e2) { parsed = null; } }
+    }
+    if (!parsed) parsed = { whatsapp: rawText, instagram: '' };
+
+    const remainingAfter = accessCheck.remaining - 1;
+    try { await incrementUsage(accessCheck.usageKey); } catch (e) {}
+
+    res.status(200).json({
+      ok: true,
+      whatsapp: parsed.whatsapp || '',
+      instagram: parsed.instagram || '',
+      remaining: remainingAfter,
+      cap: accessCheck.cap
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'صار خطأ أثناء التوليد' });
+  }
+}
+
 // نقطة دخول واحدة لكل ميزات النمو (حساب، إحالة، مشاركة، تكامل سلة) — تفادياً لتجاوز حد الـ12 Serverless Function بباقة Vercel المجانية
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -492,6 +768,12 @@ module.exports = async (req, res) => {
         break;
       case 'salla_write_back':
         await handleSallaWriteBack(body, res);
+        break;
+      case 'salla_generate_from_image':
+        await handleSallaGenerateFromImage(body, res);
+        break;
+      case 'salla_generate_marketing':
+        await handleSallaGenerateMarketing(body, res);
         break;
       case 'salla_introspect_token':
         await handleSallaIntrospectToken(body, res);
