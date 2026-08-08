@@ -52,6 +52,24 @@
   .contact-row #contactLink{color:var(--ink-dim);font-size:14px;text-decoration:none;}
   .contact-mail-link{font-size:17px;font-weight:500;color:var(--accent2);text-decoration:none;}
   .contact-mail-link:hover{text-decoration:underline;}
+
+  /* ===================== تبويبات دخول / حساب جديد ===================== */
+  .tabs{display:flex;gap:8px;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:22px;}
+  .tab-btn{flex:1;background:none;border:none;padding:10px;border-radius:7px;font-family:inherit;font-size:15px;font-weight:700;color:var(--ink-dim);cursor:pointer;}
+  .tab-btn.active{background:var(--bg);color:var(--ink);box-shadow:0 1px 3px rgba(30,27,46,.08);}
+  .auth-panel{display:none;}
+  .auth-panel.show{display:block;}
+  input[type=email], input[type=password]{
+    width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:17px;margin-bottom:14px;
+  }
+  input[type=email]:focus, input[type=password]:focus{outline:none;border-color:var(--accent);}
+  .link-btn{background:none;border:none;color:var(--accent2);font-size:14px;font-family:inherit;cursor:pointer;padding:0;text-decoration:underline;}
+  .ok-msg{color:var(--good);font-size:15px;margin-top:10px;display:none;}
+  .legacy-toggle{text-align:center;margin-top:20px;}
+  .legacy-box{display:none;margin-top:18px;padding-top:18px;border-top:1px dashed var(--line);}
+  .legacy-box.show{display:block;}
+  .logout-row{text-align:left;margin-top:18px;}
 </style>
 </head>
 <body>
@@ -67,19 +85,67 @@
     </div>
   </div>
   <h1>حسابي</h1>
-  <div class="sub">أدخل كود الوصول لعرض باقتك واستخدامك ورابط الإحالة.</div>
+  <div class="sub">سجّل دخول أو أنشئ حساب لعرض باقتك واستخدامك ورابط الإحالة.</div>
 
-  <label>كود الوصول</label>
-  <input type="text" id="accCodeInput" placeholder="مثال: AB12CD">
-  <button class="go" id="loadBtn">عرض بيانات الحساب</button>
-  <div class="err" id="accErr"></div>
+  <!-- ===================== تبويبات دخول / حساب جديد ===================== -->
+  <div class="tabs" id="authTabs">
+    <button class="tab-btn active" data-tab="login">تسجيل الدخول</button>
+    <button class="tab-btn" data-tab="signup">حساب جديد</button>
+  </div>
 
+  <!-- ---------- دخول ---------- -->
+  <div class="auth-panel show" id="loginPanel">
+    <label>الإيميل</label>
+    <input type="email" id="loginEmail" placeholder="مثال: name@email.com">
+    <label>كلمة المرور</label>
+    <input type="password" id="loginPassword" placeholder="••••••••">
+    <button class="go" id="loginBtn">دخول</button>
+    <div class="err" id="loginErr"></div>
+    <div style="text-align:center;margin-top:14px;">
+      <button class="link-btn" id="forgotBtn">نسيت كلمة المرور؟</button>
+    </div>
+  </div>
+
+  <!-- ---------- حساب جديد ---------- -->
+  <div class="auth-panel" id="signupPanel">
+    <label>الإيميل</label>
+    <input type="email" id="signupEmail" placeholder="مثال: name@email.com">
+    <label>كلمة المرور</label>
+    <input type="password" id="signupPassword" placeholder="8 أحرف على الأقل">
+    <button class="go" id="signupBtn">إنشاء الحساب</button>
+    <div class="err" id="signupErr"></div>
+  </div>
+
+  <!-- ---------- استعادة كلمة المرور: طلب رابط ---------- -->
+  <div class="auth-panel" id="forgotPanel">
+    <label>الإيميل</label>
+    <input type="email" id="forgotEmail" placeholder="مثال: name@email.com">
+    <button class="go" id="forgotSubmitBtn">أرسل رابط الاستعادة</button>
+    <div class="err" id="forgotErr"></div>
+    <div class="ok-msg" id="forgotOk"></div>
+    <div style="text-align:center;margin-top:14px;">
+      <button class="link-btn" id="backToLoginBtn">رجوع لتسجيل الدخول</button>
+    </div>
+  </div>
+
+  <!-- ---------- استعادة كلمة المرور: تعيين كلمة جديدة (يظهر بس لو الرابط فيه ?reset=) ---------- -->
+  <div class="auth-panel" id="resetPanel">
+    <label>كلمة المرور الجديدة</label>
+    <input type="password" id="resetNewPassword" placeholder="8 أحرف على الأقل">
+    <button class="go" id="resetSubmitBtn">حفظ كلمة المرور</button>
+    <div class="err" id="resetErr"></div>
+    <div class="ok-msg" id="resetOk"></div>
+  </div>
+
+  <!-- ===================== بطاقة الحساب (تظهر بعد الدخول) ===================== -->
   <div class="card" id="accCard">
-    <div class="row"><div class="k">الباقة</div><div class="v"><span class="plan-pill" id="planName"></span></div></div>
-    <div class="row"><div class="k">المتبقي هذا الشهر</div><div class="v" id="remainingVal"></div></div>
-    <div class="row"><div class="k">المستخدم هذا الشهر</div><div class="v" id="usedVal"></div></div>
+    <div class="row"><div class="k">الإيميل</div><div class="v" id="accEmailVal"></div></div>
+    <div class="row" id="planRow"><div class="k">الباقة</div><div class="v"><span class="plan-pill" id="planName"></span></div></div>
+    <div class="row" id="remainingRow"><div class="k">المتبقي هذا الشهر</div><div class="v" id="remainingVal"></div></div>
+    <div class="row" id="usedRow"><div class="k">المستخدم هذا الشهر</div><div class="v" id="usedVal"></div></div>
+    <div class="sub" id="noSubscriptionNote" style="display:none;margin-bottom:0;">ما عندك اشتراك فعّال مرتبط بهذا الحساب بعد.</div>
 
-    <div class="ref-box">
+    <div class="ref-box" id="refBox">
       <div class="ref-title">رابط الإحالة</div>
       <div class="ref-link-row">
         <input type="text" id="refLinkInput" readonly>
@@ -91,6 +157,17 @@
       </div>
       <div class="ref-hint">كل شخص يسجّل تجربة مجانية عبر هالرابط، يأخذ كلا منكم <strong><span id="refBonusHint">—</span> وصف إضافي</strong> لكل واحد فيكم (النسبة تعتمد على باقتك الحالية). عدد من دعوتهم لحد الحين: <strong id="refCount">0</strong></div>
     </div>
+
+    <div class="logout-row"><button class="link-btn" id="logoutBtn">تسجيل خروج</button></div>
+  </div>
+
+  <!-- ===================== كود الوصول القديم (بديل، للمشتركين اللي ما عندهم حساب بعد) ===================== -->
+  <div class="legacy-toggle"><button class="link-btn" id="legacyToggleBtn">عندك كود وصول بدل حساب؟ اضغط هنا</button></div>
+  <div class="legacy-box" id="legacyBox">
+    <label>كود الوصول</label>
+    <input type="text" id="accCodeInput" placeholder="مثال: AB12CD" style="text-transform:uppercase;">
+    <button class="go" id="loadBtn">عرض بيانات الحساب بالكود</button>
+    <div class="err" id="accErr"></div>
   </div>
 </div>
 
@@ -107,9 +184,207 @@ const loadBtn = document.getElementById('loadBtn');
 const accErr = document.getElementById('accErr');
 const accCard = document.getElementById('accCard');
 
-// لو المستخدم جاي من الصفحة الرئيسية وعنده كود محفوظ بالمتصفح، نعبّيه تلقائياً تسهيلاً
-const savedCode = localStorage.getItem('wassaf_accessCode');
-if(savedCode) accCodeInput.value = savedCode;
+/* ==================== مساعد عام: نداء غير النظام (auth_*) ==================== */
+async function callGrowth(action, payload){
+  const res = await fetch('/api/growth', {
+    method: 'POST',
+    credentials: 'same-origin', // ضروري عشان الكوكي (wassaf_session) يترسل ويترد
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload })
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+/* ==================== التبويبات (دخول / حساب جديد) ==================== */
+const panels = {
+  login: document.getElementById('loginPanel'),
+  signup: document.getElementById('signupPanel'),
+  forgot: document.getElementById('forgotPanel'),
+  reset: document.getElementById('resetPanel')
+};
+const authTabs = document.getElementById('authTabs');
+
+function showPanel(name){
+  Object.values(panels).forEach(p => p.classList.remove('show'));
+  panels[name].classList.add('show');
+  authTabs.style.display = (name === 'login' || name === 'signup') ? 'flex' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+}
+
+authTabs.addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab-btn');
+  if(!btn) return;
+  showPanel(btn.dataset.tab);
+});
+
+document.getElementById('forgotBtn').addEventListener('click', () => showPanel('forgot'));
+document.getElementById('backToLoginBtn').addEventListener('click', () => showPanel('login'));
+
+/* ==================== عرض بطاقة الحساب بعد نجاح الدخول/التسجيل ==================== */
+function renderAccountCard(data){
+  Object.values(panels).forEach(p => p.classList.remove('show'));
+  authTabs.style.display = 'none';
+  document.getElementById('legacyToggleBtn').style.display = 'none';
+  document.getElementById('legacyBox').classList.remove('show');
+
+  document.getElementById('accEmailVal').textContent = data.email || '';
+
+  const hasSub = !!data.hasSubscription;
+  document.getElementById('planRow').style.display = hasSub ? 'flex' : 'none';
+  document.getElementById('remainingRow').style.display = hasSub ? 'flex' : 'none';
+  document.getElementById('usedRow').style.display = hasSub ? 'flex' : 'none';
+  document.getElementById('refBox').style.display = hasSub ? 'block' : 'none';
+  document.getElementById('noSubscriptionNote').style.display = hasSub ? 'none' : 'block';
+
+  if(hasSub){
+    document.getElementById('planName').textContent = data.plan || 'عام';
+    document.getElementById('remainingVal').textContent = (data.remaining ?? '—') + ' من ' + (data.cap ?? '—');
+    document.getElementById('usedVal').textContent = data.used ?? '—';
+  }
+
+  accCard.classList.add('show');
+}
+
+/* ==================== دخول ==================== */
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
+  if(!email || !password){
+    err.textContent = 'أدخل الإيميل وكلمة المرور';
+    err.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'جاري الدخول...';
+  try{
+    const { ok, data } = await callGrowth('auth_login', { email, password });
+    if(!ok || !data.ok){
+      err.textContent = data.error || 'صار خطأ، جرب مرة ثانية';
+      err.style.display = 'block';
+      return;
+    }
+    await loadMeAndRender();
+  }catch(e){
+    err.textContent = 'صار خطأ، جرب مرة ثانية';
+    err.style.display = 'block';
+  }finally{
+    btn.disabled = false; btn.textContent = 'دخول';
+  }
+});
+
+/* ==================== حساب جديد ==================== */
+document.getElementById('signupBtn').addEventListener('click', async () => {
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const err = document.getElementById('signupErr');
+  err.style.display = 'none';
+  if(!email || password.length < 8){
+    err.textContent = 'أدخل إيميل صحيح وكلمة مرور 8 أحرف على الأقل';
+    err.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true; btn.textContent = 'جاري الإنشاء...';
+  try{
+    const { ok, data } = await callGrowth('auth_signup', { email, password });
+    if(!ok || !data.ok){
+      err.textContent = data.error || 'صار خطأ، جرب مرة ثانية';
+      err.style.display = 'block';
+      return;
+    }
+    await loadMeAndRender();
+  }catch(e){
+    err.textContent = 'صار خطأ، جرب مرة ثانية';
+    err.style.display = 'block';
+  }finally{
+    btn.disabled = false; btn.textContent = 'إنشاء الحساب';
+  }
+});
+
+/* ==================== نسيت كلمة المرور: طلب رابط ==================== */
+document.getElementById('forgotSubmitBtn').addEventListener('click', async () => {
+  const email = document.getElementById('forgotEmail').value.trim();
+  const err = document.getElementById('forgotErr');
+  const ok_ = document.getElementById('forgotOk');
+  err.style.display = 'none'; ok_.style.display = 'none';
+  if(!email){
+    err.textContent = 'أدخل الإيميل';
+    err.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('forgotSubmitBtn');
+  btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+  try{
+    const { data } = await callGrowth('auth_request_reset', { email });
+    ok_.textContent = data.message || 'لو الإيميل مسجّل عندنا، بيوصلك رابط الاستعادة خلال دقايق';
+    ok_.style.display = 'block';
+  }catch(e){
+    err.textContent = 'صار خطأ، جرب مرة ثانية';
+    err.style.display = 'block';
+  }finally{
+    btn.disabled = false; btn.textContent = 'أرسل رابط الاستعادة';
+  }
+});
+
+/* ==================== تعيين كلمة مرور جديدة (من رابط الإيميل ?reset=TOKEN) ==================== */
+const resetToken = new URLSearchParams(window.location.search).get('reset');
+if(resetToken){
+  showPanel('reset');
+  document.getElementById('resetSubmitBtn').addEventListener('click', async () => {
+    const newPassword = document.getElementById('resetNewPassword').value;
+    const err = document.getElementById('resetErr');
+    const ok_ = document.getElementById('resetOk');
+    err.style.display = 'none'; ok_.style.display = 'none';
+    if(newPassword.length < 8){
+      err.textContent = 'كلمة المرور لازم تكون 8 أحرف على الأقل';
+      err.style.display = 'block';
+      return;
+    }
+    const btn = document.getElementById('resetSubmitBtn');
+    btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+    try{
+      const { ok, data } = await callGrowth('auth_reset_password', { token: resetToken, newPassword });
+      if(!ok || !data.ok){
+        err.textContent = data.error || 'صار خطأ، جرب تطلب رابط جديد';
+        err.style.display = 'block';
+        return;
+      }
+      ok_.textContent = 'تم تغيير كلمة المرور — سجّل دخولك الحين';
+      ok_.style.display = 'block';
+      setTimeout(() => { window.location.href = '/account.html'; }, 1500);
+    }catch(e){
+      err.textContent = 'صار خطأ، جرب مرة ثانية';
+      err.style.display = 'block';
+    }finally{
+      btn.disabled = false; btn.textContent = 'حفظ كلمة المرور';
+    }
+  });
+}
+
+/* ==================== خروج ==================== */
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  try{ await callGrowth('auth_logout', {}); }catch(e){}
+  window.location.reload();
+});
+
+/* ==================== لو فيه جلسة دخول فعّالة أصلاً (كوكي)، نعرض البطاقة مباشرة ==================== */
+async function loadMeAndRender(){
+  const { ok, data } = await callGrowth('auth_me', {});
+  if(ok && data.ok){
+    renderAccountCard(data);
+    return true;
+  }
+  return false;
+}
+if(!resetToken) loadMeAndRender();
+
+/* ==================== كود الوصول القديم (بديل) ==================== */
+document.getElementById('legacyToggleBtn').addEventListener('click', () => {
+  document.getElementById('legacyBox').classList.toggle('show');
+});
 
 async function loadAccount(){
   const code = accCodeInput.value.trim().toUpperCase();
@@ -134,6 +409,14 @@ async function loadAccount(){
       accErr.style.display = 'block';
       return;
     }
+    authTabs.style.display = 'none';
+    Object.values(panels).forEach(p => p.classList.remove('show'));
+    document.getElementById('accEmailVal').textContent = '(دخول بكود الوصول)';
+    document.getElementById('planRow').style.display = 'flex';
+    document.getElementById('remainingRow').style.display = 'flex';
+    document.getElementById('usedRow').style.display = 'flex';
+    document.getElementById('refBox').style.display = 'block';
+    document.getElementById('noSubscriptionNote').style.display = 'none';
     document.getElementById('planName').textContent = data.plan;
     document.getElementById('remainingVal').textContent = `${data.remaining} من ${data.cap}`;
     document.getElementById('usedVal').textContent = data.used;
@@ -146,12 +429,11 @@ async function loadAccount(){
     accErr.style.display = 'block';
   }finally{
     loadBtn.disabled = false;
-    loadBtn.textContent = 'عرض بيانات الحساب';
+    loadBtn.textContent = 'عرض بيانات الحساب بالكود';
   }
 }
 
 loadBtn.addEventListener('click', loadAccount);
-if(savedCode) loadAccount();
 
 document.getElementById('copyRefBtn').addEventListener('click', () => {
   const input = document.getElementById('refLinkInput');
