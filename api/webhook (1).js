@@ -1,0 +1,316 @@
+const crypto = require('crypto');
+const { redisCommand } = require('./_redis');
+const { sendEmail } = require('./_email');
+
+function generateRandomCode(length = 6) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+// نحدد حد الأوصاف الشهري تلقائياً حسب رقم الباقة (variant_id) أو اسمها اللي جاية من Lemon Squeezy
+// نفس الأرقام المستخدمة بلوحة الإدارة يدوياً، عشان التوليد الآلي يطابق اليدوي
+// الأولوية لـ variant_id لأنه رقم ثابت ما يتغير، وبعده نطابق الاسم (عربي/إنجليزي) كخطة احتياطية
+
+// عدّل الأرقام هذي بأرقام الـ variant IDs الحقيقية عندك (تحصلها من لوحة Lemon Squeezy أو API)
+const VARIANT_ID_MAP = {
+  '1913994': { cap: 180, plan: 'نصف سنوي' }, // تأكدنا منه باختبار حقيقي بتاريخ 16 يوليو 2026
+  // 'رقم_الـ_variant': { cap: 30, plan: 'أسبوعي' },
+  // 'رقم_الـ_variant': { cap: 120, plan: 'شهري' },
+  // 'رقم_الـ_variant': { cap: 300, plan: 'سنوي' },
+  // 'رقم_الـ_variant': { cap: 10, plan: 'تجربة' },
+};
+
+function capFromVariantId(variantId) {
+  if (!variantId) return null;
+  const key = variantId.toString();
+  return VARIANT_ID_MAP[key] || null;
+}
+
+function capFromVariantName(name) {
+  const n = (name || '').toString().toLowerCase();
+
+  // مطابقة عربية (الأصلية)
+  if (n.includes('نصف')) return { cap: 180, plan: 'نصف سنوي' };
+  if (n.includes('سنوي')) return { cap: 300, plan: 'سنوي' };
+  if (n.includes('شهري')) return { cap: 120, plan: 'شهري' };
+  if (n.includes('أسبوع') || n.includes('اسبوع')) return { cap: 20, plan: 'أسبوعي' };
+  if (n.includes('تجرب')) return { cap: 10, plan: 'تجربة' };
+
+  // مطابقة إنجليزية (إضافة جديدة) — نتحقق من "نصف سنوي" قبل "سنوي" عشان ما يلخبط semi مع annual
+  if (n.includes('semi') || n.includes('half') || n.includes('bi-annual') || n.includes('biannual')) return { cap: 180, plan: 'نصف سنوي' };
+  if (n.includes('annual') || n.includes('year')) return { cap: 300, plan: 'سنوي' };
+  if (n.includes('month')) return { cap: 120, plan: 'شهري' };
+  if (n.includes('week')) return { cap: 20, plan: 'أسبوعي' };
+  if (n.includes('trial') || n.includes('free')) return { cap: 10, plan: 'تجربة' };
+
+  return null;
+}
+
+// الدالة الرئيسية: نجرب الـ variant_id أول، ولو ما لقينا نرجع للاسم
+function resolvePlan(variantId, variantName) {
+  return capFromVariantId(variantId) || capFromVariantName(variantName);
+}
+
+// لازم نقرأ الـ body الخام (Raw Bytes) قبل أي تحويل، لأن التحقق من التوقيع يحتاج البيانات الأصلية بالضبط
+async function readRawBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+function buildWelcomeEmailHtml({ code, plan, cap }) {
+  return `
+  <div dir="rtl" style="font-family:'IBM Plex Sans Arabic',Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <span style="font-size:28px;font-weight:900;color:#E94548;">وصّاف</span>
+    </div>
+    <h2 style="color:#1E1B2E;font-size:20px;">أهلاً فيك بوصّاف 👋</h2>
+    <p style="color:#6B6785;font-size:15px;line-height:1.8;">
+      اشتراكك بباقة <strong>${plan}</strong> نجح، وهذا كود الوصول الخاص فيك — استخدمه مباشرة بالموقع عشان تبدأ تولّد أوصاف منتجاتك.
+    </p>
+    <div style="background:#F7F6FB;border:1px solid #E7E4F0;border-radius:10px;padding:20px;text-align:center;margin:24px 0;">
+      <div style="font-size:12px;color:#6E5BC7;font-weight:700;margin-bottom:8px;">كود الوصول</div>
+      <div style="font-family:monospace;font-size:28px;font-weight:900;color:#E94548;letter-spacing:4px;">${code}</div>
+      <div style="font-size:13px;color:#6B6785;margin-top:10px;">حد ${cap} وصف بالشهر</div>
+    </div>
+    <a href="https://www.wassaf.space" style="display:block;text-align:center;background:#E94548;color:#ffffff;text-decoration:none;font-weight:700;padding:14px;border-radius:8px;font-size:15px;">
+      ابدأ التوليد الآن
+    </a>
+    <p style="color:#6B6785;font-size:13px;line-height:1.8;margin-top:24px;">
+      حط الكود بصندوق "كود الوصول" أول ما تفتح الموقع، وبيتذكره تلقائياً بعد كذا. أي استفسار راسلنا على واتساب أو إيميل، إحنا حاضرين.
+    </p>
+  </div>`;
+}
+
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  // [إضافة] أحداث سلة تُفرز فوراً بمعامل صريح بالرابط (source=salla) — قبل أي معالجة تخص Lemon Squeezy
+  // هذا يفصل المسارين بشكل كامل، صفر تداخل بينهم حتى لو تشابهت أشكال البيانات مستقبلاً
+  if (req.query && req.query.source === 'salla') {
+    await handleSallaWebhook(req, res);
+    return;
+  }
+
+  try {
+    const rawBody = await readRawBody(req);
+
+    const secret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET;
+    if (!secret) {
+      res.status(500).send('Webhook secret not configured');
+      return;
+    }
+
+    const signatureHeader = (req.headers['x-signature'] || '').toString();
+    const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+
+    let signatureValid = false;
+    try {
+      signatureValid = signatureHeader.length === expectedSignature.length &&
+        crypto.timingSafeEqual(Buffer.from(expectedSignature, 'utf8'), Buffer.from(signatureHeader, 'utf8'));
+    } catch (e) {
+      signatureValid = false;
+    }
+
+    if (!signatureValid) {
+      res.status(401).send('Invalid signature');
+      return;
+    }
+
+    const event = JSON.parse(rawBody.toString('utf8'));
+    const eventName = event.meta && event.meta.event_name;
+
+    // [تعديل ضروري] نهتم الآن بحدثين: اشتراك جديد ناجح، وانتهاء الاشتراك فعلياً (subscription_expired)
+    // subscription_expired يصير بالضبط بنهاية الفترة المدفوعة (نفس يوم الاشتراك بالشهر التالي) — سواء التاجر ألغى بنفسه أو فشل التجديد
+    // ما نستمع لـ subscription_cancelled لأنه يصير وقت الإلغاء نفسه، بينما الاشتراك يفضل فعّال لين نهاية الفترة المدفوعة فعلياً
+    if (eventName !== 'subscription_created' && eventName !== 'subscription_expired') {
+      res.status(200).json({ received: true, ignored: eventName || 'unknown' });
+      return;
+    }
+
+    // منع التكرار: Lemon Squeezy أحياناً يرسل نفس حدث الاشتراك أكثر من مرة (retry)
+    // نستخدم معرّف الاشتراك الفريد كقفل بـ Redis — أول وحدة توصل تاخذ القفل وتكمل، أي تكرار بعدها يتجاهل فوراً
+    const subscriptionId = event.data && event.data.id;
+    if (subscriptionId) {
+      // [تعديل ضروري] قفل التكرار صار مربوط باسم الحدث نفسه أيضاً، عشان حدث subscription_expired
+      // ما ياخذ نفس قفل subscription_created لنفس الاشتراك (لأنه معرّف الاشتراك واحد لكن الحدث مختلف تماماً)
+      const lockKey = `webhook:lock:${eventName}:${subscriptionId}`;
+      // NX: يحط القيمة بس لو المفتاح مو موجود أصلاً | EX 2592000: القفل ينتهي تلقائياً بعد 30 يوم
+      const lockResult = await redisCommand(['SET', lockKey, '1', 'NX', 'EX', '2592000']);
+      if (lockResult !== 'OK') {
+        // معناها فيه حدث سابق أخذ القفل قبلنا — هذا تكرار، نتجاهله
+        res.status(200).json({ received: true, duplicate: true, subscriptionId });
+        return;
+      }
+    }
+
+    // [إضافة جديدة] معالجة حدث انتهاء الاشتراك فعلياً — نطفّي الكود المرتبط بالكامل بغض النظر عن أي أوصاف متبقية
+    if (eventName === 'subscription_expired') {
+      if (!subscriptionId) {
+        res.status(200).json({ received: true, ignored: 'no subscription id' });
+        return;
+      }
+
+      const linkedCode = await redisCommand(['GET', `subscription_code:${subscriptionId}`]);
+      if (!linkedCode) {
+        // اشتراك ما نعرف الكود المرتبط فيه (غالباً كان موجود قبل هالتحديث) — نسجله للمراجعة اليدوية بدل ما نتجاهله بصمت
+        await redisCommand(['HSET', 'pending:review_expired', subscriptionId, JSON.stringify({
+          subscriptionId,
+          receivedAt: new Date().toISOString()
+        })]);
+        res.status(200).json({ received: true, codeNotFound: true, subscriptionId });
+        return;
+      }
+
+      const raw = await redisCommand(['GET', `code:${linkedCode}`]);
+      if (raw) {
+        let parsed;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e) {
+          parsed = null;
+        }
+        if (parsed) {
+          parsed.active = false;
+          parsed.deactivatedAt = new Date().toISOString();
+          parsed.deactivationReason = 'subscription_expired';
+          await redisCommand(['SET', `code:${linkedCode}`, JSON.stringify(parsed)]);
+        }
+      }
+
+      res.status(200).json({ received: true, deactivated: true, code: linkedCode, subscriptionId });
+      return;
+    }
+
+    const attrs = (event.data && event.data.attributes) || {};
+    const email = attrs.user_email || '';
+    const variantId = attrs.variant_id;
+    // product_name يحمل الاسم العربي الحقيقي للباقة (مثلاً "الباقة النصف السنوي")
+    // variant_name غالباً "Default" لما يكون فيه variant وحيد بالمنتج — لهذا نجربه بعد product_name فقط
+    const variantName = attrs.product_name || attrs.variant_name || '';
+
+    const notifyId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const planInfo = resolvePlan(variantId, variantName);
+
+    if (!planInfo) {
+      // ما قدرنا نحدد الباقة تلقائياً لا من الـ variant_id ولا من الاسم — نسجلها "تحتاج مراجعة يدوية" بدل ما نتجاهلها بصمت
+      await redisCommand(['HSET', 'pending:notify', notifyId, JSON.stringify({
+        code: null,
+        email,
+        plan: variantName || 'غير معروف',
+        variantId: variantId || null,
+        cap: null,
+        needsReview: true,
+        createdAt: new Date().toISOString()
+      })]);
+      res.status(200).json({ received: true, needsReview: true });
+      return;
+    }
+
+    const code = generateRandomCode();
+    const codeValue = JSON.stringify({
+      cap: planInfo.cap,
+      plan: planInfo.plan,
+      active: true,
+      createdAt: new Date().toISOString(),
+      source: 'webhook',
+      email,
+      subscriptionId: subscriptionId || null
+    });
+    await redisCommand(['SET', `code:${code}`, codeValue]);
+
+    // [إضافة جديدة] نخزّن الربط بين معرّف الاشتراك والكود — أساسي عشان نقدر نطفّي الكود الصحيح عند subscription_expired لاحقاً
+    if (subscriptionId) {
+      await redisCommand(['SET', `subscription_code:${subscriptionId}`, code]);
+    }
+
+    // [إضافة جديدة] فهرس إيميل → كود — يستخدمه نظام تسجيل الحسابات (auth_signup) عشان يربط
+    // أي حساب إيميل/باسورد جديد بآخر اشتراك فعّال لنفس الإيميل تلقائياً، بدون ربط يدوي
+    if (email) {
+      await redisCommand(['SET', `email_code:${email}`, code]);
+    }
+
+    let emailSent = false;
+    let emailError = null;
+    if (email) {
+      try {
+        await sendEmail({
+          to: email,
+          subject: 'كود الوصول لوصّاف جاهز 🎉',
+          html: buildWelcomeEmailHtml({ code, plan: planInfo.plan, cap: planInfo.cap })
+        });
+        emailSent = true;
+      } catch (mailErr) {
+        emailError = mailErr.message;
+      }
+    }
+
+    // نسجلها بقائمة الانتظار دايماً (حتى لو الإيميل نجح) — نسخة احتياطية لك تراجعها، وتوثيق كامل
+    await redisCommand(['HSET', 'pending:notify', notifyId, JSON.stringify({
+      code,
+      email,
+      plan: planInfo.plan,
+      cap: planInfo.cap,
+      createdAt: new Date().toISOString(),
+      emailSent,
+      emailError
+    })]);
+
+    res.status(200).json({ received: true, code, emailSent });
+  } catch (err) {
+    res.status(500).json({ error: 'Webhook error', detail: err.message });
+  }
+};
+
+// ==================== [إضافة جديدة] استقبال أحداث تطبيق سلة — منفصلة تماماً عن منطق Lemon Squeezy فوق ====================
+// رابط الاستقبال المسجّل بلوحة سلة: https://www.wassaf.space/api/webhook?source=salla
+// خطة الحماية المختارة: Token — سلة ترسل المفتاح السري مباشرة برأس Authorization
+async function handleSallaWebhook(req, res) {
+  const SALLA_WEBHOOK_SECRET = process.env.SALLA_WEBHOOK_SECRET;
+  const authHeaderRaw = req.headers['authorization'];
+  // [تعديل] بعض الأنظمة ترسل الرأس بصيغة "Bearer <token>" بدل التوكن مجرد لحاله — نتعامل مع الحالتين، ونتجاهل أي مسافات زائدة
+  const authHeader = (authHeaderRaw || '').toString().replace(/^Bearer\s+/i, '').trim();
+  const expectedSecret = (SALLA_WEBHOOK_SECRET || '').toString().trim();
+
+  // [تشخيص مؤقت — نحذفه بعد ما نحل المشكلة] نطبع معلومات آمنة بدون كشف القيم الحقيقية
+  console.log('[SALLA_DEBUG] كل الرؤوس الواردة:', JSON.stringify(Object.keys(req.headers)));
+  console.log('[SALLA_DEBUG] قيمة authorization موجودة؟', !!authHeaderRaw, '- طولها:', authHeaderRaw ? authHeaderRaw.length : 0);
+  console.log('[SALLA_DEBUG] SALLA_WEBHOOK_SECRET موجود بالمتغيرات؟', !!SALLA_WEBHOOK_SECRET, '- طوله:', expectedSecret.length);
+
+  if (!expectedSecret || authHeader !== expectedSecret) {
+    res.status(401).json({ error: 'Invalid token' });
+    return;
+  }
+
+  const { event, merchant, data } = req.body || {};
+
+  try {
+    if (event === 'app.store.authorize') {
+      // يوصل تلقائياً أول ما تاجر يثبّت التطبيق (وضع Easy Mode) — يحتوي رمز الوصول ورمز التحديث
+      const record = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt: data.expires, // unix timestamp
+        scope: data.scope,
+        installedAt: new Date().toISOString()
+      };
+      await redisCommand(['SET', `salla_store:${merchant}`, JSON.stringify(record)]);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    // [مكان جاهز للتوسعة] أحداث سلة الثانية (تركيب، إلغاء تركيب، تحديث منتج) تنضاف هنا مستقبلاً
+    res.status(200).json({ ok: true, ignored: event || 'unknown' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+}
