@@ -339,8 +339,8 @@
 
   <!-- [إضافة] يظهر بس لو الصفحة مفتوحة جوّا لوحة سلة -->
   <div class="settings-box" id="sallaBox" style="display:none;">
-    <div class="settings-title">🛍️ منتجاتك </div>
-    <div class="field-hint" style="margin-bottom:14px;">اضغط على منتج،و سيتم ادخال اسمه وسعره تلقائياً بالأسفل - أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع صورته مباشرة.</div>
+    <div class="settings-title">🛍️ منتجاتك بمتجرك على سلة</div>
+    <div class="field-hint" style="margin-bottom:14px;">اضغط على منتج، وبيتعبّى اسمه وسعره تلقائياً بالأسفل — أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع صورته مباشرة.</div>
     <div class="salla-product-grid" id="sallaProductGrid">
       <div class="salla-product-loading">جاري تحميل منتجاتك...</div>
     </div>
@@ -420,7 +420,7 @@
     <div class="fw-hint" id="styleHint">فصحى سهلة وبسيطة  بدون مفردات ثقيلة.</div>
   </div>
 
-  <button class="go" id="goBtn">ابدأ هنا</button>
+  <button class="go" id="goBtn">ولّد الأوصاف</button>
   <div class="err" id="errBox"></div>
 
   <div class="result" id="resultBox">
@@ -476,7 +476,7 @@
   </div>
 
   <!-- ===================== توليد من صورة (حصري نصف سنوي/سنوي) ===================== -->
-  <div class="salla-image-highlight" id="sallaImageHighlight" style="display:none;">📸 أسرع طريقة لعملاء سلة </div>
+  <div class="salla-image-highlight" id="sallaImageHighlight" style="display:none;">📸 أسرع طريقة لعملاء سلة — منتجك عنده صورة أصلاً</div>
   <div class="section-title" id="imageGen">ولّد الوصف من صورة المنتج</div>
   <div class="section-sub">ارفع صورة منتجك بس ، ووصّاف يحلّلها ويكتب لك الوصف الطويل والقصير وSEO تلقائياً - بدون ما تكتب كلمة.</div>
 
@@ -665,6 +665,8 @@
           <li><svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> توليد الوصف من صورة المنتج</li>
           <li><svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> منشور إنستقرام جاهز</li>
           <li><svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> رسالة واتساب جاهزة</li>
+          <li><svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> حتى 300 منتج شهرياً</li>
+          <li><svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> دعم مباشر 24 ساعة</li>
         </ul>
         <a class="plan-btn" href="https://wassaf-sa.lemonsqueezy.com/checkout/buy/092dc02f-3393-4739-9519-1e8b3ad151e3" target="_blank" rel="noopener">اشترك الآن</a>
       </div>
@@ -969,10 +971,12 @@ let lastGeneratedProduct = null; // آخر منتج تم توليد وصفه ب�
 
 async function callGenerate({ productName, audience, features, price, framework, brandTone, style, bulk = false }){
   const accessCode = getStoredAccessCode();
+  // [إضافة جديدة] لو إحنا جوّا سلة وعندنا merchant متحقق منه، نرسله بدل كود الوصول — الخادم يتحقق من اشتراك سلة عوضاً
+  const sallaMerchantId = sallaMerchant || '';
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId, style, bulk })
+    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId, style, bulk, sallaMerchantId })
   });
   const data = await response.json();
   if(!response.ok){
@@ -1049,7 +1053,7 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     }
   }finally{
     goBtn.disabled = false;
-    goBtn.textContent = 'ابدأ';
+    goBtn.textContent = 'ولّد الأوصاف';
   }
 });
 
@@ -1689,6 +1693,26 @@ function renderSallaProductGrid(products){
     // عشان التركيز يصير بالكامل على قائمة المنتجات وأدوات التوليد
     document.body.classList.add('salla-embedded');
 
+    // [إضافة جديدة] نجيب باقة التاجر تلقائياً من اشتراكه عبر سلة نفسها (الفوترة الأصلية) —
+    // بدون ما يحتاج يكتب كود وصول يدوي. نعبّي نفس المتغيرات (currentCodeCap/currentCodePlan)
+    // اللي أصلاً تتحكم بإظهار/إخفاء ميزات التوليد من صورة والمحتوى التسويقي والرفع الجماعي —
+    // فكل قيود الباقات الموجودة تشتغل تلقائياً بدون أي تكرار بالمنطق.
+    try{
+      const subRes = await fetch('/api/growth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'salla_subscription_status', merchant: sallaMerchant })
+      });
+      const subData = await subRes.json();
+      if(subRes.ok && subData.ok && subData.hasSubscription){
+        currentCodeCap = subData.cap;
+        currentCodePlan = subData.plan;
+        if(typeof updateImageFeatureVisibility === 'function') updateImageFeatureVisibility();
+      }
+    }catch(e){
+      // فشل جلب حالة الاشتراك ما يوقف الصفحة — بس ميزات الباقات المقيّدة تفضل مقفلة افتراضياً
+    }
+
     const listRes = await fetch('/api/growth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1767,7 +1791,7 @@ sallaWriteBackBtn && sallaWriteBackBtn.addEventListener('click', async () => {
     sallaWriteErr.style.display = 'block';
   }finally{
     sallaWriteBackBtn.disabled = false;
-    sallaWriteBackBtn.textContent = 'انشر الوصف';
+    sallaWriteBackBtn.textContent = 'اكتب هذا الوصف رجوع بمنتجي بسلة';
   }
 });
 </script>
