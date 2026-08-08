@@ -339,8 +339,8 @@
 
   <!-- [إضافة] يظهر بس لو الصفحة مفتوحة جوّا لوحة سلة -->
   <div class="settings-box" id="sallaBox" style="display:none;">
-    <div class="settings-title">🛍️ منتجاتك بمتجرك على سلة</div>
-    <div class="field-hint" style="margin-bottom:14px;">اضغط على منتج، وبيتعبّى اسمه وسعره تلقائياً بالأسفل — أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع صورته مباشرة.</div>
+    <div class="settings-title">🛍️ منتجاتك </div>
+    <div class="field-hint" style="margin-bottom:14px;">اضغط على منتج،و سيتم ادخال اسمه وسعره تلقائياً بالأسفل - أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع صورته مباشرة.</div>
     <div class="salla-product-grid" id="sallaProductGrid">
       <div class="salla-product-loading">جاري تحميل منتجاتك...</div>
     </div>
@@ -476,7 +476,7 @@
   </div>
 
   <!-- ===================== توليد من صورة (حصري نصف سنوي/سنوي) ===================== -->
-  <div class="salla-image-highlight" id="sallaImageHighlight" style="display:none;">📸 أسرع طريقة لعملاء سلة — منتجك عنده صورة أصلاً</div>
+  <div class="salla-image-highlight" id="sallaImageHighlight" style="display:none;">📸 أسرع طريقة لعملاء سلة </div>
   <div class="section-title" id="imageGen">ولّد الوصف من صورة المنتج</div>
   <div class="section-sub">ارفع صورة منتجك بس ، ووصّاف يحلّلها ويكتب لك الوصف الطويل والقصير وSEO تلقائياً - بدون ما تكتب كلمة.</div>
 
@@ -1049,7 +1049,7 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     }
   }finally{
     goBtn.disabled = false;
-    goBtn.textContent = 'ولّد الأوصاف';
+    goBtn.textContent = 'ابدأ';
   }
 });
 
@@ -1767,7 +1767,7 @@ sallaWriteBackBtn && sallaWriteBackBtn.addEventListener('click', async () => {
     sallaWriteErr.style.display = 'block';
   }finally{
     sallaWriteBackBtn.disabled = false;
-    sallaWriteBackBtn.textContent = 'اكتب هذا الوصف رجوع بمنتجي بسلة';
+    sallaWriteBackBtn.textContent = 'انشر الوصف';
   }
 });
 </script>
