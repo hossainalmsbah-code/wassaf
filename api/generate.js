@@ -1,5 +1,5 @@
 const { redisCommand } = require('./_redis');
-const { checkAccessCode, incrementUsage } = require('./_access');
+const { checkAccessCode, incrementUsage, checkSallaMerchantSubscription } = require('./_access');
 const { buildCacheKey, getCachedGeneration, setCachedGeneration, logGeneration } = require('./_library');
 
 const FRAMEWORK_LABELS = {
@@ -232,6 +232,7 @@ module.exports = async (req, res) => {
     const brandTone = (body.brandTone || '').toString().trim();
     const style = (body.style || 'FORMAL').toString().trim().toUpperCase();
     const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
+    const sallaMerchantId = (body.sallaMerchantId || '').toString().trim(); // [إضافة جديدة] الفوترة الأصلية جوّا سلة — بديل عن كود الوصول
     const deviceId = (body.deviceId || '').toString().trim();
     const mode = (body.mode || 'description').toString().trim(); // [إضافة] 'description' (افتراضي، السلوك الأصلي) أو 'marketing'
     const longDescription = (body.longDescription || '').toString().trim(); // [إضافة] تُستخدم بوضع marketing بس
@@ -242,34 +243,58 @@ module.exports = async (req, res) => {
       return;
     }
 
-    if (!accessCode) {
-      res.status(401).json({ error: 'أدخل كود الوصول أول عشان تقدر تولّد', code: 'NO_ACCESS_CODE' });
-      return;
-    }
-
+    // [إضافة جديدة] لو الطلب جاي من داخل سلة (فيه sallaMerchantId)، نتحقق من اشتراك سلة بدل كود الوصول العادي
     let accessCheck;
-    try {
-      accessCheck = await checkAccessCode(accessCode, deviceId);
-    } catch (redisErr) {
-      res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
-      return;
-    }
-
-    if (!accessCheck.ok) {
-      if (accessCheck.reason === 'exhausted') {
-        res.status(403).json({
-          error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك أو تواصل معنا لترقية باقتك.`,
-          code: 'QUOTA_EXHAUSTED'
-        });
-      } else if (accessCheck.reason === 'device_mismatch') {
-        res.status(403).json({
-          error: 'هذا الكود مستخدم فعلاً بجهاز ثاني. لو غيّرت جهازك، تواصل معنا نفعّله لك بالجهاز الجديد.',
-          code: 'DEVICE_MISMATCH'
-        });
-      } else {
-        res.status(403).json({ error: 'كود الوصول غير صحيح، تأكد منه أو تواصل معنا', code: 'INVALID_CODE' });
+    if (sallaMerchantId) {
+      try {
+        accessCheck = await checkSallaMerchantSubscription(sallaMerchantId);
+      } catch (redisErr) {
+        res.status(500).json({ error: 'صار خطأ بالتحقق من اشتراك متجرك، جرب مرة ثانية بعد شوي' });
+        return;
       }
-      return;
+      if (!accessCheck.ok) {
+        if (accessCheck.reason === 'exhausted') {
+          res.status(403).json({
+            error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك عبر سلة عشان تكمل التوليد.`,
+            code: 'QUOTA_EXHAUSTED'
+          });
+        } else {
+          res.status(403).json({
+            error: 'ما عندك اشتراك فعّال بوصّاف مرتبط بمتجرك — اشترك عبر سلة أول',
+            code: 'NO_SALLA_SUBSCRIPTION'
+          });
+        }
+        return;
+      }
+    } else {
+      if (!accessCode) {
+        res.status(401).json({ error: 'أدخل كود الوصول أول عشان تقدر تولّد', code: 'NO_ACCESS_CODE' });
+        return;
+      }
+
+      try {
+        accessCheck = await checkAccessCode(accessCode, deviceId);
+      } catch (redisErr) {
+        res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
+        return;
+      }
+
+      if (!accessCheck.ok) {
+        if (accessCheck.reason === 'exhausted') {
+          res.status(403).json({
+            error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك أو تواصل معنا لترقية باقتك.`,
+            code: 'QUOTA_EXHAUSTED'
+          });
+        } else if (accessCheck.reason === 'device_mismatch') {
+          res.status(403).json({
+            error: 'هذا الكود مستخدم فعلاً بجهاز ثاني. لو غيّرت جهازك، تواصل معنا نفعّله لك بالجهاز الجديد.',
+            code: 'DEVICE_MISMATCH'
+          });
+        } else {
+          res.status(403).json({ error: 'كود الوصول غير صحيح، تأكد منه أو تواصل معنا', code: 'INVALID_CODE' });
+        }
+        return;
+      }
     }
 
     // [إضافة] وضع المحتوى التسويقي حصري لباقتي النصف سنوي والسنوي — تحقق إلزامي بالخادم، مو بس بالواجهة

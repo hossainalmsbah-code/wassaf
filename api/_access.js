@@ -92,4 +92,34 @@ async function addReferralBonus(code, bonusAmount) {
   await redisCommand(['SET', `code:${code}`, JSON.stringify(parsed)]);
   return { ok: true, newCap: parsed.cap };
 }
-module.exports = { checkAccessCode, incrementUsage, currentMonthKey, unbindDevice, addReferralBonus };
+// [إضافة جديدة] يتحقق من اشتراك تاجر سلة (الفوترة الأصلية عبر merchant_id) — نفس شكل نتيجة checkAccessCode بالضبط
+// عشان باقي الكود (generate.js، فحص الباقات المقيّدة) يتعامل معه بنفس الطريقة بدون أي فرع منطق إضافي
+async function checkSallaMerchantSubscription(merchantId) {
+  const raw = await redisCommand(['GET', `salla_subscription:${merchantId}`]);
+  if (!raw) {
+    return { ok: false, reason: 'invalid' };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    return { ok: false, reason: 'invalid' };
+  }
+  if (!parsed.active || !parsed.cap) {
+    return { ok: false, reason: 'invalid' };
+  }
+  const usageKey = `usage:salla:${merchantId}:${currentMonthKey()}`;
+  const currentUsage = parseInt((await redisCommand(['GET', usageKey])) || '0', 10);
+  if (currentUsage >= parsed.cap) {
+    return { ok: false, reason: 'exhausted', cap: parsed.cap, used: currentUsage };
+  }
+  return {
+    ok: true,
+    remaining: parsed.cap - currentUsage,
+    cap: parsed.cap,
+    used: currentUsage,
+    plan: parsed.plan || 'عام',
+    usageKey
+  };
+}
+module.exports = { checkAccessCode, incrementUsage, currentMonthKey, unbindDevice, addReferralBonus, checkSallaMerchantSubscription };

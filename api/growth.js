@@ -1,4 +1,4 @@
-const { checkAccessCode, addReferralBonus, incrementUsage } = require('./_access');
+const { checkAccessCode, addReferralBonus, incrementUsage, checkSallaMerchantSubscription } = require('./_access');
 const { redisCommand } = require('./_redis');
 const { sendEmail } = require('./_email');
 const {
@@ -218,6 +218,31 @@ async function handleSallaIntrospectToken(body, res) {
 }
 // [مهم] لم أجد تأكيد 100% حرفي لهذا المسار بتوثيق سلة النصي رغم البحث، بس هو المسار القياسي بمعيار OAuth2
 // وهو نفس القاعدة اللي عليها رابط التفويض المؤكد (accounts.salla.sa/oauth2/auth). أول اختبار فعلي يثبته أو ينفيه.
+
+// [إضافة جديدة] يرجّع حالة اشتراك تاجر سلة (الفوترة الأصلية) — تستخدمها index.html جوّا سلة
+// بدل ما التاجر يكتب كود وصول يدوي، نجيب باقته تلقائياً بناءً على merchant_id اللي طلع من introspect
+async function handleSallaSubscriptionStatus(body, res) {
+  const merchant = (body.merchant || '').toString().trim();
+  if (!merchant) {
+    res.status(400).json({ error: 'رقم المتجر (merchant) مفقود' });
+    return;
+  }
+
+  const result = await checkSallaMerchantSubscription(merchant);
+  if (!result.ok && result.reason !== 'exhausted') {
+    res.status(200).json({ ok: true, hasSubscription: false });
+    return;
+  }
+
+  res.status(200).json({
+    ok: true,
+    hasSubscription: true,
+    plan: result.plan || 'عام',
+    cap: result.cap,
+    used: typeof result.used === 'number' ? result.used : null,
+    remaining: result.remaining ?? 0
+  });
+}
 
 // نجدد التوكن قبل انتهائه بـ5 دقايق احتياطية (300 ثانية) بدل ما ننتظر لين اللحظة الأخيرة بالضبط
 const TOKEN_REFRESH_MARGIN_SECONDS = 300;
@@ -1008,6 +1033,9 @@ module.exports = async (req, res) => {
         break;
       case 'salla_introspect_token':
         await handleSallaIntrospectToken(body, res);
+        break;
+      case 'salla_subscription_status':
+        await handleSallaSubscriptionStatus(body, res);
         break;
       case 'auth_signup':
         await handleAuthSignup(req, res, body);

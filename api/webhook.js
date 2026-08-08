@@ -274,6 +274,16 @@ module.exports = async (req, res) => {
 // ==================== [إضافة جديدة] استقبال أحداث تطبيق سلة — منفصلة تماماً عن منطق Lemon Squeezy فوق ====================
 // رابط الاستقبال المسجّل بلوحة سلة: https://www.wassaf.space/api/webhook?source=salla
 // خطة الحماية المختارة: Token — سلة ترسل المفتاح السري مباشرة برأس Authorization
+
+// [إضافة جديدة] خريطة أسماء الباقات المسجّلة بلوحة شركاء سلة (تبويب Pricing) → الحد الشهري والاسم الداخلي
+// ⚠️ لازم تطابق بالضبط أسماء الباقات اللي تكتبونها حرفياً بحقل "اسم الباقة" وقت التسجيل بلوحة الشركاء
+const SALLA_PLAN_MAP = {
+  'أسبوعي': { plan: 'أسبوعي', cap: 20 },
+  'شهري': { plan: 'شهري', cap: 120 },
+  'نصف سنوي': { plan: 'نصف سنوي', cap: 180 },
+  'سنوي': { plan: 'سنوي', cap: 300 }
+};
+
 async function handleSallaWebhook(req, res) {
   const SALLA_WEBHOOK_SECRET = process.env.SALLA_WEBHOOK_SECRET;
   const authHeaderRaw = req.headers['authorization'];
@@ -305,6 +315,65 @@ async function handleSallaWebhook(req, res) {
       };
       await redisCommand(['SET', `salla_store:${merchant}`, JSON.stringify(record)]);
       res.status(200).json({ ok: true });
+      return;
+    }
+
+    // [إضافة جديدة] اشتراك تاجر جديد بباقة مدفوعة عبر فوترة سلة الأصلية — نفعّل الباقة فوراً
+    if (event === 'app.subscription.started') {
+      const planNameRaw = (data && data.plan_name || '').toString().trim();
+      const mapped = SALLA_PLAN_MAP[planNameRaw];
+
+      if (!mapped) {
+        // اسم باقة ما نعرفه — نسجله للمراجعة اليدوية بدل ما نتجاهله بصمت (نفس نمط pending:notify بالأعلى)
+        await redisCommand(['HSET', 'pending:review_salla_plan', String(merchant), JSON.stringify({
+          merchant,
+          planNameRaw,
+          subscriptionId: data && data.subscription_id,
+          receivedAt: new Date().toISOString()
+        })]);
+        res.status(200).json({ ok: true, needsReview: true });
+        return;
+      }
+
+      const record = {
+        plan: mapped.plan,
+        cap: mapped.cap,
+        active: true,
+        sallaPlanName: planNameRaw,
+        subscriptionId: data && data.subscription_id,
+        startDate: data && data.start_date,
+        endDate: data && data.end_date,
+        updatedAt: new Date().toISOString()
+      };
+      await redisCommand(['SET', `salla_subscription:${merchant}`, JSON.stringify(record)]);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    // [إضافة جديدة] التاجر ألغى التجديد — الاشتراك يفضل شغّال لين نهاية الفترة المدفوعة (نفس منطق Lemon Squeezy فوق)
+    // ما نطفّي شي هنا؛ التعطيل الفعلي يصير بحدث app.subscription.expired لمّن الفترة تخلص فعلياً
+    if (event === 'app.subscription.canceled') {
+      res.status(200).json({ ok: true, noted: 'will deactivate on expiry' });
+      return;
+    }
+
+    // [إضافة جديدة] انتهت الفترة المدفوعة فعلياً — نطفّي الباقة
+    if (event === 'app.subscription.expired') {
+      const raw = await redisCommand(['GET', `salla_subscription:${merchant}`]);
+      if (raw) {
+        let parsed;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e) {
+          parsed = null;
+        }
+        if (parsed) {
+          parsed.active = false;
+          parsed.deactivatedAt = new Date().toISOString();
+          await redisCommand(['SET', `salla_subscription:${merchant}`, JSON.stringify(parsed)]);
+        }
+      }
+      res.status(200).json({ ok: true, deactivated: true });
       return;
     }
 
