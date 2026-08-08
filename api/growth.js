@@ -172,26 +172,30 @@ async function handleGetShare(body, res) {
 
 const SALLA_TOKEN_URL = 'https://accounts.salla.sa/oauth2/token';
 
-// ---------- سلة: فك توكن الصفحة المضمنة (Embedded Page) مباشرة ----------
-// [مهم] توكن v4.public موقّع فقط (Signed)، مو مشفّر — بياناته نص عادي مقروء بمجرد فك base64.
-// اكتشفنا هذا بعد ما جربنا استدعاء introspect API الرسمي وطلع "Decryption failed" — لأنه غير مخصص لهالنوع من التوكن أصلاً.
-// [تنويه أمني مهم] هذا الفك حالياً بدون تحقق من التوقيع (Signature) — يعني أي شخص يقدر نظرياً يزوّر توكن ببيانات مزيّفة.
-// قبل أي استخدام حقيقي مع تجار فعليين، لازم نضيف تحقق توقيع Ed25519 باستخدام المفتاح العام لسلة (خطوة أمنية لاحقة، مو منفّذة الآن).
-function decodeSallaEmbeddedToken(token) {
-  const parts = token.split('.');
-  if (parts.length < 3 || parts[0] !== 'v4' || parts[1] !== 'public') {
-    return null;
-  }
-  const payloadB64 = parts[2];
-  try {
-    const raw = Buffer.from(payloadB64, 'base64url');
-    // آخر 64 بايت هي توقيع Ed25519 المرفق بنفس الكتلة — الباقي قبلها هو الـJSON الفعلي
-    const messageBytes = raw.subarray(0, raw.length - 64);
-    const parsed = JSON.parse(messageBytes.toString('utf8'));
-    return parsed;
-  } catch (e) {
-    return null;
-  }
+// ---------- سلة: التحقق من توكن الصفحة المضمنة (Embedded Page) عبر introspect API الرسمي ----------
+// [إصلاح الثغرة الأمنية] المحاولة القديمة فشلت برسالة "Decryption failed" لأنها كانت ناقصة:
+// هيدر S-Source (App ID) وحقول env/iss/subject بجسم الطلب — بدونهم سلة ما تعرف تتحقق من التوكن.
+// هذا نفس الاستدعاء بالضبط اللي تسويه مكتبة @salla.sa/embedded-sdk الرسمية داخلياً (دالة auth.introspect())،
+// يعني سلة نفسها تتحقق من صحة وتوقيع التوكن — ما نحتاج نبني تحقق Ed25519 يدوي ولا نلقى مفتاح عام.
+const SALLA_INTROSPECT_URL = 'https://api.salla.dev/exchange-authority/v1/introspect';
+const SALLA_APP_ID = process.env.SALLA_APP_ID || '1137247101'; // App ID الثابت لتطبيق وصّاف برو
+
+async function introspectSallaToken(token) {
+  const response = await fetch(SALLA_INTROSPECT_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'S-Source': SALLA_APP_ID
+    },
+    body: JSON.stringify({
+      env: 'prod',
+      token,
+      iss: 'merchant-dashboard',
+      subject: 'embedded-page'
+    })
+  });
+  const data = await response.json();
+  return data; // شكلها المتوقع: { success: true/false, data: { merchant_id, ... } }
 }
 
 async function handleSallaIntrospectToken(body, res) {
@@ -201,22 +205,16 @@ async function handleSallaIntrospectToken(body, res) {
     return;
   }
 
-  const decoded = decodeSallaEmbeddedToken(token);
-  if (!decoded || !decoded.data || !decoded.data.merchant_id) {
-    res.status(422).json({ error: 'تعذر قراءة توكن سلة', detail: decoded });
-    return;
-  }
-
-  // تحقق بسيط من انتهاء الصلاحية (exp) — التوكن نفسه يحمل وقت انتهاء صريح
-  if (decoded.exp) {
-    const expDate = new Date(decoded.exp);
-    if (!isNaN(expDate.getTime()) && expDate.getTime() < Date.now()) {
-      res.status(401).json({ error: 'انتهت صلاحية جلستك، أعد فتح الأداة من لوحة سلة' });
+  try {
+    const result = await introspectSallaToken(token);
+    if (!result || !result.success || !result.data || !result.data.merchant_id) {
+      res.status(422).json({ error: 'تعذر التحقق من توكن سلة', detail: result });
       return;
     }
+    res.status(200).json({ ok: true, merchant: String(result.data.merchant_id) });
+  } catch (e) {
+    res.status(500).json({ error: 'صار خطأ أثناء التحقق من توكن سلة', detail: e.message });
   }
-
-  res.status(200).json({ ok: true, merchant: String(decoded.data.merchant_id) });
 }
 // [مهم] لم أجد تأكيد 100% حرفي لهذا المسار بتوثيق سلة النصي رغم البحث، بس هو المسار القياسي بمعيار OAuth2
 // وهو نفس القاعدة اللي عليها رابط التفويض المؤكد (accounts.salla.sa/oauth2/auth). أول اختبار فعلي يثبته أو ينفيه.
@@ -322,7 +320,8 @@ async function handleSallaListProducts(body, res) {
       id: p.id,
       name: p.name,
       price: p.price && p.price.amount,
-      currentDescription: p.description || ''
+      currentDescription: p.description || '',
+      image: (p.images && p.images[0] && (p.images[0].url || p.images[0].original)) || p.main_image || p.thumbnail || null
     }));
     res.status(200).json({ ok: true, products });
   } catch (err) {
