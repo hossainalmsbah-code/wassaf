@@ -870,6 +870,16 @@ async function handleAuthMe(req, res) {
   }
 
   if (!parsed.accessCode) {
+    // [إصلاح] لو الحساب اتسجّل قبل الاشتراك (أو قبل ما يوصل حدث Lemon Squeezy)،
+    // نتحقق من فهرس الإيميل مرة ثانية كل ما يفتح صفحة "حسابي" — ولو لقينا كود جديد، نربطه فوراً بدل ما يفضل فاضي للأبد
+    const linkedCode = await redisCommand(['GET', `email_code:${email}`]);
+    if (linkedCode) {
+      parsed.accessCode = linkedCode;
+      await redisCommand(['SET', `user:${email}`, JSON.stringify(parsed)]);
+    }
+  }
+
+  if (!parsed.accessCode) {
     res.status(200).json({ ok: true, email, hasSubscription: false });
     return;
   }
