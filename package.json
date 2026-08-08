@@ -1,5 +1,8 @@
 {
   "name": "wassaf",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
+  }
 }
