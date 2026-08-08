@@ -85,6 +85,9 @@ function buildFrameworkInstruction(framework) {
   return `استخدم إطار ${FRAMEWORK_LABELS[framework]} بالضبط.`;
 }
 
+// [إضافة جديدة] الرفع الجماعي (Bulk) حصري لباقتي النصف سنوي والسنوي — نفس نمط MARKETING_ALLOWED_PLANS
+const BULK_ALLOWED_PLANS = ['نصف سنوي', 'سنوي'];
+
 // [إضافة جديدة] محتوى تسويقي جاهز (واتساب وإنستقرام) — حصري لباقتي النصف سنوي والسنوي
 // مدموج بنفس ملف generate.js (مو ملف API منفصل) عشان ما نتجاوز حد الـ12 Serverless Function بخطة Vercel Hobby
 const MARKETING_ALLOWED_PLANS = ['نصف سنوي', 'سنوي'];
@@ -232,6 +235,7 @@ module.exports = async (req, res) => {
     const deviceId = (body.deviceId || '').toString().trim();
     const mode = (body.mode || 'description').toString().trim(); // [إضافة] 'description' (افتراضي، السلوك الأصلي) أو 'marketing'
     const longDescription = (body.longDescription || '').toString().trim(); // [إضافة] تُستخدم بوضع marketing بس
+    const isBulk = body.bulk === true || body.bulk === 'true'; // [إضافة جديدة] الواجهة ترسل هذا العلم مع كل طلب صادر من الرفع الجماعي بس
 
     if (!productName || !features) {
       res.status(400).json({ error: 'اسم المنتج والمميزات مطلوبة' });
@@ -272,6 +276,16 @@ module.exports = async (req, res) => {
     if (mode === 'marketing' && !MARKETING_ALLOWED_PLANS.includes(accessCheck.plan)) {
       res.status(403).json({
         error: 'محتوى تسويقي جاهز حصري لمشتركي الباقة النصف سنوية أو السنوية — رقّي باقتك عشان تستخدم هالميزة',
+        code: 'PLAN_NOT_ALLOWED'
+      });
+      return;
+    }
+
+    // [إضافة جديدة] الرفع الجماعي حصري لباقتي النصف سنوي والسنوي — تحقق إلزامي بالخادم، مو بس بالواجهة
+    // (الفحص السابق بالواجهة سهل تجاوزه من أي شخص يستدعي هالـ endpoint مباشرة، فهذا هو التحقق الحقيقي)
+    if (isBulk && !BULK_ALLOWED_PLANS.includes(accessCheck.plan)) {
+      res.status(403).json({
+        error: 'الرفع الجماعي حصري لمشتركي الباقة النصف سنوية أو السنوية — رقّي باقتك عشان تستخدم هالميزة',
         code: 'PLAN_NOT_ALLOWED'
       });
       return;
