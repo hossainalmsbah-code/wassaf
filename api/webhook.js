@@ -233,6 +233,12 @@ module.exports = async (req, res) => {
       await redisCommand(['SET', `subscription_code:${subscriptionId}`, code]);
     }
 
+    // [إضافة جديدة] فهرس إيميل → كود — يستخدمه نظام تسجيل الحسابات (auth_signup) عشان يربط
+    // أي حساب إيميل/باسورد جديد بآخر اشتراك فعّال لنفس الإيميل تلقائياً، بدون ربط يدوي
+    if (email) {
+      await redisCommand(['SET', `email_code:${email}`, code]);
+    }
+
     let emailSent = false;
     let emailError = null;
     if (email) {

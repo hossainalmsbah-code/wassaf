@@ -1,5 +1,12 @@
 const { checkAccessCode, addReferralBonus, incrementUsage } = require('./_access');
 const { redisCommand } = require('./_redis');
+const { sendEmail } = require('./_email');
+const {
+  hashPassword, verifyPassword, isValidEmail, isStrongEnoughPassword,
+  createSession, getSessionEmail, destroySession,
+  parseCookies, setSessionCookie, clearSessionCookie, SESSION_COOKIE_NAME,
+  createResetToken, consumeResetToken
+} = require('./_auth');
 
 // نسبة المكافأة من حد باقة المحيل الرئيسية (50%) — تُحسب ديناميكياً حسب باقة كل محيل
 const REFERRAL_BONUS_RATIO = 0.5;
@@ -736,6 +743,213 @@ async function handleSallaGenerateMarketing(body, res) {
   }
 }
 
+// ==================== [إضافة جديدة] حسابات بإيميل وباسورد — بديل/رديف لنظام كود الوصول ====================
+// تخزين: user:{email} -> {passwordHash, createdAt, accessCode}
+// الجلسة تُحفظ بكوكي httpOnly (wassaf_session)، مو بـ localStorage — أأمن ضد سرقة عبر XSS
+
+function buildResetEmailHtml(token) {
+  const link = `https://www.wassaf.space/account.html?reset=${token}`;
+  return `
+  <div dir="rtl" style="font-family:'IBM Plex Sans Arabic',Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <span style="font-size:28px;font-weight:900;color:#E94548;">وصّاف</span>
+    </div>
+    <h2 style="color:#1E1B2E;font-size:20px;">طلب استعادة كلمة المرور</h2>
+    <p style="color:#6B6785;font-size:15px;line-height:1.8;">
+      إذا كنت أنت اللي طلب استعادة كلمة المرور، اضغط الزر تحت خلال ساعة وحدة. لو ما طلبت هذا، تجاهل الإيميل ولا شي بيتغيّر.
+    </p>
+    <a href="${link}" style="display:block;text-align:center;background:#E94548;color:#ffffff;text-decoration:none;font-weight:700;padding:14px;border-radius:8px;font-size:15px;">
+      إعادة تعيين كلمة المرور
+    </a>
+  </div>`;
+}
+
+// ---------- تسجيل حساب جديد ----------
+async function handleAuthSignup(req, res, body) {
+  const email = (body.email || '').toString().trim().toLowerCase();
+  const password = (body.password || '').toString();
+
+  if (!isValidEmail(email)) {
+    res.status(400).json({ error: 'أدخل إيميل صحيح' });
+    return;
+  }
+  if (!isStrongEnoughPassword(password)) {
+    res.status(400).json({ error: 'كلمة المرور لازم تكون 8 أحرف على الأقل' });
+    return;
+  }
+
+  const userKey = `user:${email}`;
+  const existing = await redisCommand(['GET', userKey]);
+  if (existing) {
+    res.status(409).json({ error: 'فيه حساب مسجّل بهذا الإيميل من قبل، جرب تسجّل دخول' });
+    return;
+  }
+
+  const passwordHash = await hashPassword(password);
+
+  // لو نفس الإيميل عنده كود وصول من اشتراك سابق (Lemon Squeezy)، نربطه تلقائياً بالحساب الجديد
+  const linkedCode = await redisCommand(['GET', `email_code:${email}`]);
+
+  const userValue = JSON.stringify({
+    passwordHash,
+    createdAt: new Date().toISOString(),
+    accessCode: linkedCode || null
+  });
+  await redisCommand(['SET', userKey, userValue]);
+
+  const token = await createSession(email);
+  setSessionCookie(res, token);
+
+  res.status(200).json({ ok: true, email, linkedSubscription: !!linkedCode });
+}
+
+// ---------- دخول ----------
+async function handleAuthLogin(req, res, body) {
+  const email = (body.email || '').toString().trim().toLowerCase();
+  const password = (body.password || '').toString();
+
+  if (!email || !password) {
+    res.status(400).json({ error: 'أدخل الإيميل وكلمة المرور' });
+    return;
+  }
+
+  const raw = await redisCommand(['GET', `user:${email}`]);
+  if (!raw) {
+    res.status(401).json({ error: 'الإيميل أو كلمة المرور غير صحيحة' });
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    res.status(500).json({ error: 'صار خطأ، جرب مرة ثانية' });
+    return;
+  }
+
+  const passwordOk = await verifyPassword(password, parsed.passwordHash);
+  if (!passwordOk) {
+    res.status(401).json({ error: 'الإيميل أو كلمة المرور غير صحيحة' });
+    return;
+  }
+
+  const token = await createSession(email);
+  setSessionCookie(res, token);
+  res.status(200).json({ ok: true, email });
+}
+
+// ---------- خروج ----------
+async function handleAuthLogout(req, res) {
+  const cookies = parseCookies(req);
+  const token = cookies[SESSION_COOKIE_NAME];
+  await destroySession(token);
+  clearSessionCookie(res);
+  res.status(200).json({ ok: true });
+}
+
+// ---------- بيانات الحساب الحالي حسب الجلسة (بدل كود الوصول اليدوي) ----------
+async function handleAuthMe(req, res) {
+  const cookies = parseCookies(req);
+  const token = cookies[SESSION_COOKIE_NAME];
+  const email = await getSessionEmail(token);
+  if (!email) {
+    res.status(401).json({ error: 'ما فيه جلسة دخول فعّالة' });
+    return;
+  }
+
+  const raw = await redisCommand(['GET', `user:${email}`]);
+  if (!raw) {
+    res.status(404).json({ error: 'الحساب غير موجود' });
+    return;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    parsed = {};
+  }
+
+  if (!parsed.accessCode) {
+    res.status(200).json({ ok: true, email, hasSubscription: false });
+    return;
+  }
+
+  const accessResult = await checkAccessCode(parsed.accessCode, null);
+  if (!accessResult.ok && accessResult.reason !== 'exhausted') {
+    res.status(200).json({ ok: true, email, hasSubscription: false });
+    return;
+  }
+
+  res.status(200).json({
+    ok: true,
+    email,
+    hasSubscription: true,
+    plan: accessResult.plan || 'عام',
+    cap: accessResult.cap,
+    used: typeof accessResult.used === 'number' ? accessResult.used : null,
+    remaining: accessResult.remaining
+  });
+}
+
+// ---------- طلب رابط استعادة كلمة المرور ----------
+async function handleAuthRequestReset(req, res, body) {
+  const email = (body.email || '').toString().trim().toLowerCase();
+  if (!isValidEmail(email)) {
+    res.status(400).json({ error: 'أدخل إيميل صحيح' });
+    return;
+  }
+
+  const raw = await redisCommand(['GET', `user:${email}`]);
+  // نرجع نفس الرسالة سواء الحساب موجود أو لا — عشان ما نكشف وجود إيميل معيّن بالنظام لطرف مو صاحبه
+  if (raw) {
+    const token = await createResetToken(email);
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'استعادة كلمة المرور — وصّاف',
+        html: buildResetEmailHtml(token)
+      });
+    } catch (e) {
+      // فشل الإرسال هنا ما نكشفه للمستخدم، بس نتجاهله بصمت (نفس نمط باقي الملف)
+    }
+  }
+
+  res.status(200).json({ ok: true, message: 'لو الإيميل مسجّل عندنا، بيوصلك رابط استعادة كلمة المرور خلال دقايق' });
+}
+
+// ---------- تنفيذ إعادة تعيين كلمة المرور بالتوكن ----------
+async function handleAuthResetPassword(req, res, body) {
+  const token = (body.token || '').toString().trim();
+  const newPassword = (body.newPassword || '').toString();
+
+  if (!token || !isStrongEnoughPassword(newPassword)) {
+    res.status(400).json({ error: 'بيانات غير مكتملة، كلمة المرور لازم تكون 8 أحرف على الأقل' });
+    return;
+  }
+
+  const email = await consumeResetToken(token);
+  if (!email) {
+    res.status(400).json({ error: 'رابط الاستعادة منتهي أو غير صحيح' });
+    return;
+  }
+
+  const raw = await redisCommand(['GET', `user:${email}`]);
+  if (!raw) {
+    res.status(404).json({ error: 'الحساب غير موجود' });
+    return;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    parsed = {};
+  }
+  parsed.passwordHash = await hashPassword(newPassword);
+  await redisCommand(['SET', `user:${email}`, JSON.stringify(parsed)]);
+
+  res.status(200).json({ ok: true });
+}
+
 // نقطة دخول واحدة لكل ميزات النمو (حساب، إحالة، مشاركة، تكامل سلة) — تفادياً لتجاوز حد الـ12 Serverless Function بباقة Vercel المجانية
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -777,6 +991,24 @@ module.exports = async (req, res) => {
         break;
       case 'salla_introspect_token':
         await handleSallaIntrospectToken(body, res);
+        break;
+      case 'auth_signup':
+        await handleAuthSignup(req, res, body);
+        break;
+      case 'auth_login':
+        await handleAuthLogin(req, res, body);
+        break;
+      case 'auth_logout':
+        await handleAuthLogout(req, res);
+        break;
+      case 'auth_me':
+        await handleAuthMe(req, res);
+        break;
+      case 'auth_request_reset':
+        await handleAuthRequestReset(req, res, body);
+        break;
+      case 'auth_reset_password':
+        await handleAuthResetPassword(req, res, body);
         break;
       default:
         res.status(400).json({ error: 'action غير معروف' });
