@@ -430,7 +430,7 @@
         <button class="copy-btn" data-target="outputLong">نسخ النص</button>
       </div>
       <div class="output" id="outputLong"></div>
-      <button class="go secondary hidden-salla" id="sallaWriteBackBtn" type="button" style="display:none;margin-top:10px;">اكتب هذا الوصف في سلة </button>
+      <button class="go secondary hidden-salla" id="sallaWriteBackBtn" type="button" style="display:none;margin-top:10px;">اكتب هذا الوصف رجوع بمنتجي بسلة</button>
       <div class="err" id="sallaWriteErr" style="margin-top:6px;"></div>
       <div class="ok-msg" id="sallaWriteSuccess" style="margin-top:6px;">تم تحديث المنتج بمتجرك على سلة ✓</div>
     </div>
@@ -748,7 +748,7 @@ let accessCodeValid = false; // هل آخر تحقق كان ناجح؟ (نستخ
 let currentCodeCap = null; // الحد الأقصى الشهري للكود الحالي (نستخدمه بقيد الرفع الجماعي)
 let currentCodePlan = null; // اسم الباقة الحالية (نستخدمه بقيد ميزة التوليد من صورة)
 
-const BULK_MIN_CAP = 120; // الرفع الجماعي متاح بس للأكواد بحد 120 وصف فأكثر (شهري/نصف سنوي/سنوي)
+const BULK_ALLOWED_PLANS = ['نصف سنوي', 'سنوي']; // [تعديل] الرفع الجماعي صار مقصوراً على نصف سنوي/سنوي بس، بدل الاعتماد على رقم الحد الشهري
 const IMAGE_ALLOWED_PLANS = ['نصف سنوي', 'سنوي']; // ميزة التوليد من صورة مقصورة على هذي الباقات بس
 const MARKETING_ALLOWED_PLANS = ['نصف سنوي', 'سنوي']; // محتوى تسويقي جاهز مقصور على نفس الباقتين
 
@@ -967,12 +967,12 @@ document.querySelectorAll('.copy-btn').forEach(btn => {
 /* ==================== استدعاء واجهة التوليد ==================== */
 let lastGeneratedProduct = null; // آخر منتج تم توليد وصفه بنجاح — نستخدمه لميزة المحتوى التسويقي بدون إعادة إدخال البيانات
 
-async function callGenerate({ productName, audience, features, price, framework, brandTone, style }){
+async function callGenerate({ productName, audience, features, price, framework, brandTone, style, bulk = false }){
   const accessCode = getStoredAccessCode();
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId, style })
+    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId, style, bulk })
   });
   const data = await response.json();
   if(!response.ok){
@@ -1487,8 +1487,8 @@ bulkGoBtn.addEventListener('click', async () => {
     return;
   }
 
-  if(currentCodeCap !== null && currentCodeCap < BULK_MIN_CAP){
-    bulkErr.textContent = `الرفع الجماعي متاح بس لباقات الشهري فأعلى (حد ${BULK_MIN_CAP} وصف فأكثر). باقتك الحالية حدها ${currentCodeCap} وصف — رقّي باقتك عشان تستخدم هالميزة.`;
+  if(currentCodePlan !== null && !BULK_ALLOWED_PLANS.includes(currentCodePlan)){
+    bulkErr.textContent = `الرفع الجماعي حصري لمشتركي الباقة النصف سنوية أو السنوية. باقتك الحالية (${currentCodePlan}) ما تشمل هالميزة — رقّي باقتك عشان تستخدمها.`;
     bulkErr.style.display = 'block';
     return;
   }
@@ -1532,7 +1532,8 @@ bulkGoBtn.addEventListener('click', async () => {
       price: row.price,
       framework,
       brandTone: globalBrandTone,
-      style: globalStyle
+      style: globalStyle,
+      bulk: true
     });
     return { name: row.name, long: data.long || '', short: data.short || '', seo: data.seo || '' };
   }, (i, result) => {
