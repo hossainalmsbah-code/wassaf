@@ -87,15 +87,47 @@
     font-size:16px;
     min-height:100vh;
   }
-  .wrap{max-width:920px;margin:0 auto;padding:32px 24px 80px;}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 24px 80px;}
+
+  /* ===================== الشريط العلوي (ثابت أثناء التمرير) ===================== */
   header.top{
-    display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:100;
+    background:rgba(255,255,255,.82);
+    backdrop-filter:blur(14px) saturate(160%);
+    -webkit-backdrop-filter:blur(14px) saturate(160%);
     border-bottom:1px solid var(--line);
-    padding-bottom:20px;margin-bottom:32px;
+    transition:box-shadow .25s ease, padding .25s ease;
   }
-  header.top .brand-logo{height:80px;width:auto;display:block;}
-  nav a{color:var(--ink-dim);text-decoration:none;font-size:13px;margin-inline-start:18px;}
-  nav a:hover{color:var(--ink);}
+  header.top.scrolled{box-shadow:0 6px 24px rgba(30,27,46,.07);}
+  .top-inner{
+    max-width:920px;margin:0 auto;padding:16px 24px;
+    display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:20px;
+    transition:padding .25s ease;
+  }
+  header.top.scrolled .top-inner{padding-top:11px;padding-bottom:11px;}
+  header.top .brand-logo{height:64px;width:auto;display:block;transition:height .25s ease;}
+  header.top.scrolled .brand-logo{height:52px;}
+  nav.main-nav{display:flex;justify-content:center;gap:28px;}
+  nav.main-nav a{color:var(--ink-dim);text-decoration:none;font-size:13px;font-weight:600;position:relative;padding:4px 0;transition:color .15s;}
+  nav.main-nav a::after{content:"";position:absolute;right:0;left:0;bottom:-2px;height:2px;background:var(--accent);transform:scaleX(0);transition:transform .2s ease;}
+  nav.main-nav a:hover{color:var(--ink);}
+  nav.main-nav a:hover::after{transform:scaleX(1);}
+  .nav-actions{display:flex;align-items:center;gap:16px;}
+  .nav-account{color:var(--ink-dim);text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap;}
+  .nav-account:hover{color:var(--ink);}
+  .nav-cta{
+    background:linear-gradient(135deg,var(--accent) 0%,#ff7a7d 100%);
+    color:#fff;text-decoration:none;font-size:13px;font-weight:700;
+    padding:10px 22px;border-radius:24px;white-space:nowrap;
+    box-shadow:0 3px 12px rgba(233,69,72,.28);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .nav-cta:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(233,69,72,.38);}
+  @media (max-width:640px){
+    nav.main-nav{display:none;}
+    .top-inner{grid-template-columns:auto auto;padding:12px 20px;}
+    .nav-account{display:none;}
+  }
   .hero{text-align:center;padding:20px 0 40px;}
   .hero h1{font-family:'Inter','Tajawal',sans-serif;font-weight:900;font-size:36px;margin:0 0 12px;line-height:1.4;}
   .hero p{color:var(--ink-dim);font-size:17px;max-width:520px;margin:0 auto;line-height:1.8;}
@@ -203,10 +235,34 @@
   .bulk-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
   .bulk-actions .go{width:auto;flex:1;min-width:180px;}
 
-  footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;text-align:center;}
-  footer a{color:var(--ink-dim);text-decoration:none;font-size:12px;margin:0 10px;}
-  footer a:hover{color:var(--ink);}
-  footer .copy{color:var(--ink-dim);font-size:12px;margin-top:10px;}  .shine-text{
+  /* ===================== الشريط السفلي (فوتر) ===================== */
+  footer{margin-top:80px;border-top:1px solid var(--line);padding-top:48px;}
+  .footer-grid{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:32px;margin-bottom:36px;}
+  .footer-col-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:16px;}
+  .footer-col a{display:block;color:var(--ink-dim);text-decoration:none;font-size:13px;margin-bottom:11px;transition:color .15s;width:fit-content;}
+  .footer-col a:hover{color:var(--accent);}
+  .footer-brand{display:flex;flex-direction:column;gap:12px;}
+  .footer-brand img{height:36px;width:auto;}
+  .footer-brand p{font-size:12.5px;color:var(--ink-dim);line-height:1.8;margin:0;max-width:240px;}
+  .footer-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--bg-raised);border:1px solid var(--line);border-radius:20px;
+    padding:6px 14px;font-size:11.5px;color:var(--ink-dim);font-weight:700;
+    width:fit-content;margin-top:2px;
+  }
+  /* مقاطع لاتينية (أرقام/حروف إنجليزية) داخل نص عربي — خط منفصل يعطي وضوح أكثر من امتداد الخط العربي */
+  .latin{font-family:'Inter',sans-serif;letter-spacing:.03em;font-weight:800;color:var(--accent);}
+  .footer-bottom{
+    border-top:1px solid var(--line);padding-top:20px;
+    display:flex;justify-content:center;align-items:center;
+  }
+  .footer-bottom .copy{color:var(--ink-dim);font-size:12px;margin:0;}
+  @media (max-width:640px){
+    .footer-grid{grid-template-columns:1fr;gap:28px;text-align:center;}
+    .footer-col a{margin-inline:auto;}
+    .footer-brand{align-items:center;}
+  }
+  .shine-text{
     background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 40%, #ffffff 50%, var(--accent) 60%, var(--accent) 100%);
     background-size: 200% auto;
     color: transparent;
@@ -223,17 +279,21 @@
 <script src="https://unpkg.com/@salla.sa/embedded-sdk/dist/umd/index.js"></script>
 </head>
 <body>
-<div class="wrap">
-
-  <header class="top">
+<header class="top" id="siteHeader">
+  <div class="top-inner">
     <img class="brand-logo" src="/assets/logo-horizontal.svg" alt="وصّاف">
-    <nav>
-      <a href="/account.html">حسابي</a>
+    <nav class="main-nav">
       <a href="#imageGen">توليد من صورة</a>
       <a href="#bulk">رفع جماعي</a>
       <a href="#pricing">الأسعار</a>
     </nav>
-  </header>
+    <div class="nav-actions">
+      <a href="/account.html" class="nav-account">حسابي</a>
+      <a href="#tool" class="nav-cta">جرّب مجاناً</a>
+    </div>
+  </div>
+</header>
+<div class="wrap">
 
   <!-- [إضافة] يظهر بس لو الصفحة مفتوحة جوّا لوحة سلة -->
   <div class="settings-box" id="sallaBox" style="display:none;">
@@ -517,16 +577,33 @@
   </section>
 
   <footer>
-    <a href="/about.html">من نحن</a>
-    <a href="/privacy.html">سياسة الخصوصية</a>
-    <a href="/terms.html">الشروط والأحكام</a>
-    <a href="/refund.html">سياسة الاسترجاع</a>
-    <a href="mailto:wassaf.sa@gmail.com" id="contactLink" style="cursor:pointer;">تواصل معنا</a>
-    <div id="contactBox" style="display:none;margin-top:12px;font-size:12px;color:var(--ink-dim);">
-      <span id="contactEmailText" style="font-family:monospace;">wassaf.sa@gmail.com</span>
-      <button type="button" id="contactCopyBtn" class="copy-btn" style="margin-right:8px;">نسخ</button>
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div class="footer-col-title">قانوني</div>
+        <a href="/privacy.html">سياسة الخصوصية</a>
+        <a href="/terms.html">الشروط والأحكام</a>
+        <a href="/refund.html">سياسة الاسترجاع</a>
+        <a href="mailto:wassaf.sa@gmail.com" id="contactLink" style="cursor:pointer;">تواصل معنا</a>
+        <div id="contactBox" style="display:none;margin-top:6px;font-size:12px;color:var(--ink-dim);">
+          <span id="contactEmailText" style="font-family:'Inter',monospace;">wassaf.sa@gmail.com</span>
+          <button type="button" id="contactCopyBtn" class="copy-btn" style="margin-right:8px;">نسخ</button>
+        </div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">المنتج</div>
+        <a href="#tool">الأداة</a>
+        <a href="#pricing">الأسعار</a>
+        <a href="/about.html">من نحن</a>
+      </div>
+      <div class="footer-col footer-brand">
+        <img src="/assets/logo-horizontal.svg" alt="وصّاف">
+        <p>أوصاف منتجات احترافية بالعربي، بالذكاء الاصطناعي — لمتاجر سلة وشوبيفاي وزد.</p>
+        <div class="footer-badge"><span class="latin">SA</span> صُنع بأيادٍ سعودية</div>
+      </div>
     </div>
-    <div class="copy">© 2026 وصّاف. جميع الحقوق محفوظة.</div>
+    <div class="footer-bottom">
+      <div class="copy">© 2026 وصّاف. جميع الحقوق محفوظة.</div>
+    </div>
   </footer>
 
 </div>
@@ -1435,6 +1512,18 @@ if(contactLink && contactBox){
     setTimeout(() => contactCopyBtn.textContent = old, 1500);
   });
 }
+/* ==================== الشريط العلوي الثابت: ظل خفيف عند التمرير ==================== */
+(function(){
+  const siteHeader = document.getElementById('siteHeader');
+  if(!siteHeader) return;
+  const onScroll = () => {
+    if(window.scrollY > 6) siteHeader.classList.add('scrolled');
+    else siteHeader.classList.remove('scrolled');
+  };
+  window.addEventListener('scroll', onScroll, { passive:true });
+  onScroll();
+})();
+
 /* ==================== [إضافة] وعي سلة — يشتغل بس جوّا لوحة سلة ==================== */
 let sallaMerchant = null;
 let sallaSelectedProduct = null;
