@@ -6,168 +6,238 @@
 <title>حسابي — وصّاف</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#1E1B2E;--ink-dim:#6B6785;--bg:#FFFFFF;--bg-raised:#F7F6FB;
     --line:#E7E4F0;--accent:#E94548;--accent-dim:#FCEAEA;--accent2:#6E5BC7;--good:#16A34A;
   }
   *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',sans-serif;line-height:1.9;font-size:17px;}
-  .wrap{max-width:640px;margin:0 auto;padding:32px 24px 80px;}
-  .logo-row{text-align:center;margin-bottom:6px;}
-  .logo-row img{height:80px;width:auto;}
-  .today-date{text-align:center;font-size:13px;color:var(--ink-dim);margin-bottom:22px;}
-  a.back{display:inline-block;margin-bottom:20px;color:var(--ink-dim);text-decoration:none;font-size:14px;}
-  h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:28px;margin-bottom:4px;}
-  .sub{color:var(--ink-dim);font-size:15px;margin-bottom:28px;}
-  label{display:block;font-size:15px;color:var(--ink-dim);margin-bottom:6px;font-weight:500;}
-  input[type=text]{
+
+  /* ===================== شريط علوي ثابت ===================== */
+  header.top{
+    position:sticky;top:0;z-index:100;
+    background:rgba(255,255,255,.82);
+    backdrop-filter:blur(14px) saturate(160%);
+    -webkit-backdrop-filter:blur(14px) saturate(160%);
+    border-bottom:1px solid var(--line);
+  }
+  .top-inner{max-width:640px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .top-inner img{height:44px;width:auto;display:block;}
+  a.back{color:var(--ink-dim);text-decoration:none;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:color .15s;}
+  a.back:hover{color:var(--accent);}
+
+  .wrap{max-width:520px;margin:0 auto;padding:40px 24px 80px;}
+  .today-date{text-align:center;font-size:12.5px;color:var(--ink-dim);margin-bottom:6px;}
+  h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:30px;margin:18px 0 4px;text-align:center;}
+  .sub{color:var(--ink-dim);font-size:15px;margin-bottom:30px;text-align:center;line-height:1.8;}
+
+  label{display:block;font-size:14px;color:var(--ink-dim);margin-bottom:6px;font-weight:600;}
+  input[type=text], input[type=email], input[type=password]{
     width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
-    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:17px;text-transform:uppercase;
+    border-radius:10px;padding:13px 14px;font-family:inherit;font-size:16px;margin-bottom:14px;
+    transition:border-color .15s, box-shadow .15s;
   }
-  input[type=text]:focus{outline:none;border-color:var(--accent);}
+  input[type=text]{text-transform:uppercase;}
+  input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
   .go{
-    width:100%;margin-top:12px;background:var(--accent);color:#1a0e14;border:none;
-    padding:14px;border-radius:8px;font-size:17px;font-weight:700;font-family:inherit;cursor:pointer;
+    width:100%;margin-top:4px;
+    background:linear-gradient(135deg,var(--accent) 0%,#ff7a7d 100%);
+    color:#fff;border:none;
+    padding:15px;border-radius:10px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+    box-shadow:0 4px 14px rgba(233,69,72,.28);
+    transition:transform .15s ease, box-shadow .15s ease;
   }
-  .go:hover{background:#ff8095;}
-  .err{color:#E8664A;font-size:15px;margin-top:10px;display:none;}
-  .card{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:22px;margin-top:24px;display:none;}
-  .card.show{display:block;}
-  .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
-  .row:last-child{border-bottom:none;}
-  .row .k{color:var(--ink-dim);font-size:15px;}
-  .row .v{font-weight:700;font-size:16px;}
-  .plan-pill{background:var(--accent-dim);color:var(--accent2);font-size:14px;font-weight:700;padding:4px 12px;border-radius:12px;}
-  .ref-box{margin-top:20px;padding-top:20px;border-top:1px dashed var(--line);}
-  .ref-title{font-size:15px;font-weight:700;color:var(--accent2);margin-bottom:10px;}
-  .ref-link-row{display:flex;gap:8px;}
-  .ref-link-row input{background:var(--bg);font-size:15px;}
-  .ref-share-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
-  .copy-btn{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:8px 16px;border-radius:6px;font-size:14px;cursor:pointer;font-family:inherit;white-space:nowrap;}
-  .copy-btn:hover{border-color:var(--accent);color:var(--ink);}
-  .ref-hint{font-size:14px;color:var(--ink-dim);margin-top:10px;line-height:1.7;}
-  .contact-row{text-align:left;}
-  .contact-row #contactLink{color:var(--ink-dim);font-size:14px;text-decoration:none;}
-  .contact-mail-link{font-size:17px;font-weight:500;color:var(--accent2);text-decoration:none;}
-  .contact-mail-link:hover{text-decoration:underline;}
+  .go:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(233,69,72,.38);}
+  .go:disabled{background:var(--line);color:var(--ink-dim);box-shadow:none;transform:none;cursor:not-allowed;}
+  .err{color:#E8664A;font-size:14px;margin-top:10px;display:none;}
+  .ok-msg{color:var(--good);font-size:14px;margin-top:10px;display:none;}
+
+  /* ===================== بطاقة رئيسية (تسجيل / حساب) ===================== */
+  .auth-card{
+    background:var(--bg);border:1px solid var(--line);border-radius:18px;
+    padding:28px 26px;box-shadow:0 4px 24px rgba(30,27,46,.06);
+  }
 
   /* ===================== تبويبات دخول / حساب جديد ===================== */
-  .tabs{display:flex;gap:8px;background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:22px;}
-  .tab-btn{flex:1;background:none;border:none;padding:10px;border-radius:7px;font-family:inherit;font-size:15px;font-weight:700;color:var(--ink-dim);cursor:pointer;}
-  .tab-btn.active{background:var(--bg);color:var(--ink);box-shadow:0 1px 3px rgba(30,27,46,.08);}
+  .tabs{display:flex;gap:6px;background:var(--bg-raised);border:1px solid var(--line);border-radius:12px;padding:5px;margin-bottom:24px;}
+  .tab-btn{flex:1;background:none;border:none;padding:11px;border-radius:8px;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink-dim);cursor:pointer;transition:.15s;}
+  .tab-btn.active{background:var(--bg);color:var(--ink);box-shadow:0 2px 6px rgba(30,27,46,.08);}
   .auth-panel{display:none;}
   .auth-panel.show{display:block;}
-  input[type=email], input[type=password]{
-    width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
-    border-radius:8px;padding:12px 14px;font-family:inherit;font-size:17px;margin-bottom:14px;
+  .link-btn{background:none;border:none;color:var(--accent2);font-size:13.5px;font-family:inherit;cursor:pointer;padding:0;font-weight:600;}
+  .link-btn:hover{text-decoration:underline;}
+
+  /* ===================== بطاقة الحساب بعد الدخول ===================== */
+  .card{display:none;}
+  .card.show{display:block;}
+  .acc-head{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding-bottom:20px;border-bottom:1px solid var(--line);}
+  .acc-avatar{
+    width:46px;height:46px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-family:'Inter',sans-serif;font-weight:800;font-size:18px;
   }
-  input[type=email]:focus, input[type=password]:focus{outline:none;border-color:var(--accent);}
-  .link-btn{background:none;border:none;color:var(--accent2);font-size:14px;font-family:inherit;cursor:pointer;padding:0;text-decoration:underline;}
-  .ok-msg{color:var(--good);font-size:15px;margin-top:10px;display:none;}
-  .legacy-toggle{text-align:center;margin-top:20px;}
+  .acc-email{font-weight:700;font-size:15.5px;word-break:break-all;}
+  .acc-email-label{font-size:12px;color:var(--ink-dim);margin-bottom:2px;}
+
+  .plan-pill{
+    background:var(--accent-dim);color:var(--accent2);font-size:13px;font-weight:700;
+    padding:5px 14px;border-radius:14px;display:inline-block;
+  }
+  .stat-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .stat-row .k{color:var(--ink-dim);font-size:14px;font-weight:600;}
+  .stat-row .v{font-weight:800;font-size:15px;font-family:'Inter',sans-serif;}
+  .usage-bar-bg{background:var(--bg-raised);border:1px solid var(--line);border-radius:8px;height:9px;overflow:hidden;margin-bottom:20px;}
+  .usage-bar-fill{background:linear-gradient(90deg,var(--accent),#ff7a7d);height:100%;transition:width .4s ease;}
+  .no-sub-box{
+    background:var(--bg-raised);border:1px dashed var(--line);border-radius:12px;
+    padding:16px;text-align:center;font-size:14.5px;color:var(--ink-dim);margin-bottom:4px;
+  }
+
+  .ref-box{margin-top:22px;padding-top:22px;border-top:1px dashed var(--line);}
+  .ref-title{font-size:14.5px;font-weight:700;color:var(--accent2);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .ref-link-row{display:flex;gap:8px;}
+  .ref-link-row input{background:var(--bg-raised);font-size:13.5px;margin-bottom:0;font-family:'Inter',sans-serif;}
+  .ref-share-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .copy-btn{
+    background:var(--bg-raised);border:1px solid var(--line);color:var(--ink-dim);
+    padding:9px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;
+    white-space:nowrap;font-weight:600;transition:.15s;
+  }
+  .copy-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .ref-hint{font-size:13px;color:var(--ink-dim);margin-top:12px;line-height:1.75;}
+
+  .logout-row{text-align:center;margin-top:24px;padding-top:18px;border-top:1px solid var(--line);}
+  .logout-row .link-btn{color:var(--ink-dim);}
+  .logout-row .link-btn:hover{color:#E8664A;}
+
+  /* ===================== كود الوصول القديم + تواصل ===================== */
+  .legacy-toggle{text-align:center;margin-top:22px;}
   .legacy-box{display:none;margin-top:18px;padding-top:18px;border-top:1px dashed var(--line);}
   .legacy-box.show{display:block;}
-  .logout-row{text-align:left;margin-top:18px;}
+
+  .contact-footer{text-align:center;margin-top:26px;}
+  .contact-footer #contactLink{color:var(--ink-dim);font-size:13.5px;text-decoration:none;font-weight:600;}
+  .contact-footer #contactLink:hover{color:var(--accent);}
+  .contact-mail-link{font-size:15px;font-weight:600;color:var(--accent2);text-decoration:none;}
+  .contact-mail-link:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
+<header class="top">
+  <div class="top-inner">
+    <img src="/assets/logo-horizontal.svg" alt="وصّاف">
+    <a class="back" href="/">الرئيسية ←</a>
+  </div>
+</header>
 <div class="wrap">
-  <div class="logo-row"><img src="/assets/logo-horizontal.svg" alt="وصّاف"></div>
   <div class="today-date" id="todayDate"></div>
+  <h1>حسابي</h1>
+  <div class="sub">سجّل دخول أو أنشئ حساب لعرض باقتك واستخدامك ورابط الإحالة.</div>
 
-  <a class="back" href="/">← الرجوع للرئيسية</a>
-  <div class="contact-row">
+  <div class="auth-card">
+    <!-- ===================== تبويبات دخول / حساب جديد ===================== -->
+    <div class="tabs" id="authTabs">
+      <button class="tab-btn active" data-tab="login">تسجيل الدخول</button>
+      <button class="tab-btn" data-tab="signup">حساب جديد</button>
+    </div>
+
+    <!-- ---------- دخول ---------- -->
+    <div class="auth-panel show" id="loginPanel">
+      <label>الإيميل</label>
+      <input type="email" id="loginEmail" placeholder="مثال: name@email.com">
+      <label>كلمة المرور</label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+      <button class="go" id="loginBtn">دخول</button>
+      <div class="err" id="loginErr"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <button class="link-btn" id="forgotBtn">نسيت كلمة المرور؟</button>
+      </div>
+    </div>
+
+    <!-- ---------- حساب جديد ---------- -->
+    <div class="auth-panel" id="signupPanel">
+      <label>الإيميل</label>
+      <input type="email" id="signupEmail" placeholder="مثال: name@email.com">
+      <label>كلمة المرور</label>
+      <input type="password" id="signupPassword" placeholder="8 أحرف على الأقل">
+      <button class="go" id="signupBtn">إنشاء الحساب</button>
+      <div class="err" id="signupErr"></div>
+    </div>
+
+    <!-- ---------- استعادة كلمة المرور: طلب رابط ---------- -->
+    <div class="auth-panel" id="forgotPanel">
+      <label>الإيميل</label>
+      <input type="email" id="forgotEmail" placeholder="مثال: name@email.com">
+      <button class="go" id="forgotSubmitBtn">أرسل رابط الاستعادة</button>
+      <div class="err" id="forgotErr"></div>
+      <div class="ok-msg" id="forgotOk"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <button class="link-btn" id="backToLoginBtn">رجوع لتسجيل الدخول</button>
+      </div>
+    </div>
+
+    <!-- ---------- استعادة كلمة المرور: تعيين كلمة جديدة (يظهر بس لو الرابط فيه ?reset=) ---------- -->
+    <div class="auth-panel" id="resetPanel">
+      <label>كلمة المرور الجديدة</label>
+      <input type="password" id="resetNewPassword" placeholder="8 أحرف على الأقل">
+      <button class="go" id="resetSubmitBtn">حفظ كلمة المرور</button>
+      <div class="err" id="resetErr"></div>
+      <div class="ok-msg" id="resetOk"></div>
+    </div>
+
+    <!-- ===================== بطاقة الحساب (تظهر بعد الدخول) ===================== -->
+    <div class="card" id="accCard">
+      <div class="acc-head">
+        <div class="acc-avatar" id="accAvatar"></div>
+        <div>
+          <div class="acc-email-label">الإيميل</div>
+          <div class="acc-email" id="accEmailVal"></div>
+        </div>
+      </div>
+
+      <div id="subDetails">
+        <div class="stat-row"><div class="k">الباقة</div><div class="v"><span class="plan-pill" id="planName"></span></div></div>
+        <div class="stat-row" style="margin-top:16px;"><div class="k">الاستخدام هذا الشهر</div><div class="v" id="usedVal"></div></div>
+        <div class="usage-bar-bg"><div class="usage-bar-fill" id="usageBarFill" style="width:0%;"></div></div>
+        <div class="stat-row"><div class="k">المتبقي</div><div class="v" id="remainingVal"></div></div>
+      </div>
+      <div class="no-sub-box" id="noSubscriptionNote" style="display:none;">ما عندك اشتراك فعّال مرتبط بهذا الحساب بعد.</div>
+
+      <div class="ref-box" id="refBox">
+        <div class="ref-title">🔗 رابط الإحالة</div>
+        <div class="ref-link-row">
+          <input type="text" id="refLinkInput" readonly>
+        </div>
+        <div class="ref-share-row">
+          <button class="copy-btn" id="copyRefBtn">نسخ</button>
+          <button class="copy-btn" id="waRefBtn">واتساب</button>
+          <button class="copy-btn" id="mailRefBtn">إيميل</button>
+        </div>
+        <div class="ref-hint">كل شخص يسجّل تجربة مجانية عبر هالرابط، يأخذ كلا منكم <strong><span id="refBonusHint">—</span> وصف إضافي</strong> لكل واحد فيكم (النسبة تعتمد على باقتك الحالية). عدد من دعوتهم لحد الحين: <strong id="refCount">0</strong></div>
+      </div>
+
+      <div class="logout-row"><button class="link-btn" id="logoutBtn">تسجيل خروج</button></div>
+    </div>
+
+    <!-- ===================== كود الوصول القديم (بديل، للمشتركين اللي ما عندهم حساب بعد) ===================== -->
+    <div class="legacy-toggle"><button class="link-btn" id="legacyToggleBtn">عندك كود وصول بدل حساب؟ اضغط هنا</button></div>
+    <div class="legacy-box" id="legacyBox">
+      <label>كود الوصول</label>
+      <input type="text" id="accCodeInput" placeholder="مثال: AB12CD" style="text-transform:uppercase;">
+      <button class="go" id="loadBtn">عرض بيانات الحساب بالكود</button>
+      <div class="err" id="accErr"></div>
+    </div>
+  </div>
+
+  <div class="contact-footer">
     <a href="#" id="contactLink">تواصل معنا</a>
     <div id="contactBox" style="display:none;margin-top:8px;">
       <a href="mailto:wassaf.sa@gmail.com" class="contact-mail-link">wassaf.sa@gmail.com</a>
     </div>
-  </div>
-  <h1>حسابي</h1>
-  <div class="sub">سجّل دخول أو أنشئ حساب لعرض باقتك واستخدامك ورابط الإحالة.</div>
-
-  <!-- ===================== تبويبات دخول / حساب جديد ===================== -->
-  <div class="tabs" id="authTabs">
-    <button class="tab-btn active" data-tab="login">تسجيل الدخول</button>
-    <button class="tab-btn" data-tab="signup">حساب جديد</button>
-  </div>
-
-  <!-- ---------- دخول ---------- -->
-  <div class="auth-panel show" id="loginPanel">
-    <label>الإيميل</label>
-    <input type="email" id="loginEmail" placeholder="مثال: name@email.com">
-    <label>كلمة المرور</label>
-    <input type="password" id="loginPassword" placeholder="••••••••">
-    <button class="go" id="loginBtn">دخول</button>
-    <div class="err" id="loginErr"></div>
-    <div style="text-align:center;margin-top:14px;">
-      <button class="link-btn" id="forgotBtn">نسيت كلمة المرور؟</button>
-    </div>
-  </div>
-
-  <!-- ---------- حساب جديد ---------- -->
-  <div class="auth-panel" id="signupPanel">
-    <label>الإيميل</label>
-    <input type="email" id="signupEmail" placeholder="مثال: name@email.com">
-    <label>كلمة المرور</label>
-    <input type="password" id="signupPassword" placeholder="8 أحرف على الأقل">
-    <button class="go" id="signupBtn">إنشاء الحساب</button>
-    <div class="err" id="signupErr"></div>
-  </div>
-
-  <!-- ---------- استعادة كلمة المرور: طلب رابط ---------- -->
-  <div class="auth-panel" id="forgotPanel">
-    <label>الإيميل</label>
-    <input type="email" id="forgotEmail" placeholder="مثال: name@email.com">
-    <button class="go" id="forgotSubmitBtn">أرسل رابط الاستعادة</button>
-    <div class="err" id="forgotErr"></div>
-    <div class="ok-msg" id="forgotOk"></div>
-    <div style="text-align:center;margin-top:14px;">
-      <button class="link-btn" id="backToLoginBtn">رجوع لتسجيل الدخول</button>
-    </div>
-  </div>
-
-  <!-- ---------- استعادة كلمة المرور: تعيين كلمة جديدة (يظهر بس لو الرابط فيه ?reset=) ---------- -->
-  <div class="auth-panel" id="resetPanel">
-    <label>كلمة المرور الجديدة</label>
-    <input type="password" id="resetNewPassword" placeholder="8 أحرف على الأقل">
-    <button class="go" id="resetSubmitBtn">حفظ كلمة المرور</button>
-    <div class="err" id="resetErr"></div>
-    <div class="ok-msg" id="resetOk"></div>
-  </div>
-
-  <!-- ===================== بطاقة الحساب (تظهر بعد الدخول) ===================== -->
-  <div class="card" id="accCard">
-    <div class="row"><div class="k">الإيميل</div><div class="v" id="accEmailVal"></div></div>
-    <div class="row" id="planRow"><div class="k">الباقة</div><div class="v"><span class="plan-pill" id="planName"></span></div></div>
-    <div class="row" id="remainingRow"><div class="k">المتبقي هذا الشهر</div><div class="v" id="remainingVal"></div></div>
-    <div class="row" id="usedRow"><div class="k">المستخدم هذا الشهر</div><div class="v" id="usedVal"></div></div>
-    <div class="sub" id="noSubscriptionNote" style="display:none;margin-bottom:0;">ما عندك اشتراك فعّال مرتبط بهذا الحساب بعد.</div>
-
-    <div class="ref-box" id="refBox">
-      <div class="ref-title">رابط الإحالة</div>
-      <div class="ref-link-row">
-        <input type="text" id="refLinkInput" readonly>
-      </div>
-      <div class="ref-share-row">
-        <button class="copy-btn" id="copyRefBtn">نسخ</button>
-        <button class="copy-btn" id="waRefBtn">واتساب</button>
-        <button class="copy-btn" id="mailRefBtn">إيميل</button>
-      </div>
-      <div class="ref-hint">كل شخص يسجّل تجربة مجانية عبر هالرابط، يأخذ كلا منكم <strong><span id="refBonusHint">—</span> وصف إضافي</strong> لكل واحد فيكم (النسبة تعتمد على باقتك الحالية). عدد من دعوتهم لحد الحين: <strong id="refCount">0</strong></div>
-    </div>
-
-    <div class="logout-row"><button class="link-btn" id="logoutBtn">تسجيل خروج</button></div>
-  </div>
-
-  <!-- ===================== كود الوصول القديم (بديل، للمشتركين اللي ما عندهم حساب بعد) ===================== -->
-  <div class="legacy-toggle"><button class="link-btn" id="legacyToggleBtn">عندك كود وصول بدل حساب؟ اضغط هنا</button></div>
-  <div class="legacy-box" id="legacyBox">
-    <label>كود الوصول</label>
-    <input type="text" id="accCodeInput" placeholder="مثال: AB12CD" style="text-transform:uppercase;">
-    <button class="go" id="loadBtn">عرض بيانات الحساب بالكود</button>
-    <div class="err" id="accErr"></div>
   </div>
 </div>
 
@@ -228,19 +298,24 @@ function renderAccountCard(data){
   document.getElementById('legacyToggleBtn').style.display = 'none';
   document.getElementById('legacyBox').classList.remove('show');
 
-  document.getElementById('accEmailVal').textContent = data.email || '';
+  const email = data.email || '';
+  document.getElementById('accEmailVal').textContent = email;
+  document.getElementById('accAvatar').textContent = email.charAt(0).toUpperCase() || '؟';
 
   const hasSub = !!data.hasSubscription;
-  document.getElementById('planRow').style.display = hasSub ? 'flex' : 'none';
-  document.getElementById('remainingRow').style.display = hasSub ? 'flex' : 'none';
-  document.getElementById('usedRow').style.display = hasSub ? 'flex' : 'none';
+  document.getElementById('subDetails').style.display = hasSub ? 'block' : 'none';
   document.getElementById('refBox').style.display = hasSub ? 'block' : 'none';
   document.getElementById('noSubscriptionNote').style.display = hasSub ? 'none' : 'block';
 
   if(hasSub){
     document.getElementById('planName').textContent = data.plan || 'عام';
-    document.getElementById('remainingVal').textContent = (data.remaining ?? '—') + ' من ' + (data.cap ?? '—');
-    document.getElementById('usedVal').textContent = data.used ?? '—';
+    const cap = data.cap || 0;
+    const remaining = data.remaining ?? 0;
+    const used = typeof data.used === 'number' ? data.used : Math.max(cap - remaining, 0);
+    document.getElementById('usedVal').textContent = `${used} من ${cap}`;
+    document.getElementById('remainingVal').textContent = remaining;
+    const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
+    document.getElementById('usageBarFill').style.width = pct + '%';
   }
 
   accCard.classList.add('show');
@@ -412,14 +487,15 @@ async function loadAccount(){
     authTabs.style.display = 'none';
     Object.values(panels).forEach(p => p.classList.remove('show'));
     document.getElementById('accEmailVal').textContent = '(دخول بكود الوصول)';
-    document.getElementById('planRow').style.display = 'flex';
-    document.getElementById('remainingRow').style.display = 'flex';
-    document.getElementById('usedRow').style.display = 'flex';
+    document.getElementById('accAvatar').textContent = '🔑';
+    document.getElementById('subDetails').style.display = 'block';
     document.getElementById('refBox').style.display = 'block';
     document.getElementById('noSubscriptionNote').style.display = 'none';
     document.getElementById('planName').textContent = data.plan;
-    document.getElementById('remainingVal').textContent = `${data.remaining} من ${data.cap}`;
-    document.getElementById('usedVal').textContent = data.used;
+    document.getElementById('usedVal').textContent = `${data.used} من ${data.cap}`;
+    document.getElementById('remainingVal').textContent = data.remaining;
+    const pct = data.cap > 0 ? Math.min(100, Math.round((data.used / data.cap) * 100)) : 0;
+    document.getElementById('usageBarFill').style.width = pct + '%';
     document.getElementById('refCount').textContent = data.referralCount;
     document.getElementById('refLinkInput').value = `https://www.wassaf.space/?ref=${data.referralToken}`;
     document.getElementById('refBonusHint').textContent = data.estimatedReferralBonus;
