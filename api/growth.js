@@ -890,6 +890,11 @@ async function handleAuthMe(req, res) {
     return;
   }
 
+  // [إصلاح] رابط ونسبة الإحالة كانوا يُحسبون بس بمسار كود الوصول القديم — إضافتهم هنا عشان حسابات الإيميل/الباسورد تشتغل بنفس الميزة
+  const referralCount = parseInt((await redisCommand(['GET', `referral_count:${parsed.accessCode}`])) || '0', 10);
+  const referralToken = await getOrCreateReferralToken(parsed.accessCode);
+  const estimatedReferralBonus = Math.max(Math.round((accessResult.cap || 0) * REFERRAL_BONUS_RATIO), 3);
+
   res.status(200).json({
     ok: true,
     email,
@@ -897,7 +902,10 @@ async function handleAuthMe(req, res) {
     plan: accessResult.plan || 'عام',
     cap: accessResult.cap,
     used: typeof accessResult.used === 'number' ? accessResult.used : null,
-    remaining: accessResult.remaining
+    remaining: accessResult.remaining,
+    referralToken,
+    referralCount,
+    estimatedReferralBonus
   });
 }
 
