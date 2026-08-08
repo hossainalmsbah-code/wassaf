@@ -288,7 +288,7 @@
       <a href="#pricing">الأسعار</a>
     </nav>
     <div class="nav-actions">
-      <a href="/account.html" class="nav-account">تسجيل الدخول</a>
+      <a href="/account.html" class="nav-account" id="navAccountLink">تسجيل الدخول</a>
       <a href="#tool" class="nav-cta">ابدأ مجاناً</a>
     </div>
   </div>
@@ -1522,6 +1522,27 @@ if(contactLink && contactBox){
   };
   window.addEventListener('scroll', onScroll, { passive:true });
   onScroll();
+})();
+
+/* ==================== فحص جلسة الدخول (إيميل/باسورد): "تسجيل الدخول" → "حسابي" ==================== */
+(async function checkLoginSession(){
+  const navAccountLink = document.getElementById('navAccountLink');
+  if(!navAccountLink) return;
+  try{
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      credentials: 'same-origin', // ضروري عشان كوكي الجلسة (wassaf_session) يترسل مع الطلب
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'auth_me' })
+    });
+    const data = await res.json();
+    if(res.ok && data.ok){
+      navAccountLink.textContent = 'حسابي';
+    }
+    // لو ما فيه جلسة فعّالة (401)، نسيب النص الافتراضي "تسجيل الدخول" زي ما هو — بدون أي تعديل
+  }catch(e){
+    // فشل الفحص (مثلاً الشبكة بطيئة) — نتجاهل بصمت ونسيب "تسجيل الدخول" الافتراضي
+  }
 })();
 
 /* ==================== [إضافة] وعي سلة — يشتغل بس جوّا لوحة سلة ==================== */
