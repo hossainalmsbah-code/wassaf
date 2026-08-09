@@ -339,8 +339,8 @@
 
   <!-- [إضافة] يظهر بس لو الصفحة مفتوحة جوّا لوحة سلة -->
   <div class="settings-box" id="sallaBox" style="display:none;">
-    <div class="settings-title">🛍️ منتجاتك بمتجرك على سلة</div>
-    <div class="field-hint" style="margin-bottom:14px;">اضغط على منتج، وبيتعبّى اسمه وسعره تلقائياً بالأسفل — أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع صورته مباشرة.</div>
+    <div class="settings-title">🛍️منتجاتك</div>
+    <div class="field-hint" style="margin-bottom:14px;">اختر منتج، و سوف يدخل  اسمه وسعره تلقائياً بالأسفل — أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع الصورة مباشرة.</div>
     <div class="salla-product-grid" id="sallaProductGrid">
       <div class="salla-product-loading">جاري تحميل منتجاتك...</div>
     </div>
@@ -420,7 +420,7 @@
     <div class="fw-hint" id="styleHint">فصحى سهلة وبسيطة  بدون مفردات ثقيلة.</div>
   </div>
 
-  <button class="go" id="goBtn">ولّد الأوصاف</button>
+  <button class="go" id="goBtn">ابدأ هنا</button>
   <div class="err" id="errBox"></div>
 
   <div class="result" id="resultBox">
@@ -430,9 +430,9 @@
         <button class="copy-btn" data-target="outputLong">نسخ النص</button>
       </div>
       <div class="output" id="outputLong"></div>
-      <button class="go secondary hidden-salla" id="sallaWriteBackBtn" type="button" style="display:none;margin-top:10px;">اكتب هذا الوصف رجوع بمنتجي بسلة</button>
+      <button class="go secondary hidden-salla" id="sallaWriteBackBtn" type="button" style="display:none;margin-top:10px;">اانشر هذا الوصف</button>
       <div class="err" id="sallaWriteErr" style="margin-top:6px;"></div>
-      <div class="ok-msg" id="sallaWriteSuccess" style="margin-top:6px;">تم تحديث المنتج بمتجرك على سلة ✓</div>
+      <div class="ok-msg" id="sallaWriteSuccess" style="margin-top:6px;">تم تحديث المنتج بمتجرك ✓</div>
     </div>
     <div class="result-block">
       <div class="result-head">
@@ -476,13 +476,13 @@
   </div>
 
   <!-- ===================== توليد من صورة (حصري نصف سنوي/سنوي) ===================== -->
-  <div class="salla-image-highlight" id="sallaImageHighlight" style="display:none;">📸 أسرع طريقة لعملاء سلة — منتجك عنده صورة أصلاً</div>
+  <div class="salla-image-highlight" id="sallaImageHighlight" style="display:none;">📸 أسرع طريقة لتجار سلة</div>
   <div class="section-title" id="imageGen">ولّد الوصف من صورة المنتج</div>
-  <div class="section-sub">ارفع صورة منتجك بس ، ووصّاف يحلّلها ويكتب لك الوصف الطويل والقصير وSEO تلقائياً - بدون ما تكتب كلمة.</div>
+  <div class="section-sub">ارفع صورة منتجك بس ، ووصّاف يحلّلها ويكتب لك الوصف الطويل والقصير و SEO تلقائياً - بدون ما تكتب كلمة.</div>
 
   <div class="bulk-box">
     <div class="field-hint" id="imageLockedNote" style="display:block;">
-      🔒 هذي الميزة حصرية لمشتركي الباقة <strong>النصف سنوية</strong> أو <strong>السنوية</strong>. <a href="#pricing" style="color:var(--accent);font-weight:700;">شوف الباقات وترقّى من هنا</a>.
+      🔒 هذي الميزة حصرية لمشتركي الباقة <strong>النصف سنوية</strong> أو <strong>السنوية</strong>. <a href="#pricing" style="color:var(--accent);font-weight:700;">رقي باقتك من هنا</a>.
     </div>
 
     <div id="imageUploadArea" style="display:none;">
@@ -1053,7 +1053,7 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     }
   }finally{
     goBtn.disabled = false;
-    goBtn.textContent = 'ولّد الأوصاف';
+    goBtn.textContent = 'ابدأ هنا';
   }
 });
 
