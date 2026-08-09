@@ -339,7 +339,10 @@
 
   <!-- [إضافة] يظهر بس لو الصفحة مفتوحة جوّا لوحة سلة -->
   <div class="settings-box" id="sallaBox" style="display:none;">
-    <div class="settings-title">🛍️منتجاتك</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
+      <div class="settings-title" style="margin-bottom:0;">🛍️منتجاتك</div>
+      <a href="https://www.wassaf.space/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap;">🌐 موقع وصّاف</a>
+    </div>
     <div class="field-hint" style="margin-bottom:14px;">اختر منتج، و سوف يدخل  اسمه وسعره تلقائياً بالأسفل — أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع الصورة مباشرة.</div>
     <div class="salla-product-grid" id="sallaProductGrid">
       <div class="salla-product-loading">جاري تحميل منتجاتك...</div>
@@ -430,7 +433,7 @@
         <button class="copy-btn" data-target="outputLong">نسخ النص</button>
       </div>
       <div class="output" id="outputLong"></div>
-      <button class="go secondary hidden-salla" id="sallaWriteBackBtn" type="button" style="display:none;margin-top:10px;">اانشر هذا الوصف</button>
+      <button class="go secondary hidden-salla" id="sallaWriteBackBtn" type="button" style="display:none;margin-top:10px;">انشر هذا الوصف</button>
       <div class="err" id="sallaWriteErr" style="margin-top:6px;"></div>
       <div class="ok-msg" id="sallaWriteSuccess" style="margin-top:6px;">تم تحديث المنتج بمتجرك ✓</div>
     </div>
