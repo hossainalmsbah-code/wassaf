@@ -101,6 +101,12 @@ module.exports = async (req, res) => {
     return;
   }
 
+  // [إضافة جديدة] نفس الفكرة بالضبط لأحداث اشتراك زد — مسار مستقل تماماً، صفر تداخل مع سلة أو Lemon Squeezy
+  if (req.query && req.query.source === 'zid') {
+    await handleZidWebhook(req, res);
+    return;
+  }
+
   try {
     const rawBody = await readRawBody(req);
 
@@ -378,6 +384,122 @@ async function handleSallaWebhook(req, res) {
     }
 
     // [مكان جاهز للتوسعة] أحداث سلة الثانية (تركيب، إلغاء تركيب، تحديث منتج) تنضاف هنا مستقبلاً
+    res.status(200).json({ ok: true, ignored: event || 'unknown' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// ==================== [إضافة جديدة] استقبال أحداث اشتراك زد ====================
+// رابط الاستقبال المسجّل بلوحة شركاء زد: https://www.wassaf.space/api/webhook?source=zid
+// موثّق رسمياً بـdocs.zid.sa/events — كل حدث يوصل ببيانات غنية (store_id, plan_name, plan_type, amount_paid...)
+
+// [إضافة جديدة] خريطة أسماء الباقات المسجّلة بلوحة شركاء زد → الحد الشهري والاسم الداخلي
+// ⚠️ لازم تطابق بالضبط أسماء الباقات اللي هتكتبونها حرفياً بخطوة "إدارة الخطط" بلوحة شركاء زد
+const ZID_PLAN_MAP = {
+  'أسبوعي': { plan: 'أسبوعي', cap: 20 },
+  'شهري': { plan: 'شهري', cap: 120 },
+  'نصف سنوي': { plan: 'نصف سنوي', cap: 180 },
+  'سنوي': { plan: 'سنوي', cap: 300 }
+};
+
+async function handleZidWebhook(req, res) {
+  try {
+    const rawBody = await readRawBody(req);
+    let payload;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (e) {
+      res.status(400).json({ error: 'Invalid JSON' });
+      return;
+    }
+
+    const event = payload.event_name;
+    const storeId = payload.store_id;
+    const planNameRaw = (payload.plan_name || '').toString().trim();
+
+    if (!storeId) {
+      res.status(400).json({ error: 'store_id مفقود' });
+      return;
+    }
+
+    // [إضافة جديدة] تفعيل الاشتراك — يشمل التثبيت الأول والتفعيل بعد الدفع، نفس المعالجة للاثنين
+    if (event === 'app.market.subscription.active' || event === 'app.market.subscription.renew' || event === 'app.market.subscription.upgrade') {
+      const mapped = ZID_PLAN_MAP[planNameRaw];
+
+      if (!mapped) {
+        // اسم باقة ما نعرفه — نسجله للمراجعة اليدوية بدل ما نتجاهله بصمت (نفس نمط سلة)
+        await redisCommand(['HSET', 'pending:review_zid_plan', String(storeId), JSON.stringify({
+          storeId,
+          planNameRaw,
+          eventName: event,
+          amountPaid: payload.amount_paid,
+          receivedAt: new Date().toISOString()
+        })]);
+        res.status(200).json({ ok: true, needsReview: true });
+        return;
+      }
+
+      const record = {
+        plan: mapped.plan,
+        cap: mapped.cap,
+        active: true,
+        zidPlanName: planNameRaw,
+        planType: payload.plan_type, // "Paid" أو "Free Trial"
+        planId: payload.plan_id,
+        startDate: payload.start_date,
+        endDate: payload.end_date,
+        amountPaid: payload.amount_paid,
+        merchantEmail: payload.merchant_email,
+        updatedAt: new Date().toISOString()
+      };
+      await redisCommand(['SET', `zid_subscription:${storeId}`, JSON.stringify(record)]);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    // [إضافة جديدة] تعليق أو انتهاء الاشتراك — نطفّي الباقة
+    if (event === 'app.market.subscription.suspended' || event === 'app.market.subscription.expired') {
+      const raw = await redisCommand(['GET', `zid_subscription:${storeId}`]);
+      if (raw) {
+        let parsed;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e) {
+          parsed = null;
+        }
+        if (parsed) {
+          parsed.active = false;
+          parsed.deactivatedAt = new Date().toISOString();
+          await redisCommand(['SET', `zid_subscription:${storeId}`, JSON.stringify(parsed)]);
+        }
+      }
+      res.status(200).json({ ok: true, deactivated: true });
+      return;
+    }
+
+    // [إضافة جديدة] إلغاء تثبيت التطبيق — نطفّي الباقة (نفس منطق الإيقاف، احتياط إضافي)
+    if (event === 'app.market.application.uninstall') {
+      const raw = await redisCommand(['GET', `zid_subscription:${storeId}`]);
+      if (raw) {
+        let parsed;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e) {
+          parsed = null;
+        }
+        if (parsed) {
+          parsed.active = false;
+          parsed.deactivatedAt = new Date().toISOString();
+          parsed.uninstalled = true;
+          await redisCommand(['SET', `zid_subscription:${storeId}`, JSON.stringify(parsed)]);
+        }
+      }
+      res.status(200).json({ ok: true, uninstalled: true });
+      return;
+    }
+
+    // [مكان جاهز للتوسعة] أحداث زد الثانية (تقييم، طلب باقة خاصة، رفض دفع) تنضاف هنا مستقبلاً
     res.status(200).json({ ok: true, ignored: event || 'unknown' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });

@@ -1,5 +1,5 @@
 const { redisCommand } = require('./_redis');
-const { checkAccessCode, incrementUsage, checkSallaMerchantSubscription } = require('./_access');
+const { checkAccessCode, incrementUsage, checkSallaMerchantSubscription, checkZidMerchantSubscription } = require('./_access');
 const { buildCacheKey, getCachedGeneration, setCachedGeneration, logGeneration } = require('./_library');
 
 const FRAMEWORK_LABELS = {
@@ -233,6 +233,7 @@ module.exports = async (req, res) => {
     const style = (body.style || 'FORMAL').toString().trim().toUpperCase();
     const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
     const sallaMerchantId = (body.sallaMerchantId || '').toString().trim(); // [إضافة جديدة] الفوترة الأصلية جوّا سلة — بديل عن كود الوصول
+    const zidMerchantId = (body.zidMerchantId || '').toString().trim(); // [إضافة جديدة] الفوترة الأصلية جوّا زد — بديل موازٍ لسلة
     const deviceId = (body.deviceId || '').toString().trim();
     const mode = (body.mode || 'description').toString().trim(); // [إضافة] 'description' (افتراضي، السلوك الأصلي) أو 'marketing'
     const longDescription = (body.longDescription || '').toString().trim(); // [إضافة] تُستخدم بوضع marketing بس
@@ -262,6 +263,28 @@ module.exports = async (req, res) => {
           res.status(403).json({
             error: 'ما عندك اشتراك فعّال بوصّاف مرتبط بمتجرك — اشترك عبر سلة أول',
             code: 'NO_SALLA_SUBSCRIPTION'
+          });
+        }
+        return;
+      }
+    } else if (zidMerchantId) {
+      // [إضافة جديدة] نفس منطق سلة بالضبط، بس لمتجر زد
+      try {
+        accessCheck = await checkZidMerchantSubscription(zidMerchantId);
+      } catch (redisErr) {
+        res.status(500).json({ error: 'صار خطأ بالتحقق من اشتراك متجرك، جرب مرة ثانية بعد شوي' });
+        return;
+      }
+      if (!accessCheck.ok) {
+        if (accessCheck.reason === 'exhausted') {
+          res.status(403).json({
+            error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك عبر زد عشان تكمل التوليد.`,
+            code: 'QUOTA_EXHAUSTED'
+          });
+        } else {
+          res.status(403).json({
+            error: 'ما عندك اشتراك فعّال بوصّاف مرتبط بمتجرك — اشترك عبر زد أول',
+            code: 'NO_ZID_SUBSCRIPTION'
           });
         }
         return;

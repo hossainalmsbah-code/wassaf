@@ -122,4 +122,34 @@ async function checkSallaMerchantSubscription(merchantId) {
     usageKey
   };
 }
-module.exports = { checkAccessCode, incrementUsage, currentMonthKey, unbindDevice, addReferralBonus, checkSallaMerchantSubscription };
+// [إضافة جديدة] يتحقق من اشتراك تاجر زد (الفوترة الأصلية عبر store_id) — نفس شكل نتيجة checkSallaMerchantSubscription بالضبط
+async function checkZidMerchantSubscription(storeId) {
+  const raw = await redisCommand(['GET', `zid_subscription:${storeId}`]);
+  if (!raw) {
+    return { ok: false, reason: 'invalid' };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    return { ok: false, reason: 'invalid' };
+  }
+  if (!parsed.active || !parsed.cap) {
+    return { ok: false, reason: 'invalid' };
+  }
+  const usageKey = `usage:zid:${storeId}:${currentMonthKey()}`;
+  const currentUsage = parseInt((await redisCommand(['GET', usageKey])) || '0', 10);
+  if (currentUsage >= parsed.cap) {
+    return { ok: false, reason: 'exhausted', cap: parsed.cap, used: currentUsage };
+  }
+  return {
+    ok: true,
+    remaining: parsed.cap - currentUsage,
+    cap: parsed.cap,
+    used: currentUsage,
+    plan: parsed.plan || 'عام',
+    usageKey
+  };
+}
+
+module.exports = { checkAccessCode, incrementUsage, currentMonthKey, unbindDevice, addReferralBonus, checkSallaMerchantSubscription, checkZidMerchantSubscription };

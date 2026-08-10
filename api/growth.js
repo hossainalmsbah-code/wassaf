@@ -1,4 +1,4 @@
-const { checkAccessCode, addReferralBonus, incrementUsage, checkSallaMerchantSubscription } = require('./_access');
+const { checkAccessCode, addReferralBonus, incrementUsage, checkSallaMerchantSubscription, checkZidMerchantSubscription } = require('./_access');
 const { redisCommand } = require('./_redis');
 const { sendEmail } = require('./_email');
 const {
@@ -229,6 +229,30 @@ async function handleSallaSubscriptionStatus(body, res) {
   }
 
   const result = await checkSallaMerchantSubscription(merchant);
+  if (!result.ok && result.reason !== 'exhausted') {
+    res.status(200).json({ ok: true, hasSubscription: false });
+    return;
+  }
+
+  res.status(200).json({
+    ok: true,
+    hasSubscription: true,
+    plan: result.plan || 'عام',
+    cap: result.cap,
+    used: typeof result.used === 'number' ? result.used : null,
+    remaining: result.remaining ?? 0
+  });
+}
+
+// [إضافة جديدة] نفس دالة سلة بالضبط، بس لتاجر زد — يستخدمها index.html جوّا زد
+async function handleZidSubscriptionStatus(body, res) {
+  const storeId = (body.storeId || '').toString().trim();
+  if (!storeId) {
+    res.status(400).json({ error: 'رقم المتجر (storeId) مفقود' });
+    return;
+  }
+
+  const result = await checkZidMerchantSubscription(storeId);
   if (!result.ok && result.reason !== 'exhausted') {
     res.status(200).json({ ok: true, hasSubscription: false });
     return;
@@ -1036,6 +1060,9 @@ module.exports = async (req, res) => {
         break;
       case 'salla_subscription_status':
         await handleSallaSubscriptionStatus(body, res);
+        break;
+      case 'zid_subscription_status':
+        await handleZidSubscriptionStatus(body, res);
         break;
       case 'auth_signup':
         await handleAuthSignup(req, res, body);
