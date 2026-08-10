@@ -89,6 +89,17 @@ function buildWelcomeEmailHtml({ code, plan, cap }) {
 }
 
 module.exports = async (req, res) => {
+  // [إضافة جديدة] روابط تسجيل دخول زد (Redirect/Callback) تصل كـGET من متصفح التاجر مباشرة —
+  // لازم تُفرز قبل فحص "POST بس" اللي تحت، لأنها مختلفة تماماً عن أحداث الاشتراك (اللي توصل POST من سيرفر زد)
+  if (req.method === 'GET' && req.query && req.query.source === 'zid' && req.query.step === 'install') {
+    await handleZidInstallRedirect(req, res);
+    return;
+  }
+  if (req.method === 'GET' && req.query && req.query.source === 'zid' && req.query.step === 'callback') {
+    await handleZidOAuthCallback(req, res);
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -503,5 +514,98 @@ async function handleZidWebhook(req, res) {
     res.status(200).json({ ok: true, ignored: event || 'unknown' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// ==================== [إضافة جديدة] تسجيل دخول تاجر زد (OAuth) — عنوانين مسجّلين بلوحة شركاء زد ====================
+// عنوان إعادة التوجيه: https://www.wassaf.space/api/webhook?source=zid&step=install
+// عنوان URL للرد (Callback):  https://www.wassaf.space/api/webhook?source=zid&step=callback
+
+// [إضافة جديدة] خطوة 1: التاجر يضغط "تثبيت" بمتجر تطبيقات زد، وزد توديه لهنا — نحوّله فوراً لصفحة موافقة الصلاحيات الرسمية بزد
+async function handleZidInstallRedirect(req, res) {
+  const clientId = process.env.ZID_CLIENT_ID;
+  if (!clientId) {
+    res.status(500).send('ZID_CLIENT_ID غير مُعد بإعدادات Vercel');
+    return;
+  }
+  const redirectUri = 'https://www.wassaf.space/api/webhook?source=zid&step=callback';
+  const authorizeUrl = `https://oauth.zid.sa/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
+  res.writeHead(302, { Location: authorizeUrl });
+  res.end();
+}
+
+// دالة مساعدة صغيرة: تفك جزء الـpayload من توكن JWT (بدون تحقق توقيع — نستخدمها بس لقراءة رقم المتجر "sub")
+function decodeJwtPayload(jwt) {
+  try {
+    const parts = jwt.replace(/^Bearer\s+/i, '').split('.');
+    if (parts.length < 2) return null;
+    const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
+    return JSON.parse(payload);
+  } catch (e) {
+    return null;
+  }
+}
+
+// [إضافة جديدة] خطوة 2: زد ترجّع التاجر هنا مع "code" بعد ما يوافق — نبادله بتوكن حقيقي ونخزّنه
+async function handleZidOAuthCallback(req, res) {
+  const code = req.query && req.query.code;
+  if (!code) {
+    res.status(400).send('رمز التفويض (code) مفقود من طلب زد');
+    return;
+  }
+
+  const clientId = process.env.ZID_CLIENT_ID;
+  const clientSecret = process.env.ZID_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    res.status(500).send('ZID_CLIENT_ID أو ZID_CLIENT_SECRET غير معدّين بإعدادات Vercel');
+    return;
+  }
+
+  const redirectUri = 'https://www.wassaf.space/api/webhook?source=zid&step=callback';
+
+  try {
+    const tokenRes = await fetch('https://oauth.zid.sa/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code
+      })
+    });
+    const tokenData = await tokenRes.json();
+
+    if (!tokenRes.ok || !tokenData.access_token) {
+      res.status(502).send('فشل تبادل رمز التفويض بتوكن — تحقق من صحة ZID_CLIENT_SECRET');
+      return;
+    }
+
+    // [مهم] "sub" داخل توكن Authorization (JWT) يمثل رقم المتجر — نستخدمه بدل استدعاء API إضافي لجلبه
+    const decoded = decodeJwtPayload(tokenData.Authorization || tokenData.access_token || '');
+    const storeId = decoded && decoded.sub;
+
+    if (!storeId) {
+      res.status(502).send('تعذر تحديد رقم المتجر من التوكن — راجع شكل الاستجابة الفعلي من زد');
+      return;
+    }
+
+    await redisCommand(['SET', `zid_store:${storeId}`, JSON.stringify({
+      accessToken: tokenData.access_token,
+      authorizationToken: tokenData.Authorization || null,
+      refreshToken: tokenData.refresh_token || null,
+      expiresIn: tokenData.expires_in || null,
+      installedAt: new Date().toISOString()
+    })]);
+
+    // نرجّع التاجر لصفحة نجاح بسيطة — يقدر يقفلها ويرجع للوحة زد
+    res.status(200).send(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تم التفعيل</title></head>
+      <body style="font-family:sans-serif;text-align:center;padding:60px 20px;">
+        <h2 style="color:#16A34A;">✓ تم ربط وصّاف بمتجرك بنجاح</h2>
+        <p>تقدر ترجع للوحة تحكم زد وتفتح التطبيق من هناك.</p>
+      </body></html>`);
+  } catch (err) {
+    res.status(500).send('صار خطأ أثناء تفعيل التطبيق، حاول مرة ثانية أو تواصل معنا');
   }
 }
