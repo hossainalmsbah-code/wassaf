@@ -416,6 +416,14 @@ const ZID_PLAN_MAP = {
 
 async function handleZidWebhook(req, res) {
   try {
+    // [إضافة جديدة] تحقق بسيط من سر مشترك — يمنع أي طرف غير زد يرسل إشعار اشتراك مزيّف
+    // القيمة لازم تطابق بالضبط اللي بتحطها بحقل "العناوين" بلوحة شركاء زد (Header: X-Wassaf-Secret)
+    const expectedSecret = process.env.ZID_WEBHOOK_SECRET;
+    if (expectedSecret && req.headers['x-wassaf-secret'] !== expectedSecret) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
     const rawBody = await readRawBody(req);
     let payload;
     try {
