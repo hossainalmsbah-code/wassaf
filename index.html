@@ -244,7 +244,14 @@
   body.salla-embedded .nav-actions,
   body.salla-embedded #bulk,
   body.salla-embedded #bulk + .bulk-box,
-  body.salla-embedded section#pricing{display:none !important;}
+  body.salla-embedded section#pricing,
+  body.zid-embedded .hero,
+  body.zid-embedded .shine-text,
+  body.zid-embedded nav.main-nav,
+  body.zid-embedded .nav-actions,
+  body.zid-embedded #bulk,
+  body.zid-embedded #bulk + .bulk-box,
+  body.zid-embedded section#pricing{display:none !important;}
 
   /* رفع جماعي */
   .bulk-box{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:24px;box-shadow:0 1px 4px rgba(30,27,46,0.05);}
@@ -976,10 +983,11 @@ async function callGenerate({ productName, audience, features, price, framework,
   const accessCode = getStoredAccessCode();
   // [إضافة جديدة] لو إحنا جوّا سلة وعندنا merchant متحقق منه، نرسله بدل كود الوصول — الخادم يتحقق من اشتراك سلة عوضاً
   const sallaMerchantId = sallaMerchant || '';
+  const zidMerchantId = zidMerchant || ''; // [إضافة جديدة] نفس الفكرة بالضبط، بس لمتجر زد
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId, style, bulk, sallaMerchantId })
+    body: JSON.stringify({ productName, audience, features, price, framework, brandTone, accessCode, deviceId, style, bulk, sallaMerchantId, zidMerchantId })
   });
   const data = await response.json();
   if(!response.ok){
@@ -1797,6 +1805,42 @@ sallaWriteBackBtn && sallaWriteBackBtn.addEventListener('click', async () => {
     sallaWriteBackBtn.textContent = 'اكتب هذا الوصف رجوع بمنتجي بسلة';
   }
 });
+
+/* ==================== [إضافة جديدة] وعي زد — يشتغل بس جوّا لوحة زد ====================
+   ⚠️ ملاحظة صريحة: الآلية هنا مبنية على افتراض (رقم المتجر store_id يوصل برابط الصفحة كمعامل واضح)،
+   لأن توثيق زد العام ما أكّد الآلية الدقيقة 100%. لو طلعت مختلفة، نعدّل بس سطر قراءة store_id تحت،
+   باقي الكود (فحص الاشتراك، القيود، التوليد) ما يتأثر.
+   ⚠️ قائمة منتجات زد (Product Grid) ما اتبنت بعد — تحتاج تكامل إضافي مع Zid Products API
+   بعد ما نتأكد من آلية الوصول للتوكن المخزّن من خطوة OAuth. حالياً جوّا زد، التاجر يكتب بيانات
+   منتجه يدوياً بنفس نموذج التوليد العادي، والتوليد نفسه يشتغل على حساب اشتراكه بزد تلقائياً. */
+let zidMerchant = null;
+
+(async function bootstrapZidEmbedded(){
+  const params = new URLSearchParams(window.location.search);
+  const storeId = params.get('store_id') || params.get('storeId');
+  if(!storeId) return; // مو جوّا زد — نطلع بصمت بدون أي تأثير على الموقع العادي
+
+  zidMerchant = storeId;
+  document.body.classList.add('zid-embedded');
+
+  // [إضافة جديدة] نفس منطق سلة بالضبط — نجيب باقة التاجر من اشتراكه بزد، ونعبّي نفس المتغيرات
+  // اللي تتحكم بإظهار/إخفاء ميزات التوليد من صورة والمحتوى التسويقي والرفع الجماعي
+  try{
+    const subRes = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'zid_subscription_status', storeId: zidMerchant })
+    });
+    const subData = await subRes.json();
+    if(subRes.ok && subData.ok && subData.hasSubscription){
+      currentCodeCap = subData.cap;
+      currentCodePlan = subData.plan;
+      if(typeof updateImageFeatureVisibility === 'function') updateImageFeatureVisibility();
+    }
+  }catch(e){
+    // فشل جلب حالة الاشتراك ما يوقف الصفحة — بس ميزات الباقات المقيّدة تفضل مقفلة افتراضياً
+  }
+})();
 </script>
 </body>
 </html>
