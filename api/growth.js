@@ -32,8 +32,8 @@ async function zidApiRequest(storeId, path, options = {}) {
   const response = await fetch(`https://api.zid.sa/v1${path}`, {
     method: options.method || 'GET',
     headers: {
-      'Authorization': `Bearer ${store.authorizationToken}`,
-      'X-Manager-Token': store.accessToken,
+      'Authorization': `Bearer ${store.accessToken}`,
+      'X-Manager-Token': store.authorizationToken,
       'Store-Id': String(storeId),
       'Accept-Language': 'ar',
       'Content-Type': 'application/json',
