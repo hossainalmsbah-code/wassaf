@@ -368,6 +368,15 @@
     </div>
   </div>
 
+  <!-- [إضافة جديدة] صندوق ربط يدوي مرة وحدة — يظهر بس لو ما قدرنا نكتشف رقم متجر زد تلقائياً -->
+  <div class="settings-box" id="zidManualBox" style="display:none;">
+    <div class="settings-title">🔗 اربط متجرك بزد</div>
+    <div class="field-hint" style="margin-bottom:14px;">اكتب رقم متجرك بزد مرة وحدة بس، وبيتذكره متصفحك تلقائياً بعد كذا. تقدر تشوف رقم متجرك بأعلى لوحة تحكم زد.</div>
+    <input type="text" id="zidStoreIdInput" placeholder="مثال: 3267562" style="margin-bottom:10px;">
+    <button class="go" id="zidStoreIdSaveBtn" type="button">احفظ وابدأ</button>
+    <div class="err" id="zidStoreIdErr" style="margin-top:6px;display:none;"></div>
+  </div>
+
   <section class="hero">
     <h1>أوصاف منتجات احترافية بالعربي خلال ثواني</h1>
     <p>نكتب وصف منتجك بأطر عمل تسويقية مثبتة و صيغ كتابة جاهزة <br> (AIDA، PAS، BAB) - جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
@@ -1851,8 +1860,11 @@ async function initZidStore(storeId){
   document.body.classList.add('zid-embedded');
   zidBox.style.display = 'block';
 
-  const debugBanner = document.getElementById('zidDebugBanner');
-  if(debugBanner) debugBanner.remove(); // لقينا الحل — نشيل بانر التشخيص المؤقت
+  const manualBox = document.getElementById('zidManualBox');
+  if(manualBox) manualBox.style.display = 'none'; // لقينا الحل — نخفي صندوق الإدخال اليدوي لو كان ظاهر
+
+  // [إضافة جديدة] نحفظ رقم المتجر بمتصفح التاجر — أول مرة بس، بعدها يفتح تلقائياً بدون أي إدخال
+  try{ localStorage.setItem('wassaf_zidStoreId', storeId); }catch(e){}
 
   // نفس منطق سلة بالضبط — نجيب باقة التاجر تلقائياً ونفعّل قيود الباقات الموجودة أصلاً
   try{
@@ -1885,12 +1897,17 @@ async function initZidStore(storeId){
 }
 
 (function bootstrapZidDetection(){
-  // محاولة 1: معامل واضح برابط الصفحة
+  // محاولة 1: معامل واضح برابط الصفحة (نادراً، بس نسيبها احتياط)
   const params = new URLSearchParams(window.location.search);
   const fromUrl = params.get('store_id') || params.get('storeId') || params.get('store');
   if(fromUrl){ initZidStore(fromUrl); return; }
 
-  // محاولة 2: نستمع لرسائل postMessage من الصفحة الأم (لو زد ترسل بيانات بعد التحميل)
+  // محاولة 2: رقم متجر محفوظ من زيارة سابقة (أدخله التاجر يدوياً مرة، ونتذكره تلقائياً بعدها)
+  let savedStoreId = '';
+  try{ savedStoreId = localStorage.getItem('wassaf_zidStoreId') || ''; }catch(e){}
+  if(savedStoreId){ initZidStore(savedStoreId); return; }
+
+  // محاولة 3: نستمع لرسائل postMessage من الصفحة الأم (احتياط لو زد أضافتها مستقبلاً)
   window.addEventListener('message', (e) => {
     if(zidMerchant) return;
     const d = e.data;
@@ -1900,22 +1917,29 @@ async function initZidStore(storeId){
     }
   });
 
-  // محاولة 3 (تشخيص مؤقت): لو إحنا جوّا إطار (iframe) بعد ثانيتين وما لقينا شي، نعرض بانر معلومات
-  // يوريني بالضبط وش متاح بالصفحة — يُحذف تلقائياً أول ما نلقى الحل ونحذفه نهائياً من الكود بعدها
+  // محاولة 4: ما لقينا شي تلقائياً — لو إحنا جوّا إطار (iframe) جاي من زد تحديداً، نعرض صندوق الإدخال اليدوي
   setTimeout(() => {
-    if(zidMerchant || sallaMerchant) return; // لقينا حل من مكان ثاني، ما نحتاج البانر
+    if(zidMerchant || sallaMerchant) return; // لقينا حل من مكان ثاني
     if(window.top === window.self) return; // مو جوّا إطار أصلاً (الموقع العادي) — ما نعرض شي
-    const banner = document.createElement('div');
-    banner.id = 'zidDebugBanner';
-    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fffbe6;border-bottom:2px solid #f0c419;padding:10px;font-family:monospace;font-size:11px;direction:ltr;text-align:left;max-height:45vh;overflow:auto;';
-    banner.innerHTML = '<b>[تشخيص مؤقت — وصّاف]</b><br>URL: ' + location.href + '<br>Referrer: ' + (document.referrer || '(فاضي)') + '<div id="zidDebugLog" style="margin-top:6px;"></div>';
-    document.body.prepend(banner);
-    window.addEventListener('message', (e) => {
-      const log = document.getElementById('zidDebugLog');
-      if(log) log.innerHTML += '<div>postMessage من: ' + e.origin + ' — البيانات: ' + JSON.stringify(e.data) + '</div>';
-    });
-  }, 2000);
+    if(!document.referrer.includes('zid.sa')) return; // إطار من مصدر ثاني (زي سلة) — مو شأننا
+    const manualBox = document.getElementById('zidManualBox');
+    if(manualBox) manualBox.style.display = 'block';
+  }, 1200);
 })();
+
+// [إضافة جديدة] زر حفظ رقم المتجر اليدوي
+document.getElementById('zidStoreIdSaveBtn').addEventListener('click', () => {
+  const input = document.getElementById('zidStoreIdInput');
+  const err = document.getElementById('zidStoreIdErr');
+  const val = input.value.trim();
+  err.style.display = 'none';
+  if(!val || !/^\d+$/.test(val)){
+    err.textContent = 'اكتب رقم متجرك بزد بالأرقام بس (تلقاه بأعلى لوحة تحكم متجرك)';
+    err.style.display = 'block';
+    return;
+  }
+  initZidStore(val);
+});
 
 zidProductGrid && zidProductGrid.addEventListener('click', (e) => {
   const card = e.target.closest('.salla-product-card');
