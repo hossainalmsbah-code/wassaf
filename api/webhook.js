@@ -595,7 +595,13 @@ async function handleZidOAuthCallback(req, res) {
     const storeId = decoded && decoded.sub;
 
     if (!storeId) {
-      res.status(502).send('تعذر تحديد رقم المتجر من التوكن — راجع شكل الاستجابة الفعلي من زد');
+      // [تشخيص مؤقت] نعرض الرد الخام من زد وناتج فك التوكن مباشرة بالصفحة، عشان نشوف شكله الحقيقي ونصلح القراءة بدون تخمين — نحذف هذا بعد ما نحل المشكلة
+      const debugInfo = {
+        tokenDataKeys: Object.keys(tokenData || {}),
+        tokenData: tokenData,
+        decoded: decoded
+      };
+      res.status(502).send(`<pre dir="ltr" style="white-space:pre-wrap;font-family:monospace;padding:20px;">تعذر تحديد رقم المتجر — هذا الرد الفعلي من زد:\n\n${JSON.stringify(debugInfo, null, 2)}</pre>`);
       return;
     }
 
