@@ -13,6 +13,102 @@ const REFERRAL_BONUS_RATIO = 0.5;
 // مدة بقاء رابط المشاركة (30 يوم)
 const SHARE_TTL_SECONDS = 30 * 24 * 60 * 60;
 
+// ==================== [إضافة جديدة] منتجات زد — جلب القائمة وكتابة الوصف رجوع، بنفس فكرة سلة بالضبط ====================
+
+// [مساعد] نداء موحّد لأي API عند زد، يجيب التوكن المخزّن للمتجر تلقائياً من Redis (بدل ما نكرر نفس الهيدرز بكل دالة)
+// ⚠️ شكل الهيدرز مبني على أمثلة توثيق زد الرسمية (docs.zid.sa) — أول اختبار فعلي يثبته أو يحتاج تعديل بسيط
+async function zidApiRequest(storeId, path, options = {}) {
+  const raw = await redisCommand(['GET', `zid_store:${storeId}`]);
+  if (!raw) {
+    return { ok: false, notLinked: true };
+  }
+  let store;
+  try {
+    store = JSON.parse(raw);
+  } catch (e) {
+    return { ok: false, notLinked: true };
+  }
+
+  const response = await fetch(`https://api.zid.sa/v1${path}`, {
+    method: options.method || 'GET',
+    headers: {
+      'Authorization': `Bearer ${store.authorizationToken}`,
+      'X-Manager-Token': store.accessToken,
+      'Store-Id': String(storeId),
+      'Accept-Language': 'ar',
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    data = null;
+  }
+  return { ok: response.ok, status: response.status, data };
+}
+
+// [إضافة جديدة] يجيب قائمة منتجات متجر زد — تستخدمها index.html جوّا زد لعرض شبكة المنتجات (زي سلة بالضبط)
+async function handleZidListProducts(body, res) {
+  const storeId = (body.storeId || '').toString().trim();
+  if (!storeId) {
+    res.status(400).json({ error: 'رقم المتجر (storeId) مفقود' });
+    return;
+  }
+
+  const result = await zidApiRequest(storeId, '/products/?page_size=30');
+  if (result.notLinked) {
+    res.status(401).json({ error: 'متجرك مو مربوط بوصّاف بعد — ثبّت التطبيق أول' });
+    return;
+  }
+  if (!result.ok) {
+    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data });
+    return;
+  }
+
+  // [ملاحظة] شكل الاستجابة (results/data، وبنية الصور) مبني على النمط الشائع بتوثيق زد — نعدّله فور أول اختبار حقيقي لو اختلف
+  const rawList = (result.data && (result.data.results || result.data.data)) || [];
+  const products = rawList.map((p) => ({
+    id: p.id,
+    name: (p.name && (p.name.ar || p.name.en)) || p.name || '',
+    price: p.price || p.formatted_price || '',
+    image: (p.images && p.images[0] && p.images[0].image && p.images[0].image.url) || (p.thumbnail && p.thumbnail.url) || ''
+  }));
+
+  res.status(200).json({ ok: true, products });
+}
+
+// [إضافة جديدة] يكتب الوصف المولّد رجوع لمنتج بمتجر زد — نفس فكرة "اكتب رجوع بسلة"
+async function handleZidWriteBack(body, res) {
+  const storeId = (body.storeId || '').toString().trim();
+  const productId = (body.productId || '').toString().trim();
+  const description = (body.description || '').toString();
+
+  if (!storeId || !productId || !description) {
+    res.status(400).json({ error: 'بيانات ناقصة (رقم المتجر أو المنتج أو الوصف)' });
+    return;
+  }
+
+  const result = await zidApiRequest(storeId, `/products/${productId}/`, {
+    method: 'PATCH',
+    body: { description: { ar: description } }
+  });
+
+  if (result.notLinked) {
+    res.status(401).json({ error: 'متجرك مو مربوط بوصّاف بعد — ثبّت التطبيق أول' });
+    return;
+  }
+  if (!result.ok) {
+    res.status(502).json({ error: 'تعذر تحديث المنتج بمتجر زد', detail: result.data });
+    return;
+  }
+
+  res.status(200).json({ ok: true });
+}
+
 function generateShareId() {
   return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 }
@@ -1063,6 +1159,12 @@ module.exports = async (req, res) => {
         break;
       case 'zid_subscription_status':
         await handleZidSubscriptionStatus(body, res);
+        break;
+      case 'zid_list_products':
+        await handleZidListProducts(body, res);
+        break;
+      case 'zid_write_back':
+        await handleZidWriteBack(body, res);
         break;
       case 'auth_signup':
         await handleAuthSignup(req, res, body);
