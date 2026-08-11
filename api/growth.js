@@ -65,7 +65,30 @@ async function handleZidListProducts(body, res) {
     return;
   }
   if (!result.ok) {
-    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data });
+    // [تشخيص مؤقت] نوري شكل التوكنات المخزّنة (بدون كشفها كاملة) عشان نفهم سبب "No such user" — نحذف هذا بعد الحل
+    let debugTokenInfo = null;
+    try {
+      const raw = await redisCommand(['GET', `zid_store:${storeId}`]);
+      const store = raw ? JSON.parse(raw) : null;
+      if (store) {
+        const decodeJwt = (jwt) => {
+          try {
+            const parts = (jwt || '').split('.');
+            if (parts.length < 2) return null;
+            return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+          } catch (e) { return null; }
+        };
+        debugTokenInfo = {
+          accessTokenLength: store.accessToken ? store.accessToken.length : 0,
+          accessTokenPreview: store.accessToken ? store.accessToken.slice(0, 15) : null,
+          authorizationTokenLength: store.authorizationToken ? store.authorizationToken.length : 0,
+          authorizationTokenPreview: store.authorizationToken ? store.authorizationToken.slice(0, 15) : null,
+          authorizationDecoded: decodeJwt(store.authorizationToken),
+          installedAt: store.installedAt
+        };
+      }
+    } catch (e) {}
+    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data, debugTokenInfo });
     return;
   }
 
