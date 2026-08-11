@@ -591,7 +591,8 @@ async function handleZidOAuthCallback(req, res) {
     }
 
     // [مهم] "sub" داخل توكن Authorization (JWT) يمثل رقم المتجر — نستخدمه بدل استدعاء API إضافي لجلبه
-    const decoded = decodeJwtPayload(tokenData.Authorization || tokenData.access_token || '');
+    // [إصلاح] زد ترجّع الحقل بحروف صغيرة "authorization"، مو "Authorization" بحرف كبير — هذا كان سبب الفشل
+    const decoded = decodeJwtPayload(tokenData.authorization || tokenData.access_token || '');
     const storeId = decoded && decoded.sub;
 
     if (!storeId) {
@@ -607,7 +608,7 @@ async function handleZidOAuthCallback(req, res) {
 
     await redisCommand(['SET', `zid_store:${storeId}`, JSON.stringify({
       accessToken: tokenData.access_token,
-      authorizationToken: tokenData.Authorization || null,
+      authorizationToken: tokenData.authorization || null,
       refreshToken: tokenData.refresh_token || null,
       expiresIn: tokenData.expires_in || null,
       installedAt: new Date().toISOString()
