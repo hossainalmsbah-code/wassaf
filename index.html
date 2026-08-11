@@ -356,6 +356,18 @@
     </div>
   </div>
 
+  <!-- [إضافة جديدة] نفس صندوق سلة بالضبط، بس لمتجر زد -->
+  <div class="settings-box" id="zidBox" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
+      <div class="settings-title" style="margin-bottom:0;">🛍️منتجاتك</div>
+      <a href="https://www.wassaf.space/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap;">🌐 موقع وصّاف</a>
+    </div>
+    <div class="field-hint" style="margin-bottom:14px;">اختر منتج، و سوف يدخل  اسمه وسعره تلقائياً بالأسفل — أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع الصورة مباشرة.</div>
+    <div class="salla-product-grid" id="zidProductGrid">
+      <div class="salla-product-loading">جاري تحميل منتجاتك...</div>
+    </div>
+  </div>
+
   <section class="hero">
     <h1>أوصاف منتجات احترافية بالعربي خلال ثواني</h1>
     <p>نكتب وصف منتجك بأطر عمل تسويقية مثبتة و صيغ كتابة جاهزة <br> (AIDA، PAS، BAB) - جاهز للنشر مباشرة في متجرك الإلكتروني.</p>
@@ -443,6 +455,10 @@
       <button class="go secondary hidden-salla" id="sallaWriteBackBtn" type="button" style="display:none;margin-top:10px;">انشر هذا الوصف</button>
       <div class="err" id="sallaWriteErr" style="margin-top:6px;"></div>
       <div class="ok-msg" id="sallaWriteSuccess" style="margin-top:6px;">تم تحديث المنتج بمتجرك ✓</div>
+      <!-- [إضافة جديدة] نفس أزرار سلة بالضبط، بس لمتجر زد -->
+      <button class="go secondary" id="zidWriteBackBtn" type="button" style="display:none;margin-top:10px;">انشر هذا الوصف</button>
+      <div class="err" id="zidWriteErr" style="margin-top:6px;"></div>
+      <div class="ok-msg" id="zidWriteSuccess" style="margin-top:6px;">تم تحديث المنتج بمتجرك ✓</div>
     </div>
     <div class="result-block">
       <div class="result-head">
@@ -1802,24 +1818,43 @@ sallaWriteBackBtn && sallaWriteBackBtn.addEventListener('click', async () => {
 });
 
 /* ==================== [إضافة جديدة] وعي زد — يشتغل بس جوّا لوحة زد ====================
-   ⚠️ ملاحظة صريحة: الآلية هنا مبنية على افتراض (رقم المتجر store_id يوصل برابط الصفحة كمعامل واضح)،
-   لأن توثيق زد العام ما أكّد الآلية الدقيقة 100%. لو طلعت مختلفة، نعدّل بس سطر قراءة store_id تحت،
-   باقي الكود (فحص الاشتراك، القيود، التوليد) ما يتأثر.
-   ⚠️ قائمة منتجات زد (Product Grid) ما اتبنت بعد — تحتاج تكامل إضافي مع Zid Products API
-   بعد ما نتأكد من آلية الوصول للتوكن المخزّن من خطوة OAuth. حالياً جوّا زد، التاجر يكتب بيانات
-   منتجه يدوياً بنفس نموذج التوليد العادي، والتوليد نفسه يشتغل على حساب اشتراكه بزد تلقائياً. */
+   بُني على تكامل زد الكامل (OAuth + Products API) اللي جهّزناه بـwebhook.js وgrowth.js.
+   الجزء الوحيد غير المؤكد 100%: كيف بالضبط زد تمرّر رقم المتجر لحظة فتح التاجر للتطبيق.
+   عشان كذا فيه 3 محاولات كشف تلقائية بالتوازي + بانر تشخيص مؤقت (يظهر بس لو فشلت الثلاثة). */
 let zidMerchant = null;
+let zidSelectedProduct = null;
+let zidProductsCache = [];
 
-(async function bootstrapZidEmbedded(){
-  const params = new URLSearchParams(window.location.search);
-  const storeId = params.get('store_id') || params.get('storeId');
-  if(!storeId) return; // مو جوّا زد — نطلع بصمت بدون أي تأثير على الموقع العادي
+const zidBox = document.getElementById('zidBox');
+const zidProductGrid = document.getElementById('zidProductGrid');
+const zidWriteBackBtn = document.getElementById('zidWriteBackBtn');
+const zidWriteErr = document.getElementById('zidWriteErr');
+const zidWriteSuccess = document.getElementById('zidWriteSuccess');
 
+function renderZidProductGrid(products){
+  if(!products.length){
+    zidProductGrid.innerHTML = '<div class="salla-product-loading">ما لقينا منتجات بمتجرك</div>';
+    return;
+  }
+  zidProductGrid.innerHTML = products.map(p => `
+    <div class="salla-product-card" data-id="${p.id}">
+      ${p.image ? `<img src="${p.image}" alt="${p.name}" loading="lazy">` : `<div class="sp-noimg">🛍️</div>`}
+      <div class="sp-name">${p.name}</div>
+      ${p.price ? `<div class="sp-price">${p.price} ريال</div>` : ''}
+    </div>
+  `).join('');
+}
+
+async function initZidStore(storeId){
+  if(zidMerchant) return; // كشفناها من قبل، ما نكرر
   zidMerchant = storeId;
   document.body.classList.add('zid-embedded');
+  zidBox.style.display = 'block';
 
-  // [إضافة جديدة] نفس منطق سلة بالضبط — نجيب باقة التاجر من اشتراكه بزد، ونعبّي نفس المتغيرات
-  // اللي تتحكم بإظهار/إخفاء ميزات التوليد من صورة والمحتوى التسويقي والرفع الجماعي
+  const debugBanner = document.getElementById('zidDebugBanner');
+  if(debugBanner) debugBanner.remove(); // لقينا الحل — نشيل بانر التشخيص المؤقت
+
+  // نفس منطق سلة بالضبط — نجيب باقة التاجر تلقائياً ونفعّل قيود الباقات الموجودة أصلاً
   try{
     const subRes = await fetch('/api/growth', {
       method: 'POST',
@@ -1832,10 +1867,118 @@ let zidMerchant = null;
       currentCodePlan = subData.plan;
       if(typeof updateImageFeatureVisibility === 'function') updateImageFeatureVisibility();
     }
+  }catch(e){}
+
+  // نجيب قائمة منتجات المتجر ونعرضها بالشبكة
+  try{
+    const listRes = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'zid_list_products', storeId: zidMerchant })
+    });
+    const listData = await listRes.json();
+    zidProductsCache = (listRes.ok && listData.ok) ? listData.products : [];
   }catch(e){
-    // فشل جلب حالة الاشتراك ما يوقف الصفحة — بس ميزات الباقات المقيّدة تفضل مقفلة افتراضياً
+    zidProductsCache = [];
   }
+  renderZidProductGrid(zidProductsCache);
+}
+
+(function bootstrapZidDetection(){
+  // محاولة 1: معامل واضح برابط الصفحة
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('store_id') || params.get('storeId') || params.get('store');
+  if(fromUrl){ initZidStore(fromUrl); return; }
+
+  // محاولة 2: نستمع لرسائل postMessage من الصفحة الأم (لو زد ترسل بيانات بعد التحميل)
+  window.addEventListener('message', (e) => {
+    if(zidMerchant) return;
+    const d = e.data;
+    if(d && typeof d === 'object'){
+      const candidate = d.store_id || d.storeId || (d.data && (d.data.store_id || d.data.storeId));
+      if(candidate) initZidStore(String(candidate));
+    }
+  });
+
+  // محاولة 3 (تشخيص مؤقت): لو إحنا جوّا إطار (iframe) بعد ثانيتين وما لقينا شي، نعرض بانر معلومات
+  // يوريني بالضبط وش متاح بالصفحة — يُحذف تلقائياً أول ما نلقى الحل ونحذفه نهائياً من الكود بعدها
+  setTimeout(() => {
+    if(zidMerchant || sallaMerchant) return; // لقينا حل من مكان ثاني، ما نحتاج البانر
+    if(window.top === window.self) return; // مو جوّا إطار أصلاً (الموقع العادي) — ما نعرض شي
+    const banner = document.createElement('div');
+    banner.id = 'zidDebugBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fffbe6;border-bottom:2px solid #f0c419;padding:10px;font-family:monospace;font-size:11px;direction:ltr;text-align:left;max-height:45vh;overflow:auto;';
+    banner.innerHTML = '<b>[تشخيص مؤقت — وصّاف]</b><br>URL: ' + location.href + '<br>Referrer: ' + (document.referrer || '(فاضي)') + '<div id="zidDebugLog" style="margin-top:6px;"></div>';
+    document.body.prepend(banner);
+    window.addEventListener('message', (e) => {
+      const log = document.getElementById('zidDebugLog');
+      if(log) log.innerHTML += '<div>postMessage من: ' + e.origin + ' — البيانات: ' + JSON.stringify(e.data) + '</div>';
+    });
+  }, 2000);
 })();
+
+zidProductGrid && zidProductGrid.addEventListener('click', (e) => {
+  const card = e.target.closest('.salla-product-card');
+  if(!card) return;
+  const id = card.dataset.id;
+  const product = zidProductsCache.find(p => String(p.id) === String(id));
+  if(!product) return;
+
+  document.querySelectorAll('#zidProductGrid .salla-product-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+
+  zidSelectedProduct = { id: product.id, name: product.name };
+  document.getElementById('productName').value = product.name;
+  if(product.price) document.getElementById('price').value = product.price + ' ريال';
+
+  document.getElementById('tool').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+goBtn.addEventListener('click', () => {
+  zidWriteBackBtn.style.display = 'none';
+  zidWriteSuccess.style.display = 'none';
+  zidWriteErr.style.display = 'none';
+});
+
+const zidResultObserver = new MutationObserver(() => {
+  if(zidMerchant && zidSelectedProduct && resultBox.classList.contains('show') && outputLong.textContent.trim()){
+    zidWriteBackBtn.style.display = 'block';
+  }
+});
+zidResultObserver.observe(resultBox, { attributes: true, childList: true, subtree: true });
+
+zidWriteBackBtn && zidWriteBackBtn.addEventListener('click', async () => {
+  if(!zidSelectedProduct || !zidMerchant) return;
+  zidWriteErr.style.display = 'none';
+  zidWriteSuccess.style.display = 'none';
+  zidWriteBackBtn.disabled = true;
+  zidWriteBackBtn.textContent = 'جاري الكتابة...';
+  try{
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'zid_write_back',
+        storeId: zidMerchant,
+        productId: zidSelectedProduct.id,
+        description: outputLong.textContent
+      })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      zidWriteErr.textContent = data.error || 'تعذر الكتابة رجوع بمتجرك';
+      zidWriteErr.style.display = 'block';
+      return;
+    }
+    zidWriteSuccess.style.display = 'block';
+  }catch(e){
+    zidWriteErr.textContent = 'صار خطأ، جرب مرة ثانية';
+    zidWriteErr.style.display = 'block';
+  }finally{
+    zidWriteBackBtn.disabled = false;
+    zidWriteBackBtn.textContent = 'انشر هذا الوصف';
+  }
+});
 </script>
 </body>
 </html>
