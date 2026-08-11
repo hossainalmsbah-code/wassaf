@@ -1922,6 +1922,9 @@ async function initZidStore(storeId){
     if(zidMerchant || sallaMerchant) return; // لقينا حل من مكان ثاني
     if(window.top === window.self) return; // مو جوّا إطار أصلاً (الموقع العادي) — ما نعرض شي
     if(!document.referrer.includes('zid.sa')) return; // إطار من مصدر ثاني (زي سلة) — مو شأننا
+    // [إضافة جديدة] نخفي عناصر الموقع العامة فوراً (زي سلة بالضبط)، حتى قبل ما نعرف رقم المتجر —
+    // بدل ما ننتظر لين يكتب التاجر رقمه ويضغط "احفظ"، عشان الصفحة تبان نظيفة من أول لحظة
+    document.body.classList.add('zid-embedded');
     const manualBox = document.getElementById('zidManualBox');
     if(manualBox) manualBox.style.display = 'block';
   }, 1200);
