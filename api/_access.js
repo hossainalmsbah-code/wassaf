@@ -33,6 +33,20 @@ async function bindOrCheckDevice(code, deviceId) {
 }
 // يتحقق من صلاحية كود الوصول، حده الشهري، وربطه بالجهاز
 async function checkAccessCode(code, deviceId) {
+  // [إضافة جديدة] كود ثابت مخصص لمراجعي سلة بس — يفتح كل الميزات (رفع دفعة، توليد من صورة، محتوى تسويقي)
+  // بدون قفل جهاز وبدون حد شهري حقيقي، وبدون أي علاقة بأكواد الزبائن الفعلية أو Redis
+  if (code === '123123') {
+    return {
+      ok: true,
+      remaining: 999999,
+      cap: 999999,
+      used: 0,
+      plan: 'سنوي',
+      usageKey: `usage:reviewer:${currentMonthKey()}`,
+      deviceBoundNow: false
+    };
+  }
+
   const codeData = await redisCommand(['GET', `code:${code}`]);
   if (!codeData) {
     return { ok: false, reason: 'invalid' };
