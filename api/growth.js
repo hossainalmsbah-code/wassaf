@@ -76,7 +76,7 @@ async function handleZidListProducts(body, res) {
     id: p.id,
     name: (p.name && (p.name.ar || p.name.en)) || p.name || '',
     price: p.price || p.formatted_price || '',
-    image: (p.images && p.images[0] && p.images[0].image && p.images[0].image.url) || (p.thumbnail && p.thumbnail.url) || ''
+    image: (p.images && p.images[0] && p.images[0].image && (p.images[0].image.medium || p.images[0].image.thumbnail || p.images[0].image.large || p.images[0].image.small || p.images[0].image.full_size)) || ''
   }));
 
   res.status(200).json({ ok: true, products });
