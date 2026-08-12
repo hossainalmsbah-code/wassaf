@@ -66,68 +66,7 @@ async function handleZidListProducts(body, res) {
     return;
   }
   if (!result.ok) {
-    // [تشخيص مؤقت] نوري شكل التوكنات المخزّنة + نختبر endpoint ثاني تماماً (بيانات الحساب) بنفس التوكن
-    // عشان نعرف هل "No such user" يصير بكل الطلبات لهالتوكن أو بمسار المنتجات بس — نحذف هذا بعد الحل
-    let debugTokenInfo = null;
-    let profileCheck = null;
-    let realStoreIdTest = null;
-    try {
-      const raw = await redisCommand(['GET', `zid_store:${storeId}`]);
-      const store = raw ? JSON.parse(raw) : null;
-      if (store) {
-        const decodeJwt = (jwt) => {
-          try {
-            const parts = (jwt || '').split('.');
-            if (parts.length < 2) return null;
-            return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
-          } catch (e) { return null; }
-        };
-        debugTokenInfo = {
-          accessTokenLength: store.accessToken ? store.accessToken.length : 0,
-          accessTokenPreview: store.accessToken ? store.accessToken.slice(0, 15) : null,
-          authorizationTokenLength: store.authorizationToken ? store.authorizationToken.length : 0,
-          authorizationTokenPreview: store.authorizationToken ? store.authorizationToken.slice(0, 15) : null,
-          authorizationDecoded: decodeJwt(store.authorizationToken),
-          installedAt: store.installedAt
-        };
-
-        // اختبار موازي: نفس التوكن بالضبط، endpoint مختلف تماماً (بيانات الحساب مو المنتجات)
-        try {
-          const profileRes = await fetch('https://api.zid.sa/v1/managers/account/profile', {
-            headers: {
-              'Authorization': `Bearer ${store.authorizationToken}`,
-              'x-manager-token': store.accessToken,
-              'Accept-Language': 'ar'
-            }
-          });
-          let profileData;
-          try { profileData = await profileRes.json(); } catch (e) { profileData = null; }
-          profileCheck = { status: profileRes.status, ok: profileRes.ok, data: profileData };
-        } catch (e) {
-          profileCheck = { error: e.message };
-        }
-
-        // اختبار موازي ثالث: نفس التوكن، بس نفرض Store-Id = رقم متجر xoxo الحقيقي من لوحة زد (3201140)
-        // بدل الرقم المستخرج من sub بالتوكن (3267562) — نتأكد هل sub يمثل حساب المثبّت مو رقم المتجر
-        try {
-          const realStoreIdRes = await fetch('https://api.zid.sa/v1/products/?page_size=30', {
-            headers: {
-              'Authorization': `Bearer ${store.authorizationToken}`,
-              'x-manager-token': store.accessToken,
-              'Role': 'Manager',
-              'Store-Id': '3201140',
-              'Accept-Language': 'ar'
-            }
-          });
-          let realStoreIdData;
-          try { realStoreIdData = await realStoreIdRes.json(); } catch (e) { realStoreIdData = null; }
-          realStoreIdTest = { status: realStoreIdRes.status, ok: realStoreIdRes.ok, data: realStoreIdData };
-        } catch (e) {
-          realStoreIdTest = { error: e.message };
-        }
-      }
-    } catch (e) {}
-    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data, debugTokenInfo, profileCheck, realStoreIdTest });
+    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data });
     return;
   }
 

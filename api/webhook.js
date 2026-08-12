@@ -595,29 +595,29 @@ async function handleZidOAuthCallback(req, res) {
       return;
     }
 
-    // [إصلاح جوهري] اكتشفنا بالاختبار المباشر إن "sub" داخل التوكن يمثل حساب المُثبِّت، مو رقم المتجر الحقيقي —
-    // رقم المتجر الحقيقي المطلوب بمسار المنتجات مختلف تماماً (تأكدنا: sub رجع 3267562 بينما رقم المتجر الفعلي 3201140).
-    // الحل: نستدعي مسار المنتجات بدون هيدر Store-Id فور نجاح تبادل التوكن، ونطلع رقم المتجر الحقيقي من البيانات الراجعة نفسها.
+    // [إصلاح جوهري نهائي] بعد تفعيل صلاحيات الحساب الإضافية، تأكدنا إن مسار بيانات الحساب
+    // (managers/account/profile) يرجع رقم المتجر الحقيقي مباشرة بحقل user.store.id — هذا مسار موثوق
+    // لأي متجر (خلاف محاولة تخمين رقم المتجر من مسار المنتجات اللي يحتاج Store-Id من الأساس)
     const decoded = decodeJwtPayload(tokenData.authorization || tokenData.access_token || '');
     const subFallback = decoded && decoded.sub;
 
     let storeId = null;
     try {
-      const probeRes = await fetch('https://api.zid.sa/v1/products/?page_size=1', {
+      const profileRes = await fetch('https://api.zid.sa/v1/managers/account/profile', {
         headers: {
           'Authorization': `Bearer ${tokenData.authorization}`,
           'x-manager-token': tokenData.access_token,
           'Accept-Language': 'ar'
         }
       });
-      if (probeRes.ok) {
-        const probeData = await probeRes.json();
-        const realId = probeData && probeData.results && probeData.results[0] && probeData.results[0].store_id;
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        const realId = profileData && profileData.user && profileData.user.store && profileData.user.store.id;
         if (realId) storeId = String(realId);
       }
     } catch (e) { /* نكمل على الحل الاحتياطي تحت */ }
 
-    // لو ما قدرنا نكتشف رقم المتجر الحقيقي تلقائياً (مثلاً متجر جديد بدون أي منتج بعد)، نرجع لـsub كحل احتياطي مؤقت
+    // لو ما قدرنا نكتشف رقم المتجر الحقيقي تلقائياً لأي سبب، نرجع لـsub كحل احتياطي مؤقت
     if (!storeId) storeId = subFallback;
 
     if (!storeId) {
