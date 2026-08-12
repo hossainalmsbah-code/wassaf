@@ -916,13 +916,6 @@ document.addEventListener('click', (e) => {
   const link = e.target.closest('a[href="#pricing"]');
   if(link){ e.preventDefault(); switchView('pricing'); }
 });
-// [إضافة جديدة] لو الصفحة مفتوحة جوّا سلة أو زد، نفتح مباشرة على أداة التوليد بدون قائمة جانبية —
-// نتأكد بفحص كلاس body (يُضاف لاحقاً بكود سلة/زد الموجود أصلاً) بعد لحظة قصيرة من تحميل الصفحة
-setTimeout(() => {
-  if(document.body.classList.contains('salla-embedded') || document.body.classList.contains('zid-embedded')){
-    switchView('generate');
-  }
-}, 400);
 
 /* ==================== إعدادات عامة محفوظة محلياً ==================== */
 const MAX_BULK_ROWS = 300; // حد أقصى ثابت للرفع الجماعي بغض النظر عن الباقة، لتجنب تحميل زائد
@@ -1980,6 +1973,8 @@ function renderSallaProductGrid(products){
     // [إضافة] نفعّل وضع "جوّا سلة" — يخفي تلقائياً الأقسام غير الضرورية (Hero التسويقي، الأسعار، رفع الـCSV)
     // عشان التركيز يصير بالكامل على قائمة المنتجات وأدوات التوليد
     document.body.classList.add('salla-embedded');
+    // [إضافة جديدة] نفتح قسم التوليد فوراً لحظة تأكيد سلة، بدل الاعتماد على مهلة زمنية قد تسبق الاكتشاف
+    if(typeof switchView === 'function') switchView('generate');
 
     // [إضافة جديدة] نجيب باقة التاجر تلقائياً من اشتراكه عبر سلة نفسها (الفوترة الأصلية) —
     // بدون ما يحتاج يكتب كود وصول يدوي. نعبّي نفس المتغيرات (currentCodeCap/currentCodePlan)
@@ -2115,6 +2110,8 @@ async function initZidStore(storeId){
   if(zidMerchant) return; // كشفناها من قبل، ما نكرر
   zidMerchant = storeId;
   document.body.classList.add('zid-embedded');
+  // [إضافة جديدة] نفتح قسم التوليد فوراً لحظة تأكيد زد، بدل الاعتماد على مهلة زمنية قد تسبق الاكتشاف
+  if(typeof switchView === 'function') switchView('generate');
   zidBox.style.display = 'block';
 
   const manualBox = document.getElementById('zidManualBox');
@@ -2209,6 +2206,8 @@ document.getElementById('zidImportBtn') && document.getElementById('zidImportBtn
     // [إضافة جديدة] نخفي عناصر الموقع العامة فوراً (زي سلة بالضبط)، حتى قبل ما نعرف رقم المتجر —
     // بدل ما ننتظر لين يكتب التاجر رقمه ويضغط "احفظ"، عشان الصفحة تبان نظيفة من أول لحظة
     document.body.classList.add('zid-embedded');
+    // [إضافة جديدة] نفتح قسم التوليد فوراً (يعرض صندوق الإدخال اليدوي جواه) بدل الانتظار
+    if(typeof switchView === 'function') switchView('generate');
     const manualBox = document.getElementById('zidManualBox');
     if(manualBox) manualBox.style.display = 'block';
   }, 1200);
