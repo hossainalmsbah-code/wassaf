@@ -34,6 +34,7 @@ async function zidApiRequest(storeId, path, options = {}) {
     headers: {
       'Authorization': `Bearer ${store.authorizationToken}`,
       'x-manager-token': store.accessToken,
+      'Role': 'Manager',
       'Store-Id': String(storeId),
       'Accept-Language': 'ar',
       'Content-Type': 'application/json',
