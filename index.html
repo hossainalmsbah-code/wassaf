@@ -362,11 +362,12 @@
       <div class="settings-title" style="margin-bottom:0;">🛍️منتجاتك</div>
       <a href="https://www.wassaf.space/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap;">🌐 موقع وصّاف</a>
     </div>
-    <div class="field-hint" style="margin-bottom:14px;">اختر منتج، و سوف يدخل  اسمه وسعره تلقائياً بالأسفل — أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع الصورة مباشرة.</div>
-    <div class="salla-product-grid" id="zidProductGrid">
-      <div class="salla-product-loading">جاري تحميل منتجاتك...</div>
-    </div>
+    <div class="field-hint" style="margin-bottom:14px;">اضغط "استيراد جميع المنتجات" عشان تجيب منتجاتك من متجرك — بعدها اختر منتج وسوف يدخل اسمه وسعره تلقائياً بالأسفل، أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع الصورة مباشرة.</div>
+    <button class="go" id="zidImportBtn" type="button" style="margin-bottom:14px;">استيراد جميع المنتجات</button>
+    <div class="err" id="zidImportErr" style="margin-bottom:10px;display:none;"></div>
+    <div class="salla-product-grid" id="zidProductGrid"></div>
   </div>
+
 
   <!-- [إضافة جديدة] صندوق ربط يدوي مرة وحدة — يظهر بس لو ما قدرنا نكتشف رقم متجر زد تلقائياً -->
   <div class="settings-box" id="zidManualBox" style="display:none;">
@@ -1882,7 +1883,19 @@ async function initZidStore(storeId){
     }
   }catch(e){}
 
-  // نجيب قائمة منتجات المتجر ونعرضها بالشبكة
+  // [تعديل] ما نجيب المنتجات تلقائياً بعد الحين — التاجر يضغط زر "استيراد جميع المنتجات" بنفسه لما يحتاجها
+}
+
+// [إضافة جديدة] استيراد يدوي بضغطة زر — نفس طلب zid_list_products بالضبط، بس التاجر هو اللي يشغّله
+async function importZidProducts(){
+  if(!zidMerchant) return;
+  const btn = document.getElementById('zidImportBtn');
+  const err = document.getElementById('zidImportErr');
+  err.style.display = 'none';
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'جاري الاستيراد...';
+  zidProductGrid.innerHTML = '<div class="salla-product-loading">جاري تحميل منتجاتك...</div>';
   try{
     const listRes = await fetch('/api/growth', {
       method: 'POST',
@@ -1890,12 +1903,27 @@ async function initZidStore(storeId){
       body: JSON.stringify({ action: 'zid_list_products', storeId: zidMerchant })
     });
     const listData = await listRes.json();
-    zidProductsCache = (listRes.ok && listData.ok) ? listData.products : [];
+    if(listRes.ok && listData.ok){
+      zidProductsCache = listData.products;
+      renderZidProductGrid(zidProductsCache);
+    } else {
+      zidProductGrid.innerHTML = '';
+      err.textContent = (listData && listData.error) || 'تعذر جلب منتجاتك من زد، جرب مرة ثانية';
+      err.style.display = 'block';
+    }
   }catch(e){
-    zidProductsCache = [];
+    zidProductGrid.innerHTML = '';
+    err.textContent = 'صار خطأ أثناء الاتصال، جرب مرة ثانية';
+    err.style.display = 'block';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = oldText;
   }
-  renderZidProductGrid(zidProductsCache);
 }
+
+document.getElementById('zidImportBtn') && document.getElementById('zidImportBtn').addEventListener('click', importZidProducts);
+
+
 
 (function bootstrapZidDetection(){
   // محاولة 1: معامل واضح برابط الصفحة (نادراً، بس نسيبها احتياط)
