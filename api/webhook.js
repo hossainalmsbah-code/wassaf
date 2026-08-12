@@ -595,10 +595,30 @@ async function handleZidOAuthCallback(req, res) {
       return;
     }
 
-    // [مهم] "sub" داخل توكن Authorization (JWT) يمثل رقم المتجر — نستخدمه بدل استدعاء API إضافي لجلبه
-    // [إصلاح] زد ترجّع الحقل بحروف صغيرة "authorization"، مو "Authorization" بحرف كبير — هذا كان سبب الفشل
+    // [إصلاح جوهري] اكتشفنا بالاختبار المباشر إن "sub" داخل التوكن يمثل حساب المُثبِّت، مو رقم المتجر الحقيقي —
+    // رقم المتجر الحقيقي المطلوب بمسار المنتجات مختلف تماماً (تأكدنا: sub رجع 3267562 بينما رقم المتجر الفعلي 3201140).
+    // الحل: نستدعي مسار المنتجات بدون هيدر Store-Id فور نجاح تبادل التوكن، ونطلع رقم المتجر الحقيقي من البيانات الراجعة نفسها.
     const decoded = decodeJwtPayload(tokenData.authorization || tokenData.access_token || '');
-    const storeId = decoded && decoded.sub;
+    const subFallback = decoded && decoded.sub;
+
+    let storeId = null;
+    try {
+      const probeRes = await fetch('https://api.zid.sa/v1/products/?page_size=1', {
+        headers: {
+          'Authorization': `Bearer ${tokenData.authorization}`,
+          'x-manager-token': tokenData.access_token,
+          'Accept-Language': 'ar'
+        }
+      });
+      if (probeRes.ok) {
+        const probeData = await probeRes.json();
+        const realId = probeData && probeData.results && probeData.results[0] && probeData.results[0].store_id;
+        if (realId) storeId = String(realId);
+      }
+    } catch (e) { /* نكمل على الحل الاحتياطي تحت */ }
+
+    // لو ما قدرنا نكتشف رقم المتجر الحقيقي تلقائياً (مثلاً متجر جديد بدون أي منتج بعد)، نرجع لـsub كحل احتياطي مؤقت
+    if (!storeId) storeId = subFallback;
 
     if (!storeId) {
       // [تشخيص مؤقت] نعرض الرد الخام من زد وناتج فك التوكن مباشرة بالصفحة، عشان نشوف شكله الحقيقي ونصلح القراءة بدون تخمين — نحذف هذا بعد ما نحل المشكلة
