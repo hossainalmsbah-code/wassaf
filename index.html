@@ -110,7 +110,23 @@
   .app-view{display:none;}
   .app-view.active{display:block;}
   /* جوّا سلة/زد: نخفي القائمة الجانبية بالكامل، الأداة تفتح مباشرة بدون أي تنقّل إضافي */
-  body.salla-embedded .app-sidebar, body.zid-embedded .app-sidebar{display:none;}
+  /* [تعديل] القائمة الجانبية تظل ظاهرة جوّا سلة/زد — نستثني بس عناصر مو مناسبة لسياق المتجر المضمّن:
+     رفع دفعة منتجات (كان مستثنى بالتصميم الأصلي)، حسابي (نظام دخول منفصل ما ينطبق هنا)، والأسعار (فوترة سلة/زد أصلية) */
+  body.salla-embedded .sidebar-item[data-view="bulk"],
+  body.salla-embedded .sidebar-item[data-view="pricing"],
+  body.salla-embedded a.sidebar-item[href="/account.html"],
+  body.salla-embedded .sidebar-group-label.account-label,
+  body.salla-embedded #footerPricingLink,
+  body.zid-embedded .sidebar-item[data-view="bulk"],
+  body.zid-embedded .sidebar-item[data-view="pricing"],
+  body.zid-embedded a.sidebar-item[href="/account.html"],
+  body.zid-embedded .sidebar-group-label.account-label,
+  body.zid-embedded #footerPricingLink
+  {display:none !important;}
+  /* نفس الاستثناء ببطاقات الرئيسية السريعة (رفع دفعة، حسابي) */
+  body.salla-embedded .home-card-bulk, body.salla-embedded .home-card-account,
+  body.zid-embedded .home-card-bulk, body.zid-embedded .home-card-account
+  {display:none !important;}
   body.salla-embedded .app-main .wrap, body.zid-embedded .app-main .wrap{max-width:100%;padding-top:0;}
   @media (max-width:900px){
     .app-shell{flex-direction:column;}
@@ -162,6 +178,9 @@
     .nav-account{display:none;}
   }
   .hero{text-align:center;padding:20px 0 40px;}
+  .home-welcome{padding:20px 0 40px;}
+  .home-welcome h1{font-weight:900;font-size:32px;margin:0 0 12px;line-height:1.4;}
+  .home-welcome p{color:var(--ink-dim);font-size:16px;max-width:480px;margin:0 auto;line-height:1.8;}
   .hero h1{font-family:'Inter','Cairo',sans-serif;font-weight:900;font-size:36px;margin:0 0 12px;line-height:1.4;}
   .hero p{color:var(--ink-dim);font-size:17px;max-width:520px;margin:0 auto;line-height:1.8;}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
@@ -410,7 +429,7 @@
       رفع دفعة منتجات
     </button>
 
-    <div class="sidebar-group-label">الحساب</div>
+    <div class="sidebar-group-label account-label">الحساب</div>
     <a class="sidebar-item" href="/account.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
       حسابي
@@ -427,7 +446,7 @@
   <!-- [إضافة] يظهر بس لو الصفحة مفتوحة جوّا لوحة سلة -->
   <!-- [إضافة جديدة] الرئيسية — لوحة ترحيبية بسيطة توجّه لكل قسم -->
   <div id="view-home" class="app-view active">
-    <section class="hero" style="padding-top:8px;">
+    <section class="home-welcome" style="padding-top:8px;text-align:center;">
       <h1>أهلاً فيك بوصّاف 👋</h1>
       <p>اختر أي أداة من القائمة الجانبية، أو ابدأ مباشرة بتوليد أول وصف لمنتجك.</p>
     </section>
@@ -440,11 +459,11 @@
         <div class="settings-title" style="margin-bottom:6px;">📸 توليد من صورة</div>
         <div class="field-hint">ارفع صورة منتجك بس، ووصّاف يكتب لك الوصف كامل تلقائياً.</div>
       </div>
-      <div class="settings-box" style="cursor:pointer;" onclick="switchView('bulk')">
+      <div class="settings-box home-card-bulk" style="cursor:pointer;" onclick="switchView('bulk')">
         <div class="settings-title" style="margin-bottom:6px;">📊 رفع دفعة منتجات</div>
         <div class="field-hint">ارفع ملف Excel فيه منتجاتك، وولّد الأوصاف لكلها دفعة وحدة.</div>
       </div>
-      <div class="settings-box" style="cursor:pointer;" onclick="window.location.href='/account.html'">
+      <div class="settings-box home-card-account" style="cursor:pointer;" onclick="window.location.href='/account.html'">
         <div class="settings-title" style="margin-bottom:6px;">👤 حسابي</div>
         <div class="field-hint">باقتك، استخدامك الشهري، وآخر المنتجات اللي ولّدت لها وصف.</div>
       </div>
@@ -870,7 +889,7 @@
       <div class="footer-col">
         <div class="footer-col-title">المنتج</div>
         <a href="javascript:void(0)" onclick="switchView('generate')">الأداة</a>
-        <a href="javascript:void(0)" onclick="switchView('pricing')">الأسعار</a>
+        <a id="footerPricingLink" href="javascript:void(0)" onclick="switchView('pricing')">الأسعار</a>
         <a href="/about.html">من نحن</a>
         <a href="/faq.html">الأسئلة الشائعة</a>
       </div>
@@ -1973,8 +1992,6 @@ function renderSallaProductGrid(products){
     // [إضافة] نفعّل وضع "جوّا سلة" — يخفي تلقائياً الأقسام غير الضرورية (Hero التسويقي، الأسعار، رفع الـCSV)
     // عشان التركيز يصير بالكامل على قائمة المنتجات وأدوات التوليد
     document.body.classList.add('salla-embedded');
-    // [إضافة جديدة] نفتح قسم التوليد فوراً لحظة تأكيد سلة، بدل الاعتماد على مهلة زمنية قد تسبق الاكتشاف
-    if(typeof switchView === 'function') switchView('generate');
 
     // [إضافة جديدة] نجيب باقة التاجر تلقائياً من اشتراكه عبر سلة نفسها (الفوترة الأصلية) —
     // بدون ما يحتاج يكتب كود وصول يدوي. نعبّي نفس المتغيرات (currentCodeCap/currentCodePlan)
@@ -2110,8 +2127,6 @@ async function initZidStore(storeId){
   if(zidMerchant) return; // كشفناها من قبل، ما نكرر
   zidMerchant = storeId;
   document.body.classList.add('zid-embedded');
-  // [إضافة جديدة] نفتح قسم التوليد فوراً لحظة تأكيد زد، بدل الاعتماد على مهلة زمنية قد تسبق الاكتشاف
-  if(typeof switchView === 'function') switchView('generate');
   zidBox.style.display = 'block';
 
   const manualBox = document.getElementById('zidManualBox');
@@ -2206,8 +2221,6 @@ document.getElementById('zidImportBtn') && document.getElementById('zidImportBtn
     // [إضافة جديدة] نخفي عناصر الموقع العامة فوراً (زي سلة بالضبط)، حتى قبل ما نعرف رقم المتجر —
     // بدل ما ننتظر لين يكتب التاجر رقمه ويضغط "احفظ"، عشان الصفحة تبان نظيفة من أول لحظة
     document.body.classList.add('zid-embedded');
-    // [إضافة جديدة] نفتح قسم التوليد فوراً (يعرض صندوق الإدخال اليدوي جواه) بدل الانتظار
-    if(typeof switchView === 'function') switchView('generate');
     const manualBox = document.getElementById('zidManualBox');
     if(manualBox) manualBox.style.display = 'block';
   }, 1200);
