@@ -70,6 +70,7 @@ async function handleZidListProducts(body, res) {
     // عشان نعرف هل "No such user" يصير بكل الطلبات لهالتوكن أو بمسار المنتجات بس — نحذف هذا بعد الحل
     let debugTokenInfo = null;
     let profileCheck = null;
+    let realStoreIdTest = null;
     try {
       const raw = await redisCommand(['GET', `zid_store:${storeId}`]);
       const store = raw ? JSON.parse(raw) : null;
@@ -105,9 +106,28 @@ async function handleZidListProducts(body, res) {
         } catch (e) {
           profileCheck = { error: e.message };
         }
+
+        // اختبار موازي ثالث: نفس التوكن، بس نفرض Store-Id = رقم متجر xoxo الحقيقي من لوحة زد (3201140)
+        // بدل الرقم المستخرج من sub بالتوكن (3267562) — نتأكد هل sub يمثل حساب المثبّت مو رقم المتجر
+        try {
+          const realStoreIdRes = await fetch('https://api.zid.sa/v1/products/?page_size=30', {
+            headers: {
+              'Authorization': `Bearer ${store.authorizationToken}`,
+              'x-manager-token': store.accessToken,
+              'Role': 'Manager',
+              'Store-Id': '3201140',
+              'Accept-Language': 'ar'
+            }
+          });
+          let realStoreIdData;
+          try { realStoreIdData = await realStoreIdRes.json(); } catch (e) { realStoreIdData = null; }
+          realStoreIdTest = { status: realStoreIdRes.status, ok: realStoreIdRes.ok, data: realStoreIdData };
+        } catch (e) {
+          realStoreIdTest = { error: e.message };
+        }
       }
     } catch (e) {}
-    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data, debugTokenInfo, profileCheck });
+    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data, debugTokenInfo, profileCheck, realStoreIdTest });
     return;
   }
 
