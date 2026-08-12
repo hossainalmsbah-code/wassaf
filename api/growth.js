@@ -66,8 +66,10 @@ async function handleZidListProducts(body, res) {
     return;
   }
   if (!result.ok) {
-    // [تشخيص مؤقت] نوري شكل التوكنات المخزّنة (بدون كشفها كاملة) عشان نفهم سبب "No such user" — نحذف هذا بعد الحل
+    // [تشخيص مؤقت] نوري شكل التوكنات المخزّنة + نختبر endpoint ثاني تماماً (بيانات الحساب) بنفس التوكن
+    // عشان نعرف هل "No such user" يصير بكل الطلبات لهالتوكن أو بمسار المنتجات بس — نحذف هذا بعد الحل
     let debugTokenInfo = null;
+    let profileCheck = null;
     try {
       const raw = await redisCommand(['GET', `zid_store:${storeId}`]);
       const store = raw ? JSON.parse(raw) : null;
@@ -87,9 +89,25 @@ async function handleZidListProducts(body, res) {
           authorizationDecoded: decodeJwt(store.authorizationToken),
           installedAt: store.installedAt
         };
+
+        // اختبار موازي: نفس التوكن بالضبط، endpoint مختلف تماماً (بيانات الحساب مو المنتجات)
+        try {
+          const profileRes = await fetch('https://api.zid.sa/v1/managers/account/profile', {
+            headers: {
+              'Authorization': `Bearer ${store.authorizationToken}`,
+              'x-manager-token': store.accessToken,
+              'Accept-Language': 'ar'
+            }
+          });
+          let profileData;
+          try { profileData = await profileRes.json(); } catch (e) { profileData = null; }
+          profileCheck = { status: profileRes.status, ok: profileRes.ok, data: profileData };
+        } catch (e) {
+          profileCheck = { error: e.message };
+        }
       }
     } catch (e) {}
-    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data, debugTokenInfo });
+    res.status(502).json({ error: 'تعذر جلب منتجات متجرك من زد', detail: result.data, debugTokenInfo, profileCheck });
     return;
   }
 
