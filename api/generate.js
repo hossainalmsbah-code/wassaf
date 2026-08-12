@@ -1,6 +1,11 @@
 const { redisCommand } = require('./_redis');
-const { checkAccessCode, incrementUsage, checkSallaMerchantSubscription, checkZidMerchantSubscription } = require('./_access');
+const { checkAccessCode, incrementUsage, currentMonthKey, checkSallaMerchantSubscription, checkZidMerchantSubscription } = require('./_access');
 const { buildCacheKey, getCachedGeneration, setCachedGeneration, logGeneration } = require('./_library');
+
+// [إضافة جديدة] ميزة SEO التفصيلية (عنوان + Meta + كلمات مفتاحية) — سنوي/نصف سنوي بدون حد،
+// باقة شهري محدودة بحد شهري مستقل عن حد الأوصاف العام، وباقي الباقات مقفولة بالكامل
+const SEO_UNLIMITED_PLANS = ['نصف سنوي', 'سنوي'];
+const SEO_MONTHLY_PLAN_LIMIT = 10;
 
 const FRAMEWORK_LABELS = {
   AIDA: 'AIDA (الانتباه ← الاهتمام ← الرغبة ← الفعل) — الأنسب للمنتجات العاطفية ولايف ستايل (عطور، إكسسوارات، هدايا)',
@@ -463,13 +468,34 @@ module.exports = async (req, res) => {
         } catch (e) { /* فشل التسجيل التاريخي ما يوقف التوليد نفسه */ }
       }
 
+      // [إضافة جديدة] نقرر هل نرسل بيانات SEO التفصيلية (عنوان، Meta، كلمات مفتاحية) حسب الباقة:
+      // سنوي/نصف سنوي = بدون حد | شهري = حد 10 بالشهر (عداد مستقل) | باقي الباقات = مقفولة بالكامل
+      let includeSeoDetails = false;
+      let seoLimitReached = false;
+      const plan = accessCheck.plan;
+      if (SEO_UNLIMITED_PLANS.includes(plan)) {
+        includeSeoDetails = true;
+      } else if (plan === 'شهري' && accessCode) {
+        const seoUsageKey = `seo_usage:${accessCode}:${currentMonthKey()}`;
+        const seoUsedSoFar = parseInt((await redisCommand(['GET', seoUsageKey])) || '0', 10);
+        if (seoUsedSoFar < SEO_MONTHLY_PLAN_LIMIT) {
+          includeSeoDetails = true;
+          await redisCommand(['INCR', seoUsageKey]);
+          await redisCommand(['EXPIRE', seoUsageKey, 45 * 24 * 60 * 60]);
+        } else {
+          seoLimitReached = true;
+        }
+      }
+
       res.status(200).json({
         long: parsed.long || '',
         short: parsed.short || '',
         seo: parsed.seo || '',
-        seoTitle: parsed.seoTitle || '',
-        seoMeta: parsed.seoMeta || '',
-        seoKeywords: Array.isArray(parsed.seoKeywords) ? parsed.seoKeywords : [],
+        seoTitle: includeSeoDetails ? (parsed.seoTitle || '') : '',
+        seoMeta: includeSeoDetails ? (parsed.seoMeta || '') : '',
+        seoKeywords: includeSeoDetails && Array.isArray(parsed.seoKeywords) ? parsed.seoKeywords : [],
+        seoLocked: !includeSeoDetails,
+        seoLimitReached,
         remaining: remainingAfter,
         cap: accessCheck.cap
       });
