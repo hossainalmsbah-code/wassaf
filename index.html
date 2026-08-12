@@ -1083,8 +1083,40 @@ function seoRateLength(len, minIdeal, maxIdeal){
 
 function renderSeoPanel(data){
   const panel = document.getElementById('seoPanel');
+
+  // [إضافة جديدة] لو الميزة مقفولة (باقة غير مؤهلة) أو خلصت حصتها الشهرية، نعرض رسالة واضحة بدل ما نخفي الصندوق بصمت
+  if(data.seoLocked){
+    panel.style.display = 'block';
+    panel.innerHTML = data.seoLimitReached
+      ? `<div class="result-head"><div class="label">تحسين SEO — تفاصيل وتقييم</div></div>
+         <div class="field-hint" style="color:var(--accent);font-weight:700;">🔒 خلصت حصتك الشهرية من ميزة SEO التفصيلية (10 مرات). رقّي باقتك للنصف سنوية أو السنوية عشان تصير بدون حد. <a href="#pricing" style="color:var(--accent);">شوف الباقات من هنا</a></div>`
+      : `<div class="result-head"><div class="label">تحسين SEO — تفاصيل وتقييم</div></div>
+         <div class="field-hint" style="color:var(--accent);font-weight:700;">🔒 هذي الميزة حصرية لمشتركي الباقة الشهرية (10 مرات بالشهر) أو النصف سنوية والسنوية (بدون حد). <a href="#pricing" style="color:var(--accent);">شوف الباقات من هنا</a></div>`;
+    return;
+  }
+
   const hasSeoData = data.seoTitle || data.seoMeta || (data.seoKeywords && data.seoKeywords.length);
   if(!hasSeoData){ panel.style.display = 'none'; return; }
+
+  // نعيد بناء الصندوق الأصلي (لو كان قبل شوي معروض كرسالة قفل، نرجّعه لشكله الطبيعي)
+  panel.innerHTML = `
+    <div class="result-head"><div class="label">تحسين SEO — تفاصيل وتقييم</div></div>
+    <div class="seo-grid">
+      <div class="seo-field">
+        <div class="seo-field-head"><span>عنوان SEO</span><span class="seo-badge" id="seoTitleBadge"></span></div>
+        <div class="seo-field-text" id="seoTitleText"></div>
+        <div class="seo-field-count" id="seoTitleCount"></div>
+      </div>
+      <div class="seo-field">
+        <div class="seo-field-head"><span>وصف Meta</span><span class="seo-badge" id="seoMetaBadge"></span></div>
+        <div class="seo-field-text" id="seoMetaText"></div>
+        <div class="seo-field-count" id="seoMetaCount"></div>
+      </div>
+      <div class="seo-field">
+        <div class="seo-field-head"><span>كلمات مفتاحية</span><span class="seo-badge" id="seoKeywordsBadge"></span></div>
+        <div class="seo-tags" id="seoKeywordsTags"></div>
+      </div>
+    </div>`;
   panel.style.display = 'block';
 
   const title = data.seoTitle || '';
