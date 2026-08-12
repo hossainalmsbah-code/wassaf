@@ -160,6 +160,20 @@
   .result{margin-top:28px;display:none;}
   .result.show{display:block;}
   .result-block{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(30,27,46,0.05);}
+
+  /* [إضافة جديدة] لوحة SEO البصرية */
+  .seo-grid{display:flex;flex-direction:column;gap:16px;}
+  .seo-field{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .seo-field-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .seo-field-head span:first-child{font-size:13px;font-weight:700;color:var(--ink);}
+  .seo-badge{font-size:11px;font-weight:800;padding:3px 10px;border-radius:10px;white-space:nowrap;}
+  .seo-badge.excellent{background:#E8F8ED;color:var(--good);}
+  .seo-badge.good{background:#FFF4E0;color:#B8860B;}
+  .seo-badge.warn{background:var(--accent-dim);color:var(--accent);}
+  .seo-field-text{font-size:14px;color:var(--ink);line-height:1.7;}
+  .seo-field-count{font-size:11.5px;color:var(--ink-dim);margin-top:6px;font-family:'Inter',sans-serif;}
+  .seo-tags{display:flex;flex-wrap:wrap;gap:8px;}
+  .seo-tag{background:var(--accent-dim);color:var(--accent);font-size:12px;font-weight:700;padding:5px 12px;border-radius:14px;}
   .result-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);}
   .result-head .label{font-size:12px;color:var(--accent2);font-weight:700;letter-spacing:.5px;}
   .copy-btn{background:none;border:1px solid var(--line);color:var(--ink-dim);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;}
@@ -483,6 +497,38 @@
         <button class="copy-btn" data-target="outputSeo">نسخ النص</button>
       </div>
       <div class="output small" id="outputSeo"></div>
+    </div>
+
+    <!-- [إضافة جديدة] لوحة SEO بصرية — عنوان وMeta وكلمات مفتاحية بتقييم حي حسب أفضل الممارسات -->
+    <div class="result-block" id="seoPanel" style="display:none;">
+      <div class="result-head">
+        <div class="label">تحسين SEO — تفاصيل وتقييم</div>
+      </div>
+      <div class="seo-grid">
+        <div class="seo-field">
+          <div class="seo-field-head">
+            <span>عنوان SEO</span>
+            <span class="seo-badge" id="seoTitleBadge"></span>
+          </div>
+          <div class="seo-field-text" id="seoTitleText"></div>
+          <div class="seo-field-count" id="seoTitleCount"></div>
+        </div>
+        <div class="seo-field">
+          <div class="seo-field-head">
+            <span>وصف Meta</span>
+            <span class="seo-badge" id="seoMetaBadge"></span>
+          </div>
+          <div class="seo-field-text" id="seoMetaText"></div>
+          <div class="seo-field-count" id="seoMetaCount"></div>
+        </div>
+        <div class="seo-field">
+          <div class="seo-field-head">
+            <span>كلمات مفتاحية</span>
+            <span class="seo-badge" id="seoKeywordsBadge"></span>
+          </div>
+          <div class="seo-tags" id="seoKeywordsTags"></div>
+        </div>
+      </div>
     </div>
     <button class="go secondary" id="shareBtn" type="button" style="margin-top:8px;">شارك الوصف كرابط</button>
     <div class="field-hint" id="shareResultBox" style="display:none;margin-top:10px;"></div>
@@ -1026,6 +1072,48 @@ async function callGenerate({ productName, audience, features, price, framework,
 }
 
 /* ==================== توليد فردي ==================== */
+/* [إضافة جديدة] لوحة SEO البصرية — تحسب تقييم حقيقي حسب أفضل الممارسات (طول العنوان 40-60، طول الـMeta 130-160، عدد الكلمات المفتاحية) */
+function seoRateLength(len, minIdeal, maxIdeal){
+  if(len === 0) return { cls: 'warn', label: 'ناقص' };
+  if(len >= minIdeal && len <= maxIdeal) return { cls: 'excellent', label: 'ممتاز' };
+  const distance = len < minIdeal ? (minIdeal - len) : (len - maxIdeal);
+  if(distance <= 15) return { cls: 'good', label: 'جيد' };
+  return { cls: 'warn', label: 'يحتاج تحسين' };
+}
+
+function renderSeoPanel(data){
+  const panel = document.getElementById('seoPanel');
+  const hasSeoData = data.seoTitle || data.seoMeta || (data.seoKeywords && data.seoKeywords.length);
+  if(!hasSeoData){ panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const title = data.seoTitle || '';
+  const titleRate = seoRateLength(title.length, 40, 60);
+  document.getElementById('seoTitleText').textContent = title || '—';
+  document.getElementById('seoTitleCount').textContent = `${title.length} حرف — المثالي 40-60 حرف`;
+  const titleBadge = document.getElementById('seoTitleBadge');
+  titleBadge.textContent = titleRate.label;
+  titleBadge.className = 'seo-badge ' + titleRate.cls;
+
+  const meta = data.seoMeta || '';
+  const metaRate = seoRateLength(meta.length, 130, 160);
+  document.getElementById('seoMetaText').textContent = meta || '—';
+  document.getElementById('seoMetaCount').textContent = `${meta.length} حرف — المثالي 130-160 حرف`;
+  const metaBadge = document.getElementById('seoMetaBadge');
+  metaBadge.textContent = metaRate.label;
+  metaBadge.className = 'seo-badge ' + metaRate.cls;
+
+  const keywords = Array.isArray(data.seoKeywords) ? data.seoKeywords : [];
+  const kwTagsEl = document.getElementById('seoKeywordsTags');
+  kwTagsEl.innerHTML = keywords.length
+    ? keywords.map(k => `<span class="seo-tag">${escapeHTML(k)}</span>`).join('')
+    : '<span style="font-size:12.5px;color:var(--ink-dim);">ما فيه كلمات مفتاحية</span>';
+  const kwBadge = document.getElementById('seoKeywordsBadge');
+  const kwRate = keywords.length >= 5 && keywords.length <= 8 ? { cls: 'excellent', label: 'ممتاز' } : (keywords.length > 0 ? { cls: 'good', label: 'جيد' } : { cls: 'warn', label: 'ناقص' });
+  kwBadge.textContent = kwRate.label;
+  kwBadge.className = 'seo-badge ' + kwRate.cls;
+}
+
 document.getElementById('goBtn').addEventListener('click', async () => {
   const productName = document.getElementById('productName').value.trim();
   const audience = document.getElementById('audience').value.trim();
@@ -1063,6 +1151,7 @@ document.getElementById('goBtn').addEventListener('click', async () => {
   outputLong.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> يكتب الأوصاف الآن</div>';
   outputShort.textContent = '';
   outputSeo.textContent = '';
+  document.getElementById('seoPanel').style.display = 'none';
   // [إضافة] تصفير صندوق المحتوى التسويقي — منتج جديد يبدأ من الصفر
   document.getElementById('marketingResult').style.display = 'none';
   document.getElementById('marketingErr').style.display = 'none';
@@ -1073,6 +1162,7 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     outputLong.textContent = data.long || 'ما رجع نص، جرب مرة ثانية.';
     outputShort.textContent = data.short || '—';
     outputSeo.textContent = data.seo || '—';
+    renderSeoPanel(data);
     // [إضافة] نحفظ بيانات المنتج الحالي لاستخدامها لو التاجر ضغط "ولّد محتوى تسويقي" بعدين
     lastGeneratedProduct = { productName, audience, features, price, framework, brandTone, style, longDescription: data.long || '' };
   }catch(e){
