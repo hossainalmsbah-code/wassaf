@@ -450,6 +450,19 @@ module.exports = async (req, res) => {
         fromCache: Boolean(cachedResult)
       });
 
+      // [إضافة جديدة] ذاكرة بسيطة مستقلة — آخر 5 منتجات ولّد لها التاجر وصف، تُعرض بصفحة "حسابي"
+      // مستقلة تماماً عن _library.js، تُخزّن مباشرة بـRedis كقائمة (list) بحد أقصى 5 عناصر
+      if (accessCode) {
+        try {
+          const historyEntry = JSON.stringify({
+            productName,
+            date: new Date().toISOString()
+          });
+          await redisCommand(['LPUSH', `history:${accessCode}`, historyEntry]);
+          await redisCommand(['LTRIM', `history:${accessCode}`, 0, 4]);
+        } catch (e) { /* فشل التسجيل التاريخي ما يوقف التوليد نفسه */ }
+      }
+
       res.status(200).json({
         long: parsed.long || '',
         short: parsed.short || '',

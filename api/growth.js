@@ -127,6 +127,20 @@ async function getOrCreateReferralToken(accessCode) {
 }
 
 // ---------- بيانات الحساب: الباقة، الاستخدام، كود وعداد الإحالة ----------
+// [إضافة جديدة] يجيب آخر 5 منتجات ولّد لها التاجر وصف (ذاكرة بسيطة، تُستخدم بصفحة "حسابي")
+async function getRecentHistory(accessCode) {
+  if (!accessCode) return [];
+  try {
+    const raw = await redisCommand(['LRANGE', `history:${accessCode}`, 0, 4]);
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item) => {
+      try { return JSON.parse(item); } catch (e) { return null; }
+    }).filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
 async function handleAccountInfo(body, res) {
   const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
   const deviceId = (body.deviceId || '').toString().trim();
@@ -148,6 +162,7 @@ async function handleAccountInfo(body, res) {
   const used = typeof result.used === 'number' ? result.used : (cap - (result.remaining || 0));
   const remaining = typeof result.remaining === 'number' ? result.remaining : Math.max(cap - used, 0);
   const estimatedReferralBonus = Math.max(Math.round(cap * REFERRAL_BONUS_RATIO), 3);
+  const recentHistory = await getRecentHistory(accessCode);
 
   res.status(200).json({
     valid: true,
@@ -157,7 +172,8 @@ async function handleAccountInfo(body, res) {
     remaining,
     referralToken,
     referralCount,
-    estimatedReferralBonus
+    estimatedReferralBonus,
+    recentHistory
   });
 }
 
@@ -980,7 +996,8 @@ async function handleAuthLogin(req, res, body) {
 
   const token = await createSession(email);
   setSessionCookie(res, token);
-  res.status(200).json({ ok: true, email });
+  // [إضافة جديدة] نرجّع كود الوصول المرتبط بالحساب مباشرة وقت الدخول — عشان account.html يزامنه فوراً بالأداة الرئيسية
+  res.status(200).json({ ok: true, email, accessCode: parsed.accessCode || null });
 }
 
 // ---------- خروج ----------
@@ -1039,6 +1056,7 @@ async function handleAuthMe(req, res) {
   const referralCount = parseInt((await redisCommand(['GET', `referral_count:${parsed.accessCode}`])) || '0', 10);
   const referralToken = await getOrCreateReferralToken(parsed.accessCode);
   const estimatedReferralBonus = Math.max(Math.round((accessResult.cap || 0) * REFERRAL_BONUS_RATIO), 3);
+  const recentHistory = await getRecentHistory(parsed.accessCode);
 
   res.status(200).json({
     ok: true,
@@ -1048,9 +1066,11 @@ async function handleAuthMe(req, res) {
     cap: accessResult.cap,
     used: typeof accessResult.used === 'number' ? accessResult.used : null,
     remaining: accessResult.remaining,
+    accessCode: parsed.accessCode,
     referralToken,
     referralCount,
-    estimatedReferralBonus
+    estimatedReferralBonus,
+    recentHistory
   });
 }
 
