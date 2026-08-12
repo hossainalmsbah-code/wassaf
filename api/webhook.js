@@ -99,6 +99,11 @@ module.exports = async (req, res) => {
     await handleZidOAuthCallback(req, res);
     return;
   }
+  // [إضافة جديدة] هذا هو "Application URL" الثابت اللي نحطه بلوحة تطوير زد — تفتحه زد تلقائياً بالـiframe
+  if (req.method === 'GET' && req.query && req.query.source === 'zid' && req.query.step === 'embedded') {
+    await handleZidEmbeddedEntry(req, res);
+    return;
+  }
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -614,13 +619,60 @@ async function handleZidOAuthCallback(req, res) {
       installedAt: new Date().toISOString()
     })]);
 
+    // [إضافة جديدة] خطوة ٣ من دليل Embedded Apps الرسمي لزد — نولّد UUID ونسجّله عند زد،
+    // عشان زد ترسله لنا تلقائياً بالـiframe URL كل مرة التاجر يفتح التطبيق (بدل الاعتماد على إدخال يدوي)
+    const embeddedUuid = crypto.randomUUID();
+    let registrationOk = false;
+    try {
+      const regRes = await fetch('https://api.zid.sa/v1/managers/embedded-apps-token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${tokenData.authorization}`,
+          'x-manager-token': tokenData.access_token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ token: embeddedUuid })
+      });
+      registrationOk = regRes.ok;
+    } catch (e) {
+      registrationOk = false;
+    }
+
+    if (registrationOk) {
+      // نربط الـUUID برقم المتجر عشان مسار step=embedded يقدر يدور عليه لما زد ترسله بالـiframe
+      await redisCommand(['SET', `zid_embedded_token:${embeddedUuid}`, storeId]);
+    }
+
     // نرجّع التاجر لصفحة نجاح بسيطة — يقدر يقفلها ويرجع للوحة زد
     res.status(200).send(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تم التفعيل</title></head>
       <body style="font-family:sans-serif;text-align:center;padding:60px 20px;">
         <h2 style="color:#16A34A;">✓ تم ربط وصّاف بمتجرك بنجاح</h2>
         <p>تقدر ترجع للوحة تحكم زد وتفتح التطبيق من هناك.</p>
+        ${!registrationOk ? '<p style="color:#E8664A;font-size:13px;">ملاحظة: تسجيل التوصيل التلقائي ما اكتمل، بس التطبيق يشتغل عادي — لو ما ظهرت منتجاتك تلقائياً، أدخل رقم متجرك يدوياً مرة وحدة.</p>' : ''}
       </body></html>`);
   } catch (err) {
     res.status(500).send('صار خطأ أثناء تفعيل التطبيق، حاول مرة ثانية أو تواصل معنا');
   }
+}
+
+// [إضافة جديدة] خطوة ٦ من دليل Embedded Apps — هذا هو "Application URL" الثابت اللي نحدده بلوحة تطوير زد.
+// زد تفتحه تلقائياً بالـiframe مع ?token=<UUID> كل مرة التاجر يفتح التطبيق من لوحته، بدون أي إدخال يدوي.
+async function handleZidEmbeddedEntry(req, res) {
+  const token = (req.query && req.query.token || '').toString().trim();
+  if (!token) {
+    res.status(400).send('رابط غير صالح — رجاءً افتح التطبيق من لوحة تحكم زد.');
+    return;
+  }
+  const storeId = await redisCommand(['GET', `zid_embedded_token:${token}`]);
+  if (!storeId) {
+    res.status(404).send(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>يحتاج إعادة تثبيت</title></head>
+      <body style="font-family:sans-serif;text-align:center;padding:60px 20px;">
+        <h2>الرابط منتهي أو غير معروف</h2>
+        <p>جرب تفك تثبيت التطبيق من متجرك وتعيد تثبيته من جديد.</p>
+      </body></html>`);
+    return;
+  }
+  // نمرّر رقم المتجر لموقعنا الرئيسي عبر معامل الرابط — index.html أصلاً يقرأ هذا المعامل تلقائياً (محاولة الكشف رقم ١)
+  res.writeHead(302, { Location: `https://www.wassaf.space/?store_id=${encodeURIComponent(storeId)}` });
+  res.end();
 }

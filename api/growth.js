@@ -33,7 +33,7 @@ async function zidApiRequest(storeId, path, options = {}) {
     method: options.method || 'GET',
     headers: {
       'Authorization': `Bearer ${store.authorizationToken}`,
-      'Access-Token': store.accessToken,
+      'x-manager-token': store.accessToken,
       'Store-Id': String(storeId),
       'Accept-Language': 'ar',
       'Content-Type': 'application/json',
