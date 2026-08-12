@@ -98,6 +98,22 @@
   }
 
   .ref-box{margin-top:22px;padding-top:22px;border-top:1px dashed var(--line);}
+
+  /* [إضافة جديدة] جدول إحصائيات احترافي */
+  .stats-table{margin-top:20px;background:var(--bg-raised);border:1px solid var(--line);border-radius:12px;padding:16px;}
+  .stats-table-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .stats-table-cell{text-align:center;padding:6px 4px;}
+  .stats-num{font-family:'Inter',sans-serif;font-weight:800;font-size:22px;color:var(--ink);}
+  .stats-label{font-size:11.5px;color:var(--ink-dim);margin-top:4px;line-height:1.5;}
+
+  /* [إضافة جديدة] آخر المنتجات */
+  .history-box{margin-top:20px;padding-top:20px;border-top:1px dashed var(--line);}
+  .history-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px;}
+  .history-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
+  .history-item:last-child{border-bottom:none;}
+  .history-item-name{font-size:13.5px;color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%;}
+  .history-item-date{font-size:11.5px;color:var(--ink-dim);font-family:'Inter',sans-serif;white-space:nowrap;}
+  .history-empty{font-size:12.5px;color:var(--ink-dim);text-align:center;padding:12px 0;}
   .ref-title{font-size:14.5px;font-weight:700;color:var(--accent2);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
   .ref-link-row{display:flex;gap:8px;}
   .ref-link-row input{background:var(--bg-raised);font-size:13.5px;margin-bottom:0;font-family:'Inter',sans-serif;}
@@ -207,6 +223,21 @@
       </div>
       <div class="no-sub-box" id="noSubscriptionNote" style="display:none;">ما عندك اشتراك فعّال مرتبط بهذا الحساب بعد.</div>
 
+      <!-- [إضافة جديدة] جدول احترافي: عدد التوليدات، الباقي، آخر منتج -->
+      <div class="stats-table" id="statsTable" style="display:none;">
+        <div class="stats-table-row">
+          <div class="stats-table-cell"><div class="stats-num" id="statUsedNum">—</div><div class="stats-label">وصف مُولّد</div></div>
+          <div class="stats-table-cell"><div class="stats-num" id="statRemainingNum">—</div><div class="stats-label">متبقي هذا الشهر</div></div>
+          <div class="stats-table-cell"><div class="stats-num" id="statLastDate">—</div><div class="stats-label">آخر توليد</div></div>
+        </div>
+      </div>
+
+      <!-- [إضافة جديدة] آخر 5 منتجات ولّد لها التاجر وصف -->
+      <div class="history-box" id="historyBox" style="display:none;">
+        <div class="history-title">📋 آخر المنتجات</div>
+        <div id="historyList"></div>
+      </div>
+
       <div class="ref-box" id="refBox">
         <div class="ref-title">🔗 رابط الإحالة</div>
         <div class="ref-link-row">
@@ -302,6 +333,12 @@ function renderAccountCard(data){
   document.getElementById('accEmailVal').textContent = email;
   document.getElementById('accAvatar').textContent = email.charAt(0).toUpperCase() || '؟';
 
+  // [إضافة جديدة] مزامنة تلقائية — نخزّن كود الوصول بمتصفح التاجر عشان الأداة الرئيسية (index.html)
+  // تتعرف عليه تلقائياً بدون ما يحتاج يدخله يدوياً بخانة منفصلة — هذا يحل مشكلة كانت تلخبط التجار
+  if(data.accessCode){
+    try{ localStorage.setItem('wassaf_accessCode', data.accessCode); }catch(e){}
+  }
+
   const hasSub = !!data.hasSubscription;
   document.getElementById('subDetails').style.display = hasSub ? 'block' : 'none';
   document.getElementById('refBox').style.display = hasSub ? 'block' : 'none';
@@ -319,9 +356,38 @@ function renderAccountCard(data){
     document.getElementById('refCount').textContent = data.referralCount ?? 0;
     document.getElementById('refLinkInput').value = data.referralToken ? `https://www.wassaf.space/?ref=${data.referralToken}` : '';
     document.getElementById('refBonusHint').textContent = data.estimatedReferralBonus ?? '—';
+
+    renderStatsAndHistory(data, used, remaining);
   }
 
   accCard.classList.add('show');
+}
+
+/* [إضافة جديدة] جدول الإحصائيات وآخر المنتجات — مشتركة بين حساب الإيميل وكود الوصول القديم */
+function renderStatsAndHistory(data, used, remaining){
+  const history = Array.isArray(data.recentHistory) ? data.recentHistory : [];
+
+  document.getElementById('statsTable').style.display = 'block';
+  document.getElementById('statUsedNum').textContent = used;
+  document.getElementById('statRemainingNum').textContent = remaining;
+  document.getElementById('statLastDate').textContent = history.length
+    ? new Date(history[0].date).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' })
+    : '—';
+
+  const historyBox = document.getElementById('historyBox');
+  const historyList = document.getElementById('historyList');
+  historyBox.style.display = 'block';
+  if(!history.length){
+    historyList.innerHTML = '<div class="history-empty">ما ولّدت أي وصف بعد</div>';
+    return;
+  }
+  historyList.innerHTML = history.map(item => {
+    const d = new Date(item.date);
+    const dateLabel = d.toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' });
+    const name = (item.productName || '').toString();
+    const safeName = name.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="history-item"><span class="history-item-name">${safeName}</span><span class="history-item-date">${dateLabel}</span></div>`;
+  }).join('');
 }
 
 /* ==================== دخول ==================== */
@@ -502,6 +568,9 @@ async function loadAccount(){
     document.getElementById('refCount').textContent = data.referralCount;
     document.getElementById('refLinkInput').value = `https://www.wassaf.space/?ref=${data.referralToken}`;
     document.getElementById('refBonusHint').textContent = data.estimatedReferralBonus;
+    // [إضافة جديدة] مزامنة الكود بمتصفح التاجر + عرض الجدول وآخر المنتجات (نفس دالة مسار الإيميل بالضبط)
+    try{ localStorage.setItem('wassaf_accessCode', code); }catch(e){}
+    renderStatsAndHistory(data, data.used, data.remaining);
     accCard.classList.add('show');
   }catch(e){
     accErr.textContent = 'صار خطأ أثناء التحميل، جرب مرة ثانية';
