@@ -13,100 +13,104 @@
     --line:#E7E4F0;--accent:#E94548;--accent-dim:#FCEAEA;--accent2:#6E5BC7;--good:#16A34A;
   }
   *{box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Cairo',sans-serif;line-height:1.9;font-size:17px;}
-
-  /* ===================== شريط علوي ثابت ===================== */
-  header.top{
-    position:sticky;top:0;z-index:100;
-    background:rgba(255,255,255,.82);
-    backdrop-filter:blur(14px) saturate(160%);
-    -webkit-backdrop-filter:blur(14px) saturate(160%);
-    border-bottom:1px solid var(--line);
+  html{scroll-behavior:smooth;overflow-x:hidden;width:100%;}
+  body{
+    margin:0;color:var(--ink);font-family:'Cairo',sans-serif;line-height:1.9;font-size:16px;
+    background:linear-gradient(150deg,#FDF7F7 0%,#F7F6FB 45%,#F3F1FB 75%,#FBF5F7 100%);
+    min-height:100vh;position:relative;overflow-x:hidden;width:100%;
   }
-  .top-inner{max-width:640px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
-  .top-inner img{height:44px;width:auto;display:block;}
-  a.back{color:var(--ink-dim);text-decoration:none;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:4px;transition:color .15s;}
-  a.back:hover{color:var(--accent);}
+  .pearl-blob{position:absolute;border-radius:50%;filter:blur(4px);pointer-events:none;z-index:0;}
+  .pb1{top:-160px;right:-120px;width:520px;height:520px;background:radial-gradient(circle, rgba(233,69,72,.13), transparent 70%);}
+  .pb2{bottom:-200px;left:-140px;width:580px;height:580px;background:radial-gradient(circle, rgba(110,91,199,.11), transparent 70%);}
 
-  .wrap{max-width:520px;margin:0 auto;padding:40px 24px 80px;}
-  .today-date{text-align:center;font-size:12.5px;color:var(--ink-dim);margin-bottom:6px;}
-  h1{font-family:'Cairo',sans-serif;font-weight:900;font-size:30px;margin:18px 0 4px;text-align:center;}
-  .sub{color:var(--ink-dim);font-size:15px;margin-bottom:30px;text-align:center;line-height:1.8;}
+  /* ===================== الهيكل: تقسيم شاشة (يختفي بعد الدخول) ===================== */
+  .split{display:flex;width:100%;min-height:100vh;position:relative;z-index:2;}
+  .brand-panel{flex:1;display:flex;flex-direction:column;justify-content:center;padding:60px 64px;}
+  .brand-panel.hide{display:none;}
+  .brand-inner{max-width:460px;}
+  .badge-pill{
+    display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.7);backdrop-filter:blur(8px);
+    border:1px solid rgba(233,69,72,.18);border-radius:20px;padding:8px 18px;font-size:12.5px;font-weight:800;
+    color:var(--accent);width:fit-content;margin-bottom:26px;
+  }
+  .brand-inner h2{font-size:38px;font-weight:900;color:var(--ink);line-height:1.4;margin-bottom:16px;}
+  .brand-inner h2 .hl{color:var(--accent);}
+  .brand-inner p.lead{font-size:16px;color:var(--ink-dim);line-height:1.8;margin-bottom:34px;max-width:420px;}
+  .feature-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;}
+  .feature-icon{
+    width:42px;height:42px;border-radius:12px;flex-shrink:0;
+    background:linear-gradient(135deg,var(--accent),#ff7a7d);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(233,69,72,.22);
+  }
+  .feature-icon svg{width:20px;height:20px;stroke:#fff;}
+  .feature-text h3{font-size:14.5px;font-weight:800;color:var(--ink);margin-bottom:3px;}
+  .feature-text p{font-size:12.5px;color:var(--ink-dim);line-height:1.6;}
 
-  label{display:block;font-size:14px;color:var(--ink-dim);margin-bottom:6px;font-weight:600;}
+  .form-panel{
+    width:520px;flex-shrink:0;background:rgba(255,255,255,.55);backdrop-filter:blur(20px);
+    border-right:1px solid rgba(255,255,255,.6);display:flex;flex-direction:column;justify-content:center;
+    padding:52px;box-shadow:-30px 0 60px rgba(30,27,46,.04);position:relative;z-index:2;
+  }
+  .form-panel.wide{width:100%;border-right:none;box-shadow:none;background:transparent;backdrop-filter:none;align-items:center;}
+  .form-inner{width:100%;max-width:420px;margin:0 auto;}
+  .form-panel.wide .form-inner{max-width:560px;}
+  .logo-top{height:38px;width:auto;display:block;margin-bottom:30px;}
+
+  .today-date{text-align:center;font-size:12px;color:var(--ink-dim);margin-bottom:6px;}
+  h1{font-family:'Cairo',sans-serif;font-weight:900;font-size:26px;margin:6px 0 4px;text-align:center;}
+  .sub{color:var(--ink-dim);font-size:14px;margin-bottom:26px;text-align:center;line-height:1.8;}
+
+  label{display:block;font-size:13.5px;color:var(--ink);margin-bottom:7px;font-weight:700;}
   input[type=text], input[type=email], input[type=password]{
-    width:100%;background:var(--bg-raised);border:1px solid var(--line);color:var(--ink);
-    border-radius:10px;padding:13px 14px;font-family:inherit;font-size:16px;margin-bottom:14px;
+    width:100%;background:#fff;border:1.5px solid rgba(30,27,46,.10);color:var(--ink);
+    border-radius:10px;padding:13px 15px;font-family:inherit;font-size:14.5px;margin-bottom:16px;
     transition:border-color .15s, box-shadow .15s;
   }
   input[type=text]{text-transform:uppercase;}
-  input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+  input:focus{outline:none;border-color:var(--accent);}
   .go{
-    width:100%;margin-top:4px;
-    background:linear-gradient(135deg,var(--accent) 0%,#ff7a7d 100%);
-    color:#fff;border:none;
-    padding:15px;border-radius:10px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
-    box-shadow:0 4px 14px rgba(233,69,72,.28);
-    transition:transform .15s ease, box-shadow .15s ease;
+    width:100%;margin-top:4px;background:linear-gradient(135deg,var(--accent) 0%,#ff7a7d 100%);
+    color:#fff;border:none;padding:15px;border-radius:12px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;
+    box-shadow:0 10px 24px rgba(233,69,72,.28);transition:transform .15s ease, box-shadow .15s ease;
   }
-  .go:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(233,69,72,.38);}
+  .go:hover{transform:translateY(-1px);}
   .go:disabled{background:var(--line);color:var(--ink-dim);box-shadow:none;transform:none;cursor:not-allowed;}
-  .err{color:#E8664A;font-size:14px;margin-top:10px;display:none;}
-  .ok-msg{color:var(--good);font-size:14px;margin-top:10px;display:none;}
+  .err{color:#E8664A;font-size:13.5px;margin-top:4px;margin-bottom:10px;display:none;background:var(--accent-dim);padding:10px 13px;border-radius:9px;line-height:1.6;}
+  .ok-msg{color:var(--good);font-size:13.5px;margin-top:10px;display:none;}
 
-  /* ===================== بطاقة رئيسية (تسجيل / حساب) ===================== */
-  .auth-card{
-    background:var(--bg);border:1px solid var(--line);border-radius:18px;
-    padding:28px 26px;box-shadow:0 4px 24px rgba(30,27,46,.06);
-  }
+  .auth-card{background:transparent;padding:0;}
 
-  /* ===================== تبويبات دخول / حساب جديد ===================== */
-  .tabs{display:flex;gap:6px;background:var(--bg-raised);border:1px solid var(--line);border-radius:12px;padding:5px;margin-bottom:24px;}
-  .tab-btn{flex:1;background:none;border:none;padding:11px;border-radius:8px;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink-dim);cursor:pointer;transition:.15s;}
-  .tab-btn.active{background:var(--bg);color:var(--ink);box-shadow:0 2px 6px rgba(30,27,46,.08);}
+  .tabs{display:flex;gap:6px;background:rgba(30,27,46,.05);border:none;border-radius:12px;padding:4px;margin-bottom:26px;}
+  .tab-btn{flex:1;background:none;border:none;padding:11px;border-radius:9px;font-family:inherit;font-size:14px;font-weight:800;color:var(--ink-dim);cursor:pointer;transition:.15s;}
+  .tab-btn.active{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(30,27,46,.06);}
   .auth-panel{display:none;}
   .auth-panel.show{display:block;}
-  .link-btn{background:none;border:none;color:var(--accent2);font-size:13.5px;font-family:inherit;cursor:pointer;padding:0;font-weight:600;}
+  .link-btn{background:none;border:none;color:var(--accent);font-size:13.5px;font-family:inherit;cursor:pointer;padding:0;font-weight:800;}
   .link-btn:hover{text-decoration:underline;}
 
-  /* ===================== بطاقة الحساب بعد الدخول ===================== */
   .card{display:none;}
-  .card.show{display:block;}
+  .card.show{display:block;background:#fff;border:1px solid var(--line);border-radius:20px;padding:32px;box-shadow:0 20px 50px rgba(30,27,46,.06);}
   .acc-head{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding-bottom:20px;border-bottom:1px solid var(--line);}
   .acc-avatar{
     width:46px;height:46px;border-radius:50%;flex-shrink:0;
     background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
-    color:#fff;display:flex;align-items:center;justify-content:center;
-    font-family:'Inter',sans-serif;font-weight:800;font-size:18px;
+    color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-weight:800;font-size:18px;
   }
   .acc-email{font-weight:700;font-size:15.5px;word-break:break-all;}
   .acc-email-label{font-size:12px;color:var(--ink-dim);margin-bottom:2px;}
-
-  .plan-pill{
-    background:var(--accent-dim);color:var(--accent2);font-size:13px;font-weight:700;
-    padding:5px 14px;border-radius:14px;display:inline-block;
-  }
+  .plan-pill{background:var(--accent-dim);color:var(--accent2);font-size:13px;font-weight:700;padding:5px 14px;border-radius:14px;display:inline-block;}
   .stat-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
   .stat-row .k{color:var(--ink-dim);font-size:14px;font-weight:600;}
   .stat-row .v{font-weight:800;font-size:15px;font-family:'Inter',sans-serif;}
   .usage-bar-bg{background:var(--bg-raised);border:1px solid var(--line);border-radius:8px;height:9px;overflow:hidden;margin-bottom:20px;}
   .usage-bar-fill{background:linear-gradient(90deg,var(--accent),#ff7a7d);height:100%;transition:width .4s ease;}
-  .no-sub-box{
-    background:var(--bg-raised);border:1px dashed var(--line);border-radius:12px;
-    padding:16px;text-align:center;font-size:14.5px;color:var(--ink-dim);margin-bottom:4px;
-  }
-
+  .no-sub-box{background:var(--bg-raised);border:1px dashed var(--line);border-radius:12px;padding:16px;text-align:center;font-size:14.5px;color:var(--ink-dim);margin-bottom:4px;}
   .ref-box{margin-top:22px;padding-top:22px;border-top:1px dashed var(--line);}
-
-  /* [إضافة جديدة] جدول إحصائيات احترافي */
   .stats-table{margin-top:20px;background:var(--bg-raised);border:1px solid var(--line);border-radius:12px;padding:16px;}
   .stats-table-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
   .stats-table-cell{text-align:center;padding:6px 4px;}
   .stats-num{font-family:'Inter',sans-serif;font-weight:800;font-size:22px;color:var(--ink);}
   .stats-label{font-size:11.5px;color:var(--ink-dim);margin-top:4px;line-height:1.5;}
-
-  /* [إضافة جديدة] آخر المنتجات */
   .history-box{margin-top:20px;padding-top:20px;border-top:1px dashed var(--line);}
   .history-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px;}
   .history-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
@@ -118,38 +122,62 @@
   .ref-link-row{display:flex;gap:8px;}
   .ref-link-row input{background:var(--bg-raised);font-size:13.5px;margin-bottom:0;font-family:'Inter',sans-serif;}
   .ref-share-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
-  .copy-btn{
-    background:var(--bg-raised);border:1px solid var(--line);color:var(--ink-dim);
-    padding:9px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;
-    white-space:nowrap;font-weight:600;transition:.15s;
-  }
+  .copy-btn{background:var(--bg-raised);border:1px solid var(--line);color:var(--ink-dim);padding:9px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;font-weight:600;transition:.15s;}
   .copy-btn:hover{border-color:var(--accent);color:var(--accent);}
   .ref-hint{font-size:13px;color:var(--ink-dim);margin-top:12px;line-height:1.75;}
-
   .logout-row{text-align:center;margin-top:24px;padding-top:18px;border-top:1px solid var(--line);}
-  .logout-row .link-btn{color:var(--ink-dim);}
+  .logout-row .link-btn{color:var(--ink-dim);font-weight:600;}
   .logout-row .link-btn:hover{color:#E8664A;}
 
-  /* ===================== كود الوصول القديم + تواصل ===================== */
   .legacy-toggle{text-align:center;margin-top:22px;}
-  .legacy-box{display:none;margin-top:18px;padding-top:18px;border-top:1px dashed var(--line);}
+  .legacy-box{display:none;margin-top:18px;padding-top:18px;border-top:1px dashed rgba(30,27,46,.10);}
   .legacy-box.show{display:block;}
 
   .contact-footer{text-align:center;margin-top:26px;}
-  .contact-footer #contactLink{color:var(--ink-dim);font-size:13.5px;text-decoration:none;font-weight:600;}
+  .contact-footer #contactLink{color:var(--ink-dim);font-size:13px;text-decoration:none;font-weight:600;}
   .contact-footer #contactLink:hover{color:var(--accent);}
-  .contact-mail-link{font-size:15px;font-weight:600;color:var(--accent2);text-decoration:none;}
+  .contact-mail-link{font-size:14px;font-weight:600;color:var(--accent2);text-decoration:none;}
   .contact-mail-link:hover{text-decoration:underline;}
+
+  @media (max-width:900px){
+    .split{flex-direction:column;}
+    .brand-panel{padding:44px 28px 10px;}
+    .brand-panel.hide{display:none;}
+    .form-panel{width:100%;border-right:none;padding:36px 24px 60px;box-shadow:none;}
+  }
 </style>
 </head>
 <body>
-<header class="top">
-  <div class="top-inner">
-    <img src="/assets/logo-horizontal.svg" alt="وصّاف">
-    <a class="back" href="/">الرئيسية</a>
+
+<div class="pearl-blob pb1"></div>
+<div class="pearl-blob pb2"></div>
+
+<div class="split">
+
+  <div class="brand-panel" id="brandPanel">
+    <div class="brand-inner">
+      <div class="badge-pill">✨ أداة عربية بالكامل</div>
+      <h2>جهّز أوصاف منتجاتك <span class="hl">خلال ثواني</span></h2>
+      <p class="lead">ابدأ خلال ثواني — بدون أي التزام. حساب واحد يفتح لك كل أدوات وصّاف.</p>
+      <div class="feature-row">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"></path></svg></div>
+        <div class="feature-text"><h3>توليد فوري</h3><p>من اسم المنتج ومميزاته إلى وصف كامل خلال ثواني</p></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg></div>
+        <div class="feature-text"><h3>ولّد من صورة</h3><p>ارفع صورة منتجك ووصّاف يكتب لك الوصف تلقائياً</p></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"></rect><path d="M8 7V5a4 4 0 0 1 8 0v2"></path></svg></div>
+        <div class="feature-text"><h3>يشتغل داخل متجرك</h3><p>تكامل مباشر مع سلة وزد بضغطة وحدة</p></div>
+      </div>
+    </div>
   </div>
-</header>
-<div class="wrap">
+
+  <div class="form-panel" id="formPanel">
+  <div class="form-inner">
+  <img class="logo-top" src="/assets/logo-horizontal.svg" alt="وصّاف">
+
   <div class="today-date" id="todayDate"></div>
   <h1>حسابي</h1>
   <div class="sub">سجّل دخول أو أنشئ حساب لعرض باقتك واستخدامك ورابط الإحالة.</div>
@@ -270,6 +298,10 @@
       <a href="mailto:wassaf.sa@gmail.com" class="contact-mail-link">wassaf.sa@gmail.com</a>
     </div>
   </div>
+
+  </div>
+  </div>
+
 </div>
 
 <script>
@@ -328,6 +360,10 @@ function renderAccountCard(data){
   authTabs.style.display = 'none';
   document.getElementById('legacyToggleBtn').style.display = 'none';
   document.getElementById('legacyBox').classList.remove('show');
+
+  // [إضافة جديدة] بعد نجاح الدخول، نخفي لوحة التسويق ونوسّع بطاقة الحساب لتاخذ عرض الصفحة
+  document.getElementById('brandPanel').classList.add('hide');
+  document.getElementById('formPanel').classList.add('wide');
 
   const email = data.email || '';
   document.getElementById('accEmailVal').textContent = email;
@@ -555,6 +591,9 @@ async function loadAccount(){
     }
     authTabs.style.display = 'none';
     Object.values(panels).forEach(p => p.classList.remove('show'));
+    // [إضافة جديدة] بعد نجاح الدخول بالكود، نخفي لوحة التسويق ونوسّع بطاقة الحساب
+    document.getElementById('brandPanel').classList.add('hide');
+    document.getElementById('formPanel').classList.add('wide');
     document.getElementById('accEmailVal').textContent = '(دخول بكود الوصول)';
     document.getElementById('accAvatar').textContent = '🔑';
     document.getElementById('subDetails').style.display = 'block';
