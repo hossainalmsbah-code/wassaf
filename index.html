@@ -2077,7 +2077,7 @@ sallaWriteBackBtn && sallaWriteBackBtn.addEventListener('click', async () => {
     });
     const data = await res.json();
     if(!res.ok || !data.ok){
-      sallaWriteErr.textContent = data.error || 'تعذر الكتابة رجوع بمتجرك';
+      sallaWriteErr.textContent = data.error || 'تعذر الكتابة رجوع لمتجرك';
       sallaWriteErr.style.display = 'block';
       return;
     }
@@ -2087,7 +2087,7 @@ sallaWriteBackBtn && sallaWriteBackBtn.addEventListener('click', async () => {
     sallaWriteErr.style.display = 'block';
   }finally{
     sallaWriteBackBtn.disabled = false;
-    sallaWriteBackBtn.textContent = 'اكتب هذا الوصف رجوع بمنتجي بسلة';
+    sallaWriteBackBtn.textContent = 'تصدير هذا الوصف لمتجري';
   }
 });
 
