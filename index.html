@@ -734,6 +734,9 @@
         </div>
         <div class="output small" id="outputImgSeo"></div>
       </div>
+
+      <!-- [إضافة جديدة] نفس صندوق SEO التفصيلي المستخدم بالتوليد النصي، بس مخصص لنتيجة الصورة -->
+      <div class="result-block" id="imgSeoPanel" style="display:none;"></div>
     </div>
   </div>
 
@@ -1205,8 +1208,9 @@ function seoRateLength(len, minIdeal, maxIdeal){
   return { cls: 'warn', label: 'يحتاج تحسين' };
 }
 
-function renderSeoPanel(data){
-  const panel = document.getElementById('seoPanel');
+function renderSeoPanel(data, panelId = 'seoPanel'){
+  const panel = document.getElementById(panelId);
+  if(!panel) return;
 
   // [إضافة جديدة] لو الميزة مقفولة (باقة غير مؤهلة) أو خلصت حصتها الشهرية، نعرض رسالة واضحة بدل ما نخفي الصندوق بصمت
   if(data.seoLocked){
@@ -1227,44 +1231,44 @@ function renderSeoPanel(data){
     <div class="result-head"><div class="label">تحسين SEO — تفاصيل وتقييم</div></div>
     <div class="seo-grid">
       <div class="seo-field">
-        <div class="seo-field-head"><span>عنوان SEO</span><span class="seo-badge" id="seoTitleBadge"></span></div>
-        <div class="seo-field-text" id="seoTitleText"></div>
-        <div class="seo-field-count" id="seoTitleCount"></div>
+        <div class="seo-field-head"><span>عنوان SEO</span><span class="seo-badge" data-role="seoTitleBadge"></span></div>
+        <div class="seo-field-text" data-role="seoTitleText"></div>
+        <div class="seo-field-count" data-role="seoTitleCount"></div>
       </div>
       <div class="seo-field">
-        <div class="seo-field-head"><span>وصف Meta</span><span class="seo-badge" id="seoMetaBadge"></span></div>
-        <div class="seo-field-text" id="seoMetaText"></div>
-        <div class="seo-field-count" id="seoMetaCount"></div>
+        <div class="seo-field-head"><span>وصف Meta</span><span class="seo-badge" data-role="seoMetaBadge"></span></div>
+        <div class="seo-field-text" data-role="seoMetaText"></div>
+        <div class="seo-field-count" data-role="seoMetaCount"></div>
       </div>
       <div class="seo-field">
-        <div class="seo-field-head"><span>كلمات مفتاحية</span><span class="seo-badge" id="seoKeywordsBadge"></span></div>
-        <div class="seo-tags" id="seoKeywordsTags"></div>
+        <div class="seo-field-head"><span>كلمات مفتاحية</span><span class="seo-badge" data-role="seoKeywordsBadge"></span></div>
+        <div class="seo-tags" data-role="seoKeywordsTags"></div>
       </div>
     </div>`;
   panel.style.display = 'block';
 
   const title = data.seoTitle || '';
   const titleRate = seoRateLength(title.length, 40, 60);
-  document.getElementById('seoTitleText').textContent = title || '—';
-  document.getElementById('seoTitleCount').textContent = `${title.length} حرف — المثالي 40-60 حرف`;
-  const titleBadge = document.getElementById('seoTitleBadge');
+  panel.querySelector('[data-role="seoTitleText"]').textContent = title || '—';
+  panel.querySelector('[data-role="seoTitleCount"]').textContent = `${title.length} حرف — المثالي 40-60 حرف`;
+  const titleBadge = panel.querySelector('[data-role="seoTitleBadge"]');
   titleBadge.textContent = titleRate.label;
   titleBadge.className = 'seo-badge ' + titleRate.cls;
 
   const meta = data.seoMeta || '';
   const metaRate = seoRateLength(meta.length, 130, 160);
-  document.getElementById('seoMetaText').textContent = meta || '—';
-  document.getElementById('seoMetaCount').textContent = `${meta.length} حرف — المثالي 130-160 حرف`;
-  const metaBadge = document.getElementById('seoMetaBadge');
+  panel.querySelector('[data-role="seoMetaText"]').textContent = meta || '—';
+  panel.querySelector('[data-role="seoMetaCount"]').textContent = `${meta.length} حرف — المثالي 130-160 حرف`;
+  const metaBadge = panel.querySelector('[data-role="seoMetaBadge"]');
   metaBadge.textContent = metaRate.label;
   metaBadge.className = 'seo-badge ' + metaRate.cls;
 
   const keywords = Array.isArray(data.seoKeywords) ? data.seoKeywords : [];
-  const kwTagsEl = document.getElementById('seoKeywordsTags');
+  const kwTagsEl = panel.querySelector('[data-role="seoKeywordsTags"]');
   kwTagsEl.innerHTML = keywords.length
     ? keywords.map(k => `<span class="seo-tag">${escapeHTML(k)}</span>`).join('')
     : '<span style="font-size:12.5px;color:var(--ink-dim);">ما فيه كلمات مفتاحية</span>';
-  const kwBadge = document.getElementById('seoKeywordsBadge');
+  const kwBadge = panel.querySelector('[data-role="seoKeywordsBadge"]');
   const kwRate = keywords.length >= 5 && keywords.length <= 8 ? { cls: 'excellent', label: 'ممتاز' } : (keywords.length > 0 ? { cls: 'good', label: 'جيد' } : { cls: 'warn', label: 'ناقص' });
   kwBadge.textContent = kwRate.label;
   kwBadge.className = 'seo-badge ' + kwRate.cls;
@@ -1553,7 +1557,9 @@ if(imageInput){
           brandTone: document.getElementById('brandTone').value.trim(),
           style: activeStyleBtn ? activeStyleBtn.dataset.style : 'FORMAL',
           accessCode: getStoredAccessCode(),
-          deviceId
+          deviceId,
+          sallaMerchantId: sallaMerchant || '',
+          zidMerchantId: zidMerchant || ''
         })
       });
       const data = await res.json();
@@ -1565,6 +1571,7 @@ if(imageInput){
       document.getElementById('outputImgLong').textContent = data.long || '';
       document.getElementById('outputImgShort').textContent = data.short || '';
       document.getElementById('outputImgSeo').textContent = data.seo || '';
+      renderSeoPanel(data, 'imgSeoPanel');
       imageResultBox.classList.add('show');
       imageResultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       updateAccessStatusAfterGenerate(data.remaining, data.cap);
