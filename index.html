@@ -2076,6 +2076,17 @@ sallaProductGrid && sallaProductGrid.addEventListener('click', (e) => {
   document.getElementById('productName').value = product.name;
   if(product.price) document.getElementById('price').value = product.price + ' ريال';
 
+  // [إصلاح جوهري] حقل "المميزات" كان يفضل فاضي بعد اختيار منتج، والتوليد يرفض يشتغل بدونه —
+  // نعبّيه تلقائياً من وصف المنتج الحالي بمتجرك (لو موجود)، بعد تنظيفه من وسوم HTML
+  const featuresInput = document.getElementById('features');
+  if(product.currentDescription){
+    const cleanText = product.currentDescription.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    featuresInput.value = cleanText.slice(0, 400);
+  } else {
+    featuresInput.value = '';
+    featuresInput.placeholder = 'ما لقينا وصف حالي لهذا المنتج — اكتب أهم مميزاته هنا يدوياً قبل التوليد';
+  }
+
   document.getElementById('tool').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
@@ -2286,6 +2297,16 @@ zidProductGrid && zidProductGrid.addEventListener('click', (e) => {
   zidSelectedProduct = { id: product.id, name: product.name };
   document.getElementById('productName').value = product.name;
   if(product.price) document.getElementById('price').value = product.price + ' ريال';
+
+  // [إصلاح جوهري] نفس إصلاح سلة بالضبط — نعبّي المميزات تلقائياً من الوصف المختصر الموجود بمنتج زد
+  const featuresInputZid = document.getElementById('features');
+  if(product.currentDescription){
+    const cleanTextZid = product.currentDescription.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    featuresInputZid.value = cleanTextZid.slice(0, 400);
+  } else {
+    featuresInputZid.value = '';
+    featuresInputZid.placeholder = 'ما لقينا وصف حالي لهذا المنتج — اكتب أهم مميزاته هنا يدوياً قبل التوليد';
+  }
 
   document.getElementById('tool').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
