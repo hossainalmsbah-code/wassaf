@@ -117,11 +117,13 @@
   body.salla-embedded a.sidebar-item[href="/account.html"],
   body.salla-embedded .sidebar-group-label.account-label,
   body.salla-embedded #footerPricingLink,
+  body.salla-embedded #shareBtn,
   body.zid-embedded .sidebar-item[data-view="bulk"],
   body.zid-embedded .sidebar-item[data-view="pricing"],
   body.zid-embedded a.sidebar-item[href="/account.html"],
   body.zid-embedded .sidebar-group-label.account-label,
-  body.zid-embedded #footerPricingLink
+  body.zid-embedded #footerPricingLink,
+  body.zid-embedded #shareBtn
   {display:none !important;}
   /* نفس الاستثناء ببطاقات الرئيسية السريعة (رفع دفعة، حسابي) */
   body.salla-embedded .home-card-bulk, body.salla-embedded .home-card-account,
@@ -372,6 +374,17 @@
     display:flex;justify-content:center;align-items:center;
   }
   .footer-bottom .copy{color:var(--ink-dim);font-size:12px;margin:0;}
+
+  /* [إضافة جديدة] رابط موقع وصّاف المستقل بأسفل الصفحة */
+  .wassaf-site-banner{
+    max-width:820px;margin:24px auto 0;padding:16px 20px;
+    background:var(--accent-dim);border:1.5px solid rgba(233,69,72,.2);border-radius:12px;
+    text-align:center;
+  }
+  .wassaf-site-banner a{
+    color:var(--accent);font-size:15px;font-weight:800;text-decoration:none;
+  }
+  .wassaf-site-banner a:hover{text-decoration:underline;}
   @media (max-width:640px){
     .footer-grid{grid-template-columns:1fr;gap:28px;text-align:center;}
     .footer-col a{margin-inline:auto;}
@@ -428,7 +441,7 @@
     <div class="sidebar-group-label account-label">الحساب</div>
     <a class="sidebar-item" href="/account.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-      حسابي
+      <span class="account-link-text">تسجيل الدخول</span>
     </a>
     <button class="sidebar-item" data-view="pricing" onclick="switchView('pricing')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
@@ -460,7 +473,7 @@
         <div class="field-hint">ارفع ملف Excel فيه منتجاتك، وولّد الأوصاف لكلها دفعة وحدة.</div>
       </div>
       <div class="settings-box home-card-account" style="cursor:pointer;" onclick="window.location.href='/account.html'">
-        <div class="settings-title" style="margin-bottom:6px;">👤 حسابي</div>
+        <div class="settings-title" style="margin-bottom:6px;">👤 <span class="account-link-text">تسجيل الدخول</span></div>
         <div class="field-hint">باقتك، استخدامك الشهري، وآخر المنتجات اللي ولّدت لها وصف.</div>
       </div>
     </div>
@@ -470,7 +483,6 @@
   <div class="settings-box" id="sallaBox" style="display:none;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
       <div class="settings-title" style="margin-bottom:0;">🛍️منتجاتك</div>
-      <a href="https://www.wassaf.space/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap;">🌐 موقع وصّاف</a>
     </div>
     <div class="field-hint" style="margin-bottom:14px;">اختر منتج، و سوف يدخل  اسمه وسعره تلقائياً بالأسفل — أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع الصورة مباشرة.</div>
     <div class="salla-product-grid" id="sallaProductGrid">
@@ -482,7 +494,6 @@
   <div class="settings-box" id="zidBox" style="display:none;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
       <div class="settings-title" style="margin-bottom:0;">🛍️منتجاتك</div>
-      <a href="https://www.wassaf.space/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap;">🌐 موقع وصّاف</a>
     </div>
     <div class="field-hint" style="margin-bottom:14px;">اضغط "استيراد جميع المنتجات" عشان تجيب منتجاتك من متجرك — بعدها اختر منتج وسوف يدخل اسمه وسعره تلقائياً بالأسفل، أو مرّر لقسم "ولّد الوصف من صورة المنتج" وارفع الصورة مباشرة.</div>
     <button class="go" id="zidImportBtn" type="button" style="margin-bottom:14px;">استيراد جميع المنتجات</button>
@@ -900,6 +911,11 @@
     </div>
   </footer>
 
+  <!-- [إضافة جديدة] رابط "موقع وصّاف" — نُقل من داخل صناديق سلة/زد ليصير عنصر مستقل وواضح بأسفل الصفحة -->
+  <div class="wassaf-site-banner">
+    <a href="https://www.wassaf.space/" target="_blank" rel="noopener">🌐 موقع وصّاف — wassaf.space</a>
+  </div>
+
 </div>
   </main>
 </div>
@@ -914,7 +930,39 @@
 
 <script>
 /* ==================== [إضافة جديدة] التنقّل بين أقسام القائمة الجانبية ==================== */
-function switchView(viewName){
+/* ==================== [تعديل] التنقّل بين أقسام القائمة الجانبية — مع بوابة تسجيل دخول إلزامية ====================
+   أدوات التوليد (توليد وصف/من صورة/رفع دفعة) صارت تتطلب حساب مسجّل قبل الدخول، عشان نظام تجميع
+   البيانات (سجل آخر المنتجات، إحصائيات الاستخدام) يرتبط بحساب حقيقي من أول استخدام */
+const GATED_VIEWS = ['generate', 'image', 'bulk'];
+let cachedLoginState = null; // null = لسه ما تحقننا، true/false = نتيجة محفوظة نتجنب بيها تكرار الطلب
+
+async function isUserLoggedIn(){
+  if(cachedLoginState !== null) return cachedLoginState;
+  try{
+    const res = await fetch('/api/growth', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'auth_me' })
+    });
+    const data = await res.json();
+    cachedLoginState = !!(res.ok && data.ok);
+  }catch(e){
+    cachedLoginState = false;
+  }
+  return cachedLoginState;
+}
+
+async function switchView(viewName){
+  // [مهم] جوّا سلة/زد، التاجر مسجّل دخول أصلاً عبر متجره — ما نطبّق بوابة حساب وصّاف هناك إطلاقاً
+  const isEmbedded = document.body.classList.contains('salla-embedded') || document.body.classList.contains('zid-embedded');
+  if(!isEmbedded && GATED_VIEWS.includes(viewName)){
+    const loggedIn = await isUserLoggedIn();
+    if(!loggedIn){
+      window.location.href = '/account.html';
+      return;
+    }
+  }
   document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
   const targetId = viewName === 'pricing' ? 'pricing' : ('view-' + viewName);
   const target = document.getElementById(targetId);
@@ -1920,25 +1968,14 @@ if(contactLink && contactBox){
   onScroll();
 })();
 
-/* ==================== فحص جلسة الدخول (إيميل/باسورد): "تسجيل الدخول" → "حسابي" ==================== */
+/* ==================== [تعديل] فحص جلسة الدخول عند تحميل الصفحة: "تسجيل الدخول" → "حسابي" ==================== */
 (async function checkLoginSession(){
-  const navAccountLink = document.getElementById('navAccountLink');
-  if(!navAccountLink) return;
-  try{
-    const res = await fetch('/api/growth', {
-      method: 'POST',
-      credentials: 'same-origin', // ضروري عشان كوكي الجلسة (wassaf_session) يترسل مع الطلب
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'auth_me' })
-    });
-    const data = await res.json();
-    if(res.ok && data.ok){
-      navAccountLink.textContent = 'حسابي';
-    }
-    // لو ما فيه جلسة فعّالة (401)، نسيب النص الافتراضي "تسجيل الدخول" زي ما هو — بدون أي تعديل
-  }catch(e){
-    // فشل الفحص (مثلاً الشبكة بطيئة) — نتجاهل بصمت ونسيب "تسجيل الدخول" الافتراضي
+  const accountLinks = document.querySelectorAll('.account-link-text');
+  const loggedIn = await isUserLoggedIn(); // يخزّن النتيجة بـcachedLoginState، تُستخدم لاحقاً ببوابة switchView بدون تكرار الطلب
+  if(loggedIn){
+    accountLinks.forEach(el => { el.textContent = 'حسابي'; });
   }
+  // لو ما فيه جلسة فعّالة، نسيب النص الافتراضي "تسجيل الدخول" زي ما هو — بدون أي تعديل
 })();
 
 /* ==================== [إضافة] وعي سلة — يشتغل بس جوّا لوحة سلة ==================== */
