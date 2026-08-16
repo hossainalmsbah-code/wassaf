@@ -1,6 +1,29 @@
-const { checkAccessCode, addReferralBonus, incrementUsage, checkSallaMerchantSubscription, checkZidMerchantSubscription } = require('./_access');
+const { checkAccessCode, addReferralBonus, incrementUsage, currentMonthKey, checkSallaMerchantSubscription, checkZidMerchantSubscription } = require('./_access');
 const { redisCommand } = require('./_redis');
 const { sendEmail } = require('./_email');
+const crypto = require('crypto');
+
+// [إضافة جديدة] توليد كود تجربة مجانية عشوائي (٦ أحرف كبيرة/أرقام) بنفس شكل البيانات اللي يتوقعها
+// checkAccessCode بالضبط (_access.js) — تُستخدم بس وقت تسجيل حساب جديد بدون اشتراك سابق مرتبط بإيميله
+async function createFreshTrialCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // بدون أحرف/أرقام متشابهة بصرياً (O/0, I/1)
+  let code;
+  let attempts = 0;
+  do {
+    code = Array.from({ length: 6 }, () => chars[crypto.randomInt(chars.length)]).join('');
+    attempts++;
+    const exists = await redisCommand(['GET', `code:${code}`]);
+    if (!exists) break;
+  } while (attempts < 5);
+
+  await redisCommand(['SET', `code:${code}`, JSON.stringify({
+    active: true,
+    cap: 10,
+    plan: 'تجربة',
+    createdAt: new Date().toISOString()
+  })]);
+  return code;
+}
 const {
   hashPassword, verifyPassword, isValidEmail, isStrongEnoughPassword,
   createSession, getSessionEmail, destroySession,
@@ -953,17 +976,33 @@ async function handleAuthSignup(req, res, body) {
   // لو نفس الإيميل عنده كود وصول من اشتراك سابق (Lemon Squeezy)، نربطه تلقائياً بالحساب الجديد
   const linkedCode = await redisCommand(['GET', `email_code:${email}`]);
 
+  // [إضافة جديدة] لو ما فيه اشتراك سابق مرتبط بإيميله، ننشئ له كود تجربة مجانية جديد (10 أوصاف) —
+  // هذا يعوّض نظام "التجربة الصامتة" القديم اللي حذفناه لأنه كان يتعارض مع بوابة تسجيل الدخول
+  let finalCode = linkedCode;
+  if (!finalCode) {
+    finalCode = await createFreshTrialCode();
+  }
+
   const userValue = JSON.stringify({
     passwordHash,
     createdAt: new Date().toISOString(),
-    accessCode: linkedCode || null
+    accessCode: finalCode
   });
   await redisCommand(['SET', userKey, userValue]);
+
+  // [إضافة جديدة] لو جاي من رابط إحالة (referrerToken بالطلب)، نطبّق المكافأة فوراً هنا —
+  // هذي النقطة الحقيقية الوحيدة لتفعيل الإحالة الحين، بعد ما حذفنا الزر الميت اللي كان يسويها بـindex.html
+  const referrerToken = (body.referrerToken || '').toString().trim();
+  if (referrerToken && finalCode) {
+    try {
+      await handleApplyReferral({ newAccessCode: finalCode, referrerToken }, { status: () => ({ json: () => {} }) });
+    } catch (e) { /* فشل تطبيق الإحالة ما يوقف التسجيل نفسه */ }
+  }
 
   const token = await createSession(email);
   setSessionCookie(res, token);
 
-  res.status(200).json({ ok: true, email, linkedSubscription: !!linkedCode });
+  res.status(200).json({ ok: true, email, linkedSubscription: !!linkedCode, accessCode: finalCode });
 }
 
 // ---------- دخول ----------

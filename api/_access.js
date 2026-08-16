@@ -109,6 +109,21 @@ async function addReferralBonus(code, bonusAmount) {
 // [إضافة جديدة] يتحقق من اشتراك تاجر سلة (الفوترة الأصلية عبر merchant_id) — نفس شكل نتيجة checkAccessCode بالضبط
 // عشان باقي الكود (generate.js، فحص الباقات المقيّدة) يتعامل معه بنفس الطريقة بدون أي فرع منطق إضافي
 async function checkSallaMerchantSubscription(merchantId) {
+  // [إضافة جديدة] قائمة بيضاء اختبارية — أي رقم متجر مذكور بمتغير SALLA_TEST_MERCHANT_IDS بإعدادات Vercel
+  // (مفصولة بفواصل لو أكثر من متجر) يتجاوز فحص الاشتراك بالكامل ويشتغل بباقة سنوية وهمية دايماً —
+  // عشان تقدر تختبر من أي متجر سلة تحبه بدون ما يوقفك عدم وجود اشتراك حقيقي مسجّل
+  const sallaTestIds = (process.env.SALLA_TEST_MERCHANT_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (sallaTestIds.includes(String(merchantId))) {
+    return {
+      ok: true,
+      remaining: 999999,
+      cap: 999999,
+      used: 0,
+      plan: 'سنوي',
+      usageKey: `usage:salla_test:${merchantId}:${currentMonthKey()}`
+    };
+  }
+
   const raw = await redisCommand(['GET', `salla_subscription:${merchantId}`]);
   if (!raw) {
     return { ok: false, reason: 'invalid' };
@@ -138,6 +153,19 @@ async function checkSallaMerchantSubscription(merchantId) {
 }
 // [إضافة جديدة] يتحقق من اشتراك تاجر زد (الفوترة الأصلية عبر store_id) — نفس شكل نتيجة checkSallaMerchantSubscription بالضبط
 async function checkZidMerchantSubscription(storeId) {
+  // [إضافة جديدة] نفس فكرة القائمة البيضاء بالضبط، بس لمتاجر زد — متغير ZID_TEST_STORE_IDS بإعدادات Vercel
+  const zidTestIds = (process.env.ZID_TEST_STORE_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (zidTestIds.includes(String(storeId))) {
+    return {
+      ok: true,
+      remaining: 999999,
+      cap: 999999,
+      used: 0,
+      plan: 'سنوي',
+      usageKey: `usage:zid_test:${storeId}:${currentMonthKey()}`
+    };
+  }
+
   const raw = await redisCommand(['GET', `zid_subscription:${storeId}`]);
   if (!raw) {
     return { ok: false, reason: 'invalid' };
