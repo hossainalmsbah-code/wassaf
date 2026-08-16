@@ -1,4 +1,10 @@
-const { checkAccessCode, incrementUsage } = require('./_access');
+const { checkAccessCode, incrementUsage, currentMonthKey, checkSallaMerchantSubscription, checkZidMerchantSubscription } = require('./_access');
+const { redisCommand } = require('./_redis');
+
+// [إضافة جديدة] نفس منطق حد SEO التفصيلي المستخدم بـgenerate.js بالضبط — سنوي/نصف سنوي بدون حد،
+// شهري محدود بـ10 بالشهر (عداد مستقل)، باقي الباقات مقفولة
+const SEO_UNLIMITED_PLANS = ['نصف سنوي', 'سنوي'];
+const SEO_MONTHLY_PLAN_LIMIT = 10;
 
 // نفس السجلين اللغويين المستخدمين بالتوليد النصي العادي — نعيد استخدامهم بالضبط عشان يطلع نفس أسلوب الكتابة
 const SYSTEM_PROMPT_COLLOQUIAL = `أنت كاتب محتوى تسويقي متخصص في التجارة الإلكترونية الخليجية. التاجر بيعطيك اسم المنتج بالضبط، وصورة له. اسم المنتج هو المرجع الأساسي لنوع المنتج — الصورة تستخدمها بس لاستخراج التفاصيل البصرية الملموسة (اللون، الشكل، الخامة، أي تفاصيل تصميم ظاهرة) ومنها تكتب وصف تسويقي يحوّل الزائر لمشتري.
@@ -42,16 +48,22 @@ ${brandTone ? brandTone : 'ما فيه تفضيل محدد — اختر نبرة
 
 # معلومات إضافية (اختيارية، استخدمها لو موجودة)
 الجمهور المستهدف: ${audience || 'عام'}
-${price ? 'السعر: ' + price : ''}
+${price ? 'السعر (للسياق فقط — يساعدك تحدد مستوى المنتج: اقتصادي أو متوسط أو فاخر، عشان تختار نبرة وكلمات مناسبة): ' + price : ''}
+
+# قاعدة إلزامية بخصوص السعر
+${price ? 'استخدم السعر بس كمعلومة خلفية لتحديد نبرة الكتابة — لا تذكر رقم السعر ولا كلمة "ريال" ولا أي إشارة صريحة للسعر داخل أي نص تكتبه (long, short, seo, seoMeta). السعر يظهر تلقائياً بصفحة المنتج، وذكره بالوصف يسبب تعارض لو غيّره التاجر لاحقاً.' : 'ما فيه سعر مُدخل — لا تخترع أو تفترض أي رقم سعر بالنص.'}
 
 # المطلوب منك بالضبط
 استخدم الصورة المرفقة بس لاستخراج التفاصيل البصرية الملموسة (اللون، الخامة، الشكل، أي تفاصيل تصميم ظاهرة) — مو لتحديد نوع المنتج، لأن نوع المنتج محدد فوق بالضبط باسم "${productName}". اكتب:
 1. "long": نسخة وحدة قوية ومركّزة من الوصف الطويل، جاهزة للنشر مباشرة بصفحة منتج.
 2. "short": نسخة مختصرة جداً (سطرين إلى ثلاثة كحد أقصى) تصلح كابشن إنستقرام.
 3. "seo": جملة واحدة قصيرة (لا تتجاوز 160 حرف) محسّنة لظهور المنتج بجوجل.
+4. "seoTitle": عنوان SEO منفصل ومختلف عن اسم المنتج الأصلي، بين 40 و60 حرف بالضبط.
+5. "seoMeta": وصف Meta منفصل، بين 130 و160 حرف بالضبط، يشجع على الضغط عليه بنتائج البحث.
+6. "seoKeywords": مصفوفة من 5 إلى 8 كلمات أو عبارات مفتاحية قصيرة يبحث فيها عميل يدور على هذا المنتج.
 
 مهم جداً: أجب فقط بكائن JSON صحيح وخام بدون أي شيء آخر — بدون علامات كود، بدون شرح. الصيغة بالضبط:
-{"long":"...","short":"...","seo":"..."}
+{"long":"...","short":"...","seo":"...","seoTitle":"...","seoMeta":"...","seoKeywords":["...","..."]}
 
 ${reviewLine}`;
 }
@@ -117,6 +129,8 @@ module.exports = async (req, res) => {
     const style = (body.style || 'FORMAL').toString().trim().toUpperCase();
     const accessCode = (body.accessCode || '').toString().trim().toUpperCase();
     const deviceId = (body.deviceId || '').toString().trim();
+    const sallaMerchantId = (body.sallaMerchantId || '').toString().trim(); // [إضافة جديدة] نفس نمط generate.js بالضبط
+    const zidMerchantId = (body.zidMerchantId || '').toString().trim();
 
     if (!productName) {
       res.status(400).json({ error: 'اكتب اسم المنتج أول — يساعد بتحديد نوعه بدقة بدل التخمين من الصورة بس' });
@@ -128,17 +142,50 @@ module.exports = async (req, res) => {
       return;
     }
 
-    if (!accessCode) {
-      res.status(401).json({ error: 'أدخل كود الوصول أول', code: 'NO_ACCESS_CODE' });
-      return;
-    }
-
+    // [إضافة جديدة] لو الطلب جاي من داخل سلة أو زد، نتحقق من اشتراك المتجر بدل كود الوصول العادي —
+    // نفس المنطق بالضبط المستخدم بـgenerate.js، عشان الميزة تشتغل صح جوّا المنصتين
     let accessCheck;
-    try {
-      accessCheck = await checkAccessCode(accessCode, deviceId);
-    } catch (redisErr) {
-      res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
-      return;
+    if (sallaMerchantId) {
+      try {
+        accessCheck = await checkSallaMerchantSubscription(sallaMerchantId);
+      } catch (redisErr) {
+        res.status(500).json({ error: 'صار خطأ بالتحقق من اشتراك متجرك، جرب مرة ثانية بعد شوي' });
+        return;
+      }
+      if (!accessCheck.ok) {
+        if (accessCheck.reason === 'exhausted') {
+          res.status(403).json({ error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك عبر سلة عشان تكمل التوليد.`, code: 'QUOTA_EXHAUSTED' });
+        } else {
+          res.status(403).json({ error: 'ما عندك اشتراك فعّال بوصّاف مرتبط بمتجرك — اشترك عبر سلة أول', code: 'NO_SALLA_SUBSCRIPTION' });
+        }
+        return;
+      }
+    } else if (zidMerchantId) {
+      try {
+        accessCheck = await checkZidMerchantSubscription(zidMerchantId);
+      } catch (redisErr) {
+        res.status(500).json({ error: 'صار خطأ بالتحقق من اشتراك متجرك، جرب مرة ثانية بعد شوي' });
+        return;
+      }
+      if (!accessCheck.ok) {
+        if (accessCheck.reason === 'exhausted') {
+          res.status(403).json({ error: `خلصت حصتك الشهرية (${accessCheck.cap} وصف). جدد اشتراكك عبر زد عشان تكمل التوليد.`, code: 'QUOTA_EXHAUSTED' });
+        } else {
+          res.status(403).json({ error: 'ما عندك اشتراك فعّال بوصّاف مرتبط بمتجرك — اشترك عبر زد أول', code: 'NO_ZID_SUBSCRIPTION' });
+        }
+        return;
+      }
+    } else {
+      if (!accessCode) {
+        res.status(401).json({ error: 'أدخل كود الوصول أول', code: 'NO_ACCESS_CODE' });
+        return;
+      }
+      try {
+        accessCheck = await checkAccessCode(accessCode, deviceId);
+      } catch (redisErr) {
+        res.status(500).json({ error: 'صار خطأ بالتحقق من الكود، جرب مرة ثانية بعد شوي' });
+        return;
+      }
     }
 
     if (!accessCheck.ok) {
@@ -212,10 +259,33 @@ module.exports = async (req, res) => {
     }
 
     if (parsed && (parsed.long || parsed.short || parsed.seo)) {
+      // [إضافة جديدة] نفس منطق حد SEO التفصيلي المستخدم بـgenerate.js بالضبط
+      let includeSeoDetails = false;
+      let seoLimitReached = false;
+      const plan = accessCheck.plan;
+      if (SEO_UNLIMITED_PLANS.includes(plan)) {
+        includeSeoDetails = true;
+      } else if (plan === 'شهري' && accessCode) {
+        const seoUsageKey = `seo_usage:${accessCode}:${currentMonthKey()}`;
+        const seoUsedSoFar = parseInt((await redisCommand(['GET', seoUsageKey])) || '0', 10);
+        if (seoUsedSoFar < SEO_MONTHLY_PLAN_LIMIT) {
+          includeSeoDetails = true;
+          await redisCommand(['INCR', seoUsageKey]);
+          await redisCommand(['EXPIRE', seoUsageKey, 45 * 24 * 60 * 60]);
+        } else {
+          seoLimitReached = true;
+        }
+      }
+
       res.status(200).json({
         long: parsed.long || '',
         short: parsed.short || '',
         seo: parsed.seo || '',
+        seoTitle: includeSeoDetails ? (parsed.seoTitle || '') : '',
+        seoMeta: includeSeoDetails ? (parsed.seoMeta || '') : '',
+        seoKeywords: includeSeoDetails && Array.isArray(parsed.seoKeywords) ? parsed.seoKeywords : [],
+        seoLocked: !includeSeoDetails,
+        seoLimitReached,
         remaining: remainingAfter,
         cap: accessCheck.cap
       });
@@ -224,6 +294,9 @@ module.exports = async (req, res) => {
         long: rawText || 'ما قدرنا نحلل الصورة، جرب صورة أوضح.',
         short: '',
         seo: '',
+        seoTitle: '',
+        seoMeta: '',
+        seoKeywords: [],
         remaining: remainingAfter,
         cap: accessCheck.cap
       });
