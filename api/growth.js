@@ -76,6 +76,8 @@ async function handleZidListProducts(body, res) {
     id: p.id,
     name: (p.name && (p.name.ar || p.name.en)) || p.name || '',
     price: p.price || p.formatted_price || '',
+    // [إضافة جديدة] وصف مختصر موجود أصلاً بمنتجات زد — نستخدمه لتعبئة حقل "المميزات" تلقائياً وقت اختيار المنتج
+    currentDescription: (p.short_description && (p.short_description.ar || p.short_description.en)) || '',
     image: (p.images && p.images[0] && p.images[0].image && (p.images[0].image.medium || p.images[0].image.thumbnail || p.images[0].image.large || p.images[0].image.small || p.images[0].image.full_size)) || ''
   }));
 
