@@ -1094,41 +1094,10 @@ function loadAccessCode(){
 }
 loadAccessCode();
 
-// [إضافة جديدة] لو الزائر ما عنده كود محفوظ إطلاقاً، نطلب له تجربة مجانية تلقائياً وبصمت
-// بدون أي زر — يفتح الموقع، ويلقى نفسه جاهز يولّد مباشرة (10 أوصاف مجانية لكل جهاز)
-(async function autoCreateTrialIfNeeded(){
-  if(getStoredAccessCode()) return; // عنده كود أصلاً (تجربة سابقة أو باقة مدفوعة) — ما نسوي شي
-  try{
-    const res = await fetch('/api/create-trial', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId })
-    });
-    const data = await res.json();
-    if(res.ok && data.code){
-      accessCodeInput.value = data.code;
-      localStorage.setItem('wassaf_accessCode', data.code);
-      validateAccessCode(data.code, { silent: true });
-
-      // لو جاي من رابط إحالة، نطبّقها فوراً بما إن الكود الجديد صار جاهز بين يدينا
-      const pendingRef = localStorage.getItem('wassaf_pendingRef');
-      if(pendingRef && localStorage.getItem('wassaf_refAppliedFor') !== data.code){
-        fetch('/api/growth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'apply_referral', newAccessCode: data.code, referrerToken: pendingRef })
-        }).then(() => {
-          localStorage.setItem('wassaf_refAppliedFor', data.code);
-          localStorage.removeItem('wassaf_pendingRef');
-        }).catch(() => {});
-      }
-    } else {
-      // جهازه أخذ تجربته من قبل — نعرض صندوق كود الوصول مع رسالة اشتراك واضحة
-      document.getElementById('accessBox').style.display = 'block';
-      document.getElementById('subscribeNudge').style.display = 'block';
-    }
-  }catch(e){ /* تجاهل بصمت */ }
-})();
+// [حذف] نظام "التجربة الصامتة" (autoCreateTrialIfNeeded) اتحذف بالكامل — كان يتعارض مباشرة مع
+// بوابة تسجيل الدخول الإلزامية الجديدة (كل زائر جديد كان ياخذ كود تجربة بصمت بدون أي حساب،
+// بينما بالتوازي البوابة تمنعه يوصل لواجهة التوليد أصلاً). التجربة المجانية الحين تُمنح فقط
+// وقت إنشاء حساب حقيقي عبر account.html (نفس منطق handleAuthSignup بـgrowth.js).
 
 accessCodeInput.addEventListener('change', () => {
   const code = accessCodeInput.value.trim().toUpperCase();
@@ -1150,42 +1119,8 @@ function updateAccessStatusAfterGenerate(remaining, cap){
   }
 }
 
-/* ==================== زر التجربة المجانية الذاتية ==================== */
-/* [تعديل ضروري] الزر نفسه انحذف من بطاقات الأسعار بناءً على طلبك — أضفنا حماية null
-   عشان باقي الكود بالصفحة يستمر يشتغل عادي بدل ما ينكسر كامل السكربت */
-const oldTrialBtnEl = document.getElementById('trialBtn');
-if(oldTrialBtnEl){
-oldTrialBtnEl.addEventListener('click', async (e) => {
-  e.preventDefault();
-  const btn = e.currentTarget;
-  const oldText = btn.textContent;
-  btn.textContent = 'جاري التجهيز...';
-
-  try{
-    const res = await fetch('/api/create-trial', { method: 'POST' });
-    const data = await res.json();
-
-    if(!res.ok){
-      // لو جرّب هالشهر من قبل، ننقله للأداة ونوريه رسالة واضحة بدل ما نفشل بصمت
-      document.getElementById('tool').scrollIntoView({ behavior: 'smooth' });
-      setAccessStatus(data.error || 'تعذر إنشاء تجربة جديدة', 'error');
-      return;
-    }
-
-    // نعبّي الكود تلقائياً ونحفظه، تماماً زي لو كتبه المستخدم بنفسه
-    accessCodeInput.value = data.code;
-    localStorage.setItem('wassaf_accessCode', data.code);
-    document.getElementById('tool').scrollIntoView({ behavior: 'smooth' });
-    setAccessStatus(`✓ جاهز! تبقى لك ${data.cap} من ${data.cap} وصف بالتجربة المجانية`, 'ok');
-    accessCodeValid = true;
-    currentCodeCap = data.cap;
-  }catch(e){
-    setAccessStatus('صار خطأ أثناء إنشاء التجربة، جرب مرة ثانية', 'error');
-  }finally{
-    btn.textContent = oldText;
-  }
-});
-}
+/* [حذف] زر "trialBtn" وكل مستمعيه اتحذفوا — العنصر نفسه مو موجود بالـHTML من زمان (كان محمي بـif()
+   فما كان يسبب كراش، بس كان كود ميت بالكامل). التجربة المجانية الحين تُمنح عبر إنشاء حساب حقيقي بس. */
 
 /* ==================== الإطار الإقناعي (توليد فردي) ==================== */
 const hints = {
@@ -1465,31 +1400,9 @@ marketingBtn.addEventListener('click', async () => {
   }
 })();
 
-// لا نلمس زر التجربة المجانية الأصلي — نضيف مستمع ثاني منفصل يراقب ظهور الكود الجديد بعد نجاح الإنشاء
-const referralTrialBtn = document.getElementById('trialBtn');
-if(referralTrialBtn){
-  referralTrialBtn.addEventListener('click', () => {
-    const pendingRef = localStorage.getItem('wassaf_pendingRef');
-    if(!pendingRef) return;
-    let attempts = 0;
-    const poll = setInterval(() => {
-      attempts++;
-      const code = localStorage.getItem('wassaf_accessCode');
-      if(code && localStorage.getItem('wassaf_refAppliedFor') !== code){
-        clearInterval(poll);
-        fetch('/api/growth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'apply_referral', newAccessCode: code, referrerToken: pendingRef })
-        }).then(() => {
-          localStorage.setItem('wassaf_refAppliedFor', code);
-          localStorage.removeItem('wassaf_pendingRef');
-        }).catch(() => {});
-      }
-      if(attempts > 15) clearInterval(poll);
-    }, 1000);
-  });
-}
+/* [حذف] مستمع "trialBtn" الثاني (تفعيل مكافأة الإحالة) اتحذف — كان معطّل بالكامل من زمان لأن
+   العنصر مو موجود بالـHTML. نقلنا تفعيل مكافأة الإحالة الحقيقي لنقطة التسجيل الفعلية بـaccount.html —
+   نفس متغير wassaf_pendingRef المُلتقط فوق يُستخدم من هناك مباشرة بعد نجاح إنشاء الحساب. */
 
 /* ==================== مشاركة الوصف كرابط ==================== */
 const shareBtn = document.getElementById('shareBtn');

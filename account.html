@@ -55,6 +55,11 @@
   .form-inner{width:100%;max-width:420px;margin:0 auto;}
   .form-panel.wide .form-inner{max-width:560px;}
   .logo-top{height:38px;width:auto;display:block;margin-bottom:30px;}
+  .back-home-link{
+    display:inline-flex;align-items:center;gap:4px;color:var(--ink-dim);text-decoration:none;
+    font-size:13.5px;font-weight:700;margin-bottom:20px;transition:color .15s;
+  }
+  .back-home-link:hover{color:var(--accent);}
 
   .today-date{text-align:center;font-size:12px;color:var(--ink-dim);margin-bottom:6px;}
   h1{font-family:'Cairo',sans-serif;font-weight:900;font-size:26px;margin:6px 0 4px;text-align:center;}
@@ -176,6 +181,7 @@
 
   <div class="form-panel" id="formPanel">
   <div class="form-inner">
+  <a href="/" class="back-home-link">→ الرئيسية</a>
   <img class="logo-top" src="/assets/logo-horizontal.svg" alt="وصّاف">
 
   <div class="today-date" id="todayDate"></div>
@@ -469,12 +475,16 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
   const btn = document.getElementById('signupBtn');
   btn.disabled = true; btn.textContent = 'جاري الإنشاء...';
   try{
-    const { ok, data } = await callGrowth('auth_signup', { email, password });
+    // [إضافة جديدة] لو زار الموقع الرئيسي قبل عبر رابط إحالة (?ref=)، القيمة محفوظة بنفس المتصفح —
+    // نرسلها وقت التسجيل عشان تطبيق مكافأة الإحالة يصير بنفس اللحظة (نقطة التفعيل الحقيقية الوحيدة الحين)
+    const referrerToken = localStorage.getItem('wassaf_pendingRef') || '';
+    const { ok, data } = await callGrowth('auth_signup', { email, password, referrerToken });
     if(!ok || !data.ok){
       err.textContent = data.error || 'صار خطأ، جرب مرة ثانية';
       err.style.display = 'block';
       return;
     }
+    if(referrerToken){ try{ localStorage.removeItem('wassaf_pendingRef'); }catch(e){} }
     await loadMeAndRender();
   }catch(e){
     err.textContent = 'صار خطأ، جرب مرة ثانية';
