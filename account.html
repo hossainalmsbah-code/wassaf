@@ -181,7 +181,7 @@
 
   <div class="form-panel" id="formPanel">
   <div class="form-inner">
-  <a href="/" class="back-home-link">→ الرئيسية</a>
+  <a href="/" class="back-home-link">الرئيسية</a>
   <img class="logo-top" src="/assets/logo-horizontal.svg" alt="وصّاف">
 
   <div class="today-date" id="todayDate"></div>
@@ -367,9 +367,7 @@ function renderAccountCard(data){
   document.getElementById('legacyToggleBtn').style.display = 'none';
   document.getElementById('legacyBox').classList.remove('show');
 
-  // [إضافة جديدة] بعد نجاح الدخول، نخفي لوحة التسويق ونوسّع بطاقة الحساب لتاخذ عرض الصفحة
-  document.getElementById('brandPanel').classList.add('hide');
-  document.getElementById('formPanel').classList.add('wide');
+  // [تعديل] تقسيم الشاشة (لوحة التسويق + بطاقة الحساب) يبقى زي ما هو حتى بعد الدخول — بدون إخفاء أو توسيع
 
   const email = data.email || '';
   document.getElementById('accEmailVal').textContent = email;
@@ -601,9 +599,7 @@ async function loadAccount(){
     }
     authTabs.style.display = 'none';
     Object.values(panels).forEach(p => p.classList.remove('show'));
-    // [إضافة جديدة] بعد نجاح الدخول بالكود، نخفي لوحة التسويق ونوسّع بطاقة الحساب
-    document.getElementById('brandPanel').classList.add('hide');
-    document.getElementById('formPanel').classList.add('wide');
+    // [تعديل] تقسيم الشاشة يبقى زي ما هو هنا كمان — بدون إخفاء أو توسيع
     document.getElementById('accEmailVal').textContent = '(دخول بكود الوصول)';
     document.getElementById('accAvatar').textContent = '🔑';
     document.getElementById('subDetails').style.display = 'block';
