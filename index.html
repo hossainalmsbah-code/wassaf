@@ -964,7 +964,10 @@ async function isUserLoggedIn(){
 async function switchView(viewName){
   // [مهم] جوّا سلة/زد، التاجر مسجّل دخول أصلاً عبر متجره — ما نطبّق بوابة حساب وصّاف هناك إطلاقاً
   const isEmbedded = document.body.classList.contains('salla-embedded') || document.body.classList.contains('zid-embedded');
-  if(!isEmbedded && GATED_VIEWS.includes(viewName)){
+  // [إصلاح جوهري] كود الوصول القديم (زبائن الفوترة المباشرة + كود المراجعين) نظام منفصل تماماً عن
+  // حساب الإيميل — لو التاجر عنده كود صحيح متحقق منه بالفعل، ما نوقفه ونوديه لصفحة تسجيل حساب زيادة
+  const hasValidAccessCode = accessCodeValid === true;
+  if(!isEmbedded && !hasValidAccessCode && GATED_VIEWS.includes(viewName)){
     const loggedIn = await isUserLoggedIn();
     if(!loggedIn){
       window.location.href = '/account.html';
