@@ -375,11 +375,16 @@
   }
   .footer-bottom .copy{color:var(--ink-dim);font-size:12px;margin:0;}
 
-  /* [إضافة جديدة] رابط موقع وصّاف المستقل بأسفل الصفحة */
+  /* [تعديل] رابط موقع وصّاف — مخفي افتراضياً بالموقع العادي (زيادة مالها داعي وهو أصلاً واقف فيه)،
+     يظهر بس جوّا سلة أو زد عشان يوجّه التاجر لموقعنا الأصلي */
   .wassaf-site-banner{
+    display:none;
     max-width:820px;margin:24px auto 0;padding:16px 20px;
     background:var(--accent-dim);border:1.5px solid rgba(233,69,72,.2);border-radius:12px;
     text-align:center;
+  }
+  body.salla-embedded .wassaf-site-banner, body.zid-embedded .wassaf-site-banner{
+    display:block;
   }
   .wassaf-site-banner a{
     color:var(--accent);font-size:15px;font-weight:800;text-decoration:none;
@@ -915,6 +920,10 @@
   </footer>
 
   <!-- [إضافة جديدة] رابط "موقع وصّاف" — نُقل من داخل صناديق سلة/زد ليصير عنصر مستقل وواضح بأسفل الصفحة -->
+  <div class="wassaf-site-banner">
+    <a href="https://www.wassaf.space/" target="_blank" rel="noopener">🌐 موقع وصّاف — wassaf.space</a>
+  </div>
+
 </div>
   </main>
 </div>
