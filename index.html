@@ -681,7 +681,7 @@
 
   <div id="view-image" class="app-view">
   <!-- ===================== توليد من صورة (حصري نصف سنوي/سنوي) ===================== -->
-  <div class="salla-image-highlight" id="sallaImageHighlight" style="display:none;">📸 أسرع طريقة للتجار</div>
+  <div class="salla-image-highlight" id="sallaImageHighlight" style="display:none;">📸 أسرع طريقة لتجار سلة</div>
   <div class="section-title" id="imageGen">ولّد الوصف من صورة المنتج</div>
   <div class="section-sub">ارفع صورة منتجك بس ، ووصّاف يحلّلها ويكتب لك الوصف الطويل والقصير و SEO تلقائياً - بدون ما تكتب كلمة.</div>
 
@@ -1199,14 +1199,7 @@ async function callGenerate({ productName, audience, features, price, framework,
 }
 
 /* ==================== توليد فردي ==================== */
-/* [إضافة جديدة] لوحة SEO البصرية — تحسب تقييم حقيقي حسب أفضل الممارسات (طول العنوان 40-60، طول الـMeta 130-160، عدد الكلمات المفتاحية) */
-function seoRateLength(len, minIdeal, maxIdeal){
-  if(len === 0) return { cls: 'warn', label: 'ناقص' };
-  if(len >= minIdeal && len <= maxIdeal) return { cls: 'excellent', label: 'ممتاز' };
-  const distance = len < minIdeal ? (minIdeal - len) : (len - maxIdeal);
-  if(distance <= 15) return { cls: 'good', label: 'جيد' };
-  return { cls: 'warn', label: 'يحتاج تحسين' };
-}
+/* [تعديل] لوحة SEO البصرية — تعرض المحتوى وعدد الأحرف بس، بدون أي شارة تقييم لونية (ممتاز/جيد/يحتاج تحسين) */
 
 function renderSeoPanel(data, panelId = 'seoPanel'){
   const panel = document.getElementById(panelId);
@@ -1227,51 +1220,40 @@ function renderSeoPanel(data, panelId = 'seoPanel'){
   if(!hasSeoData){ panel.style.display = 'none'; return; }
 
   // نعيد بناء الصندوق الأصلي (لو كان قبل شوي معروض كرسالة قفل، نرجّعه لشكله الطبيعي)
+  // [تعديل] حذفنا شارات التقييم اللونية (ممتاز/جيد/يحتاج تحسين) بالكامل — المحتوى وعداد الأحرف بس، بدون أي حكم
   panel.innerHTML = `
-    <div class="result-head"><div class="label">تحسين SEO — تفاصيل وتقييم</div></div>
+    <div class="result-head"><div class="label">تحسين SEO — تفاصيل</div></div>
     <div class="seo-grid">
       <div class="seo-field">
-        <div class="seo-field-head"><span>عنوان SEO</span><span class="seo-badge" data-role="seoTitleBadge"></span></div>
+        <div class="seo-field-head"><span>عنوان SEO</span></div>
         <div class="seo-field-text" data-role="seoTitleText"></div>
         <div class="seo-field-count" data-role="seoTitleCount"></div>
       </div>
       <div class="seo-field">
-        <div class="seo-field-head"><span>وصف Meta</span><span class="seo-badge" data-role="seoMetaBadge"></span></div>
+        <div class="seo-field-head"><span>وصف Meta</span></div>
         <div class="seo-field-text" data-role="seoMetaText"></div>
         <div class="seo-field-count" data-role="seoMetaCount"></div>
       </div>
       <div class="seo-field">
-        <div class="seo-field-head"><span>كلمات مفتاحية</span><span class="seo-badge" data-role="seoKeywordsBadge"></span></div>
+        <div class="seo-field-head"><span>كلمات مفتاحية</span></div>
         <div class="seo-tags" data-role="seoKeywordsTags"></div>
       </div>
     </div>`;
   panel.style.display = 'block';
 
   const title = data.seoTitle || '';
-  const titleRate = seoRateLength(title.length, 40, 60);
   panel.querySelector('[data-role="seoTitleText"]').textContent = title || '—';
-  panel.querySelector('[data-role="seoTitleCount"]').textContent = `${title.length} حرف — المثالي 40-60 حرف`;
-  const titleBadge = panel.querySelector('[data-role="seoTitleBadge"]');
-  titleBadge.textContent = titleRate.label;
-  titleBadge.className = 'seo-badge ' + titleRate.cls;
+  panel.querySelector('[data-role="seoTitleCount"]').textContent = `${title.length} حرف`;
 
   const meta = data.seoMeta || '';
-  const metaRate = seoRateLength(meta.length, 130, 160);
   panel.querySelector('[data-role="seoMetaText"]').textContent = meta || '—';
-  panel.querySelector('[data-role="seoMetaCount"]').textContent = `${meta.length} حرف — المثالي 130-160 حرف`;
-  const metaBadge = panel.querySelector('[data-role="seoMetaBadge"]');
-  metaBadge.textContent = metaRate.label;
-  metaBadge.className = 'seo-badge ' + metaRate.cls;
+  panel.querySelector('[data-role="seoMetaCount"]').textContent = `${meta.length} حرف`;
 
   const keywords = Array.isArray(data.seoKeywords) ? data.seoKeywords : [];
   const kwTagsEl = panel.querySelector('[data-role="seoKeywordsTags"]');
   kwTagsEl.innerHTML = keywords.length
     ? keywords.map(k => `<span class="seo-tag">${escapeHTML(k)}</span>`).join('')
     : '<span style="font-size:12.5px;color:var(--ink-dim);">ما فيه كلمات مفتاحية</span>';
-  const kwBadge = panel.querySelector('[data-role="seoKeywordsBadge"]');
-  const kwRate = keywords.length >= 5 && keywords.length <= 8 ? { cls: 'excellent', label: 'ممتاز' } : (keywords.length > 0 ? { cls: 'good', label: 'جيد' } : { cls: 'warn', label: 'ناقص' });
-  kwBadge.textContent = kwRate.label;
-  kwBadge.className = 'seo-badge ' + kwRate.cls;
 }
 
 document.getElementById('goBtn').addEventListener('click', async () => {
