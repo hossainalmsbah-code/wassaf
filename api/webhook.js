@@ -449,6 +449,16 @@ async function handleSallaWebhook(req, res) {
       return;
     }
 
+    // [إضافة جديدة] فك تثبيت التطبيق — نحذف كل بيانات التاجر فوراً (رمز الوصول، رمز التحديث، حالة الاشتراك)
+    // هذا يضمن ما نحتفظ بأي بيانات وصول لمتجر بعد ما التاجر يفك التثبيت، بدون فترة انتظار
+    if (event === 'app.uninstalled') {
+      await redisCommand(['DEL', `salla_store:${merchant}`]);
+      await redisCommand(['DEL', `salla_subscription:${merchant}`]);
+      console.log('[SALLA_UNINSTALL] حذفنا بيانات المتجر رقم', merchant, 'بنجاح بعد فك التثبيت');
+      res.status(200).json({ ok: true, deleted: true });
+      return;
+    }
+
     // [مكان جاهز للتوسعة] أحداث سلة الثانية (تركيب، إلغاء تركيب، تحديث منتج) تنضاف هنا مستقبلاً
     res.status(200).json({ ok: true, ignored: event || 'unknown' });
   } catch (err) {
