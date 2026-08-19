@@ -154,6 +154,20 @@ async function checkSallaMerchantSubscription(merchantId) {
 // [إضافة جديدة] يتحقق من اشتراك تاجر زد (الفوترة الأصلية عبر store_id) — نفس شكل نتيجة checkSallaMerchantSubscription بالضبط
 async function checkZidMerchantSubscription(storeId) {
   // [إضافة جديدة] نفس فكرة القائمة البيضاء بالضبط، بس لمتاجر زد — متغير ZID_TEST_STORE_IDS بإعدادات Vercel
+  // [مفتاح تجربة مؤقت] لو ZID_BYPASS_ALL=1 بإعدادات Vercel، فحص الاشتراك يتوقف بالكامل لكل تجار زد —
+  // أي متجر زد (بما فيه مراجعي QA) يشتغل بباقة سنوية وهمية دايماً بدون أي اشتراك حقيقي.
+  // للرجوع للوضع الطبيعي: احذفوا المتغير من Vercel وأعيدوا النشر (Redeploy)، بدون أي تعديل بالكود.
+  if (process.env.ZID_BYPASS_ALL === '1') {
+    return {
+      ok: true,
+      remaining: 999999,
+      cap: 999999,
+      used: 0,
+      plan: 'سنوي',
+      usageKey: `usage:zid_bypass:${storeId || 'unknown'}:${currentMonthKey()}`
+    };
+  }
+
   const zidTestIds = (process.env.ZID_TEST_STORE_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
   if (zidTestIds.includes(String(storeId))) {
     return {
