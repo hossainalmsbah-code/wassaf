@@ -1288,7 +1288,9 @@ document.getElementById('goBtn').addEventListener('click', async () => {
     return;
   }
 
-  if(!getStoredAccessCode()){
+  // [إصلاح] جوّا سلة/زد التاجر يتحقق عبر اشتراك متجره (sallaMerchant/zidMerchant) مو كود الوصول —
+  // نفس استثناء isEmbedded المطبّق بـswitchView، ناقص كان هنا وهو سبب مطالبة مراجعي زد بكود وصول ما عندهم
+  if(!sallaMerchant && !zidMerchant && !getStoredAccessCode()){
     errBox.textContent = 'أدخل كود الوصول بالصندوق فوق قبل ما تقدر تولّد';
     errBox.style.display = 'block';
     accessCodeInput.focus();
@@ -1346,7 +1348,8 @@ marketingBtn.addEventListener('click', async () => {
     return;
   }
 
-  if(!getStoredAccessCode()){
+  // [إصلاح] نفس استثناء سلة/زد المطبّق بزر التوليد الفردي
+  if(!sallaMerchant && !zidMerchant && !getStoredAccessCode()){
     marketingErr.textContent = 'أدخل كود الوصول بالصندوق فوق قبل ما تقدر تولّد';
     marketingErr.style.display = 'block';
     return;
@@ -1514,7 +1517,8 @@ if(imageInput){
 
   imageGoBtn.addEventListener('click', async () => {
     imageErr.style.display = 'none';
-    if(!accessCodeValid){
+    // [إصلاح] نفس استثناء سلة/زد — التاجر المضمّن يتحقق عبر اشتراك متجره مو كود وصول
+    if(!sallaMerchant && !zidMerchant && !accessCodeValid){
       imageErr.textContent = 'أدخل كود وصول صحيح أول';
       imageErr.style.display = 'block';
       return;
