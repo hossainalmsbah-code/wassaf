@@ -367,15 +367,22 @@ async function handleSallaWebhook(req, res) {
           const storeInfoData = await storeInfoRes.json();
           const storeEmail = storeInfoData && storeInfoData.data && storeInfoData.data.email;
           const storeName = storeInfoData && storeInfoData.data && storeInfoData.data.name;
+          console.log('[SALLA_WELCOME] بيانات المتجر وصلت — الإيميل:', storeEmail || '(فاضي)', '- الاسم:', storeName || '(فاضي)');
           if (storeEmail) {
             await sendEmail({
               to: storeEmail,
               subject: 'أهلاً فيك مع وصّاف 🎉',
               html: buildSallaWelcomeEmailHtml({ storeName })
             });
+            console.log('[SALLA_WELCOME] ✓ بريد الترحيب انرسل بنجاح لـ:', storeEmail);
+          } else {
+            console.log('[SALLA_WELCOME] ✗ ما فيه إيميل بالرد — ما قدرنا نرسل بريد ترحيب');
           }
+        } else {
+          console.log('[SALLA_WELCOME] ✗ فشل جلب بيانات المتجر — رمز الحالة:', storeInfoRes.status);
         }
       } catch (mailErr) {
+        console.log('[SALLA_WELCOME] ✗ صار استثناء أثناء المحاولة:', mailErr.message);
         // فشل جلب الإيميل أو إرسال بريد الترحيب ما يوقف تخزين التوكن الأساسي — العملية الأهم نجحت فعلاً
       }
 
