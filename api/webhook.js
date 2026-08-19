@@ -88,6 +88,31 @@ function buildWelcomeEmailHtml({ code, plan, cap }) {
   </div>`;
 }
 
+// [إضافة جديدة] بريد ترحيب خاص بتجار سلة تحديداً — مختلف عن بريد Lemon Squeezy فوق لأن تاجر سلة
+// ما يحتاج كود وصول إطلاقاً، التطبيق يتعرف عليه تلقائياً بمجرد ما يفتحه من لوحة تحكمه
+function buildSallaWelcomeEmailHtml({ storeName }) {
+  return `
+  <div dir="rtl" style="font-family:'IBM Plex Sans Arabic',Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <span style="font-size:28px;font-weight:900;color:#E94548;">وصّاف</span>
+    </div>
+    <h2 style="color:#1E1B2E;font-size:20px;">أهلاً فيك ${storeName ? 'يا ' + storeName : ''} 👋</h2>
+    <p style="color:#6B6785;font-size:15px;line-height:1.8;">
+      تم تثبيت وصّاف بنجاح على متجرك بسلة! ما تحتاج أي كود أو خطوة إضافية — بس افتح التطبيق من داخل لوحة تحكم متجرك بسلة، اختر منتجك، واضغط توليد.
+    </p>
+    <div style="background:#F7F6FB;border:1px solid #E7E4F0;border-radius:10px;padding:20px;margin:24px 0;">
+      <div style="font-size:13px;color:#1E1B2E;line-height:2;">
+        ✨ وصف طويل، وصف قصير، ووصف SEO — خلال ثواني<br>
+        🛍️ انشر الوصف رجوع لمنتجك بضغطة وحدة<br>
+        📸 أو ولّد الوصف من صورة المنتج مباشرة
+      </div>
+    </div>
+    <p style="color:#6B6785;font-size:13px;line-height:1.8;margin-top:24px;">
+      أي استفسار راسلنا على واتساب أو إيميل، إحنا حاضرين.
+    </p>
+  </div>`;
+}
+
 module.exports = async (req, res) => {
   // [إضافة جديدة] روابط تسجيل دخول زد (Redirect/Callback) تصل كـGET من متصفح التاجر مباشرة —
   // لازم تُفرز قبل فحص "POST بس" اللي تحت، لأنها مختلفة تماماً عن أحداث الاشتراك (اللي توصل POST من سيرفر زد)
@@ -313,11 +338,6 @@ async function handleSallaWebhook(req, res) {
   const authHeader = (authHeaderRaw || '').toString().replace(/^Bearer\s+/i, '').trim();
   const expectedSecret = (SALLA_WEBHOOK_SECRET || '').toString().trim();
 
-  // [تشخيص مؤقت — نحذفه بعد ما نحل المشكلة] نطبع معلومات آمنة بدون كشف القيم الحقيقية
-  console.log('[SALLA_DEBUG] كل الرؤوس الواردة:', JSON.stringify(Object.keys(req.headers)));
-  console.log('[SALLA_DEBUG] قيمة authorization موجودة؟', !!authHeaderRaw, '- طولها:', authHeaderRaw ? authHeaderRaw.length : 0);
-  console.log('[SALLA_DEBUG] SALLA_WEBHOOK_SECRET موجود بالمتغيرات؟', !!SALLA_WEBHOOK_SECRET, '- طوله:', expectedSecret.length);
-
   if (!expectedSecret || authHeader !== expectedSecret) {
     res.status(401).json({ error: 'Invalid token' });
     return;
@@ -336,6 +356,29 @@ async function handleSallaWebhook(req, res) {
         installedAt: new Date().toISOString()
       };
       await redisCommand(['SET', `salla_store:${merchant}`, JSON.stringify(record)]);
+
+      // [إضافة جديدة] حدث app.store.authorize ما يحتوي إيميل التاجر أبداً (تأكدنا من توثيق سلة الرسمي) —
+      // نجيبه بطلب منفصل لمسار بيانات المتجر بنفس التوكن الجديد، ونرسل بريد ترحيب فوري
+      try {
+        const storeInfoRes = await fetch('https://api.salla.dev/admin/v2/store/info', {
+          headers: { 'Authorization': `Bearer ${data.access_token}` }
+        });
+        if (storeInfoRes.ok) {
+          const storeInfoData = await storeInfoRes.json();
+          const storeEmail = storeInfoData && storeInfoData.data && storeInfoData.data.email;
+          const storeName = storeInfoData && storeInfoData.data && storeInfoData.data.name;
+          if (storeEmail) {
+            await sendEmail({
+              to: storeEmail,
+              subject: 'أهلاً فيك مع وصّاف 🎉',
+              html: buildSallaWelcomeEmailHtml({ storeName })
+            });
+          }
+        }
+      } catch (mailErr) {
+        // فشل جلب الإيميل أو إرسال بريد الترحيب ما يوقف تخزين التوكن الأساسي — العملية الأهم نجحت فعلاً
+      }
+
       res.status(200).json({ ok: true });
       return;
     }
